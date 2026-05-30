@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>GREEN LINE NEON RPG - FULL WORLD</title>
+<style>
+  :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:var(--g);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Apple SD Gothic Neo","Noto Sans KR",monospace;touch-action:none;overscroll-behavior:none;}
+  #wrap{position:fixed;inset:0;background:#000;overflow:hidden;}
+  canvas{position:absolute;inset:0;width:100%;height:100%;display:block;background:#000;touch-action:none;}
+  .hud{position:absolute;left:10px;right:10px;top:8px;z-index:5;display:grid;grid-template-columns:minmax(210px,280px) auto;gap:8px;pointer-events:none;align-items:start;justify-content:space-between;}
+  .panel{border:1px solid var(--gd);box-shadow:0 0 14px var(--gb), inset 0 0 14px var(--gb);background:rgba(0,0,0,.72);border-radius:12px;padding:8px;}
+  .stats{font-size:11px;line-height:1.25;display:grid;gap:4px;width:min(280px,calc(100vw - 136px));min-height:82px;}
+  .row{display:flex;gap:6px;align-items:center;justify-content:space-between;white-space:nowrap;}
+  .bar{height:6px;border:1px solid var(--gd);border-radius:999px;overflow:hidden;background:rgba(0,255,114,.06);}
+  .fill{height:100%;width:50%;background:linear-gradient(90deg,rgba(0,255,114,.55),rgba(0,255,114,.95));box-shadow:0 0 10px var(--g);}
+  .topBtns{display:flex;gap:6px;pointer-events:auto;align-items:flex-start;}
+  .menuBtns{display:grid;grid-template-columns:repeat(2,52px);gap:5px;align-self:stretch;}
+  .menuBtns button{height:38px;padding:4px 3px;font-size:11px;border-radius:9px;}
+  button{background:#000;color:var(--g);border:1px solid var(--gd);border-radius:11px;padding:8px 9px;font-family:inherit;font-weight:800;box-shadow:0 0 10px var(--gb), inset 0 0 10px rgba(0,255,114,.05);touch-action:manipulation;}
+  button:active{transform:translateY(1px);background:rgba(0,255,114,.12);}
+  button:disabled{opacity:.32;}
+  #zoneTag{position:absolute;left:50%;top:86px;transform:translateX(-50%);z-index:4;border:1px solid var(--gd);border-radius:999px;padding:5px 10px;background:rgba(0,0,0,.66);font-size:11px;box-shadow:0 0 12px var(--gb);pointer-events:none;}
+  #joy{position:absolute;left:18px;bottom:28px;width:116px;height:116px;border:1px solid var(--gd);border-radius:50%;z-index:6;background:rgba(0,255,114,.03);box-shadow:0 0 18px var(--gb), inset 0 0 18px rgba(0,255,114,.04);touch-action:none;}
+  #stick{position:absolute;left:38px;top:38px;width:40px;height:40px;border:2px solid var(--g);border-radius:50%;box-shadow:0 0 16px var(--gd);background:rgba(0,0,0,.85);}
+  #actions{position:absolute;right:14px;bottom:24px;z-index:6;display:grid;grid-template-columns:62px 62px;gap:8px;}
+  #actions button{height:54px;font-size:12px;line-height:1.05;padding:4px;}
+  #talkPrompt{position:absolute;z-index:9;display:none;transform:translate(-50%,-100%);font-size:11px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.88);white-space:nowrap;box-shadow:0 0 14px var(--gb), inset 0 0 10px rgba(0,255,114,.06);}
+  .cool{font-size:10px;opacity:.8;display:block;margin-top:2px;}
+  #mini{position:static;width:82px;height:82px;border:1px solid var(--gd);border-radius:12px;background:rgba(0,0,0,.72);z-index:5;box-shadow:0 0 13px var(--gb), inset 0 0 12px rgba(0,255,114,.04);}
+  #popupLayer{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.74);padding:14px;}
+  #popup{width:min(430px,100%);max-height:88vh;overflow:auto;border:1px solid var(--g);border-radius:18px;background:#000;box-shadow:0 0 28px rgba(0,255,114,.26), inset 0 0 22px rgba(0,255,114,.05);padding:14px;}
+  .title{font-weight:900;font-size:18px;margin:0 0 8px;text-shadow:0 0 12px var(--gd);}
+  .sub{font-size:12px;opacity:.85;line-height:1.45;margin-bottom:10px;}
+  .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+  .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
+  .card{border:1px solid var(--gd);border-radius:14px;padding:10px;background:rgba(0,255,114,.045);box-shadow:inset 0 0 14px rgba(0,255,114,.045);font-size:12px;line-height:1.38;}
+  .card h3{margin:0 0 5px;font-size:14px;}
+  .card .small{font-size:10px;opacity:.8;}
+  .selected{outline:2px solid var(--g);background:rgba(0,255,114,.13);}
+  .rare-일반{border-color:rgba(0,255,114,.38)}.rare-레어{border-color:rgba(0,255,114,.55)}.rare-희귀{border-color:rgba(0,255,114,.72)}.rare-에픽{border-color:rgba(0,255,114,.88)}.rare-전설{border-color:var(--g);box-shadow:0 0 18px rgba(0,255,114,.18), inset 0 0 16px rgba(0,255,114,.08)}.rare-신화{border-color:#9dffcb;box-shadow:0 0 25px rgba(0,255,114,.32), inset 0 0 20px rgba(0,255,114,.12)}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px;}.tabs button{font-size:11px;padding:7px 8px;}
+  .footerBtns{display:flex;gap:8px;margin-top:12px;}.footerBtns button{flex:1;}
+  .log{position:absolute;left:10px;right:10px;bottom:154px;z-index:4;min-height:28px;max-height:54px;overflow:hidden;font-size:11px;line-height:1.35;color:rgba(0,255,114,.9);pointer-events:none;text-shadow:0 0 6px rgba(0,255,114,.45);}
+  #toast{position:absolute;left:50%;bottom:154px;transform:translateX(-50%);z-index:30;border:1px solid var(--gd);border-radius:999px;background:rgba(0,0,0,.86);padding:7px 12px;font-size:12px;display:none;box-shadow:0 0 16px var(--gb);}
+  .rouletteWheel{position:relative;margin:8px auto 12px;width:210px;height:210px;border:2px solid var(--g);border-radius:50%;box-shadow:0 0 28px rgba(0,255,114,.28), inset 0 0 22px rgba(0,255,114,.08);transition:transform 2.1s cubic-bezier(.16,.84,.19,1);}
+  .rouletteWheel:before,.rouletteWheel:after{content:"";position:absolute;inset:18px;border:1px dashed var(--gd);border-radius:50%;}.rouletteWheel:after{inset:58px;border-style:solid;}
+  .pin{width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:22px solid var(--g);margin:0 auto -8px;filter:drop-shadow(0 0 8px var(--g));}
+  .resultBox{text-align:center;border:1px solid var(--gd);border-radius:12px;padding:10px;margin-top:8px;background:rgba(0,255,114,.055);}
+  .hidden{display:none!important;}
+  @media (orientation:landscape){
+    .hud{left:10px;right:10px;top:8px;grid-template-columns:270px auto;gap:10px;align-items:start;}
+    .stats{width:270px;min-height:92px;font-size:10.5px;gap:3px;padding:7px;}
+    .bar{height:5px;}
+    #mini{width:92px;height:92px;border-radius:13px;}
+    .menuBtns{grid-template-columns:repeat(2,58px);gap:6px;}
+    .menuBtns button{height:43px;font-size:11px;}
+    .topBtns{gap:8px;align-items:stretch;}
+    #zoneTag{top:112px;}
+    #joy{left:18px;bottom:18px;width:104px;height:104px;}
+    #stick{left:34px;top:34px;width:36px;height:36px;}
+    #actions{right:16px;bottom:16px;grid-template-columns:58px 58px;gap:7px;}
+    #actions button{height:48px;font-size:11px;}
+    .log{left:138px;right:150px;bottom:18px;max-height:44px;}
+    #toast{bottom:76px;}
+    #popup{width:min(620px,92vw);max-height:82vh;}
+    .grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  }
+  @media (orientation:portrait){
+    .hud{grid-template-columns:minmax(210px,1fr) auto;}
+    .stats{max-width:280px;}
+  }
+
+
+  /* 세로/가로 화면 최적화 패치 */
+  :root{
+    --safe-top:env(safe-area-inset-top,0px);--safe-right:env(safe-area-inset-right,0px);--safe-bottom:env(safe-area-inset-bottom,0px);--safe-left:env(safe-area-inset-left,0px);
+    --hud-gap:6px;--mini-size:76px;--menu-btn-w:45px;--menu-gap:4px;--stat-w:clamp(138px,39vw,170px);--stat-font:10px;--stat-pad:6px;
+    --joy-size:108px;--stick-size:36px;--action-w:58px;--action-h:50px;--action-gap:7px;--action-group-w:123px;--action-group-h:107px;--control-bottom:22px;--control-side:12px;--popup-w:430px;
+  }
+  html,body,#wrap{width:100vw;height:100dvh;min-height:100dvh;}
+  .hud{left:calc(7px + var(--safe-left));right:calc(7px + var(--safe-right));top:calc(6px + var(--safe-top));display:flex;grid-template-columns:none;justify-content:space-between;align-items:flex-start;gap:var(--hud-gap);pointer-events:none;}
+  .stats{width:var(--stat-w);max-width:none;min-width:0;min-height:var(--mini-size);padding:var(--stat-pad);font-size:var(--stat-font);gap:3px;line-height:1.16;overflow:hidden;}
+  .row{gap:4px;min-width:0;}
+  .row b,.row span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .bar{height:5px;}
+  .topBtns{display:grid;grid-template-columns:var(--mini-size) calc(var(--menu-btn-w) * 2 + var(--menu-gap));gap:var(--hud-gap);align-items:stretch;height:var(--mini-size);pointer-events:auto;}
+  #mini{width:var(--mini-size);height:var(--mini-size);border-radius:11px;}
+  .menuBtns{display:grid;grid-template-columns:repeat(2,var(--menu-btn-w));gap:var(--menu-gap);height:var(--mini-size);align-self:stretch;}
+  .menuBtns button{height:calc((var(--mini-size) - var(--menu-gap)) / 2);min-height:0;padding:2px 1px;font-size:10.5px;border-radius:8px;line-height:1;}
+  #zoneTag{top:calc(var(--safe-top) + var(--mini-size) + 16px);font-size:10.5px;padding:4px 9px;max-width:calc(100vw - 24px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  #joy{left:calc(var(--control-side) + var(--safe-left));bottom:calc(var(--control-bottom) + var(--safe-bottom));width:var(--joy-size);height:var(--joy-size);}
+  #stick{width:var(--stick-size);height:var(--stick-size);left:calc((var(--joy-size) - var(--stick-size)) / 2);top:calc((var(--joy-size) - var(--stick-size)) / 2);}
+  #actions{right:calc(var(--control-side) + var(--safe-right));bottom:calc(var(--control-bottom) + var(--safe-bottom));grid-template-columns:repeat(2,var(--action-w));gap:var(--action-gap);}
+  #actions button{height:var(--action-h);font-size:11px;padding:3px;}
+  .cool{font-size:9px;margin-top:1px;}
+  .log{left:calc(9px + var(--safe-left));right:calc(9px + var(--safe-right));bottom:calc(var(--safe-bottom) + var(--action-group-h) + var(--control-bottom) + 14px);max-height:42px;font-size:10.5px;}
+  #toast{bottom:calc(var(--safe-bottom) + var(--action-group-h) + var(--control-bottom) + 12px);max-width:calc(100vw - 40px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  #popupLayer{padding:calc(12px + var(--safe-top)) calc(12px + var(--safe-right)) calc(12px + var(--safe-bottom)) calc(12px + var(--safe-left));}
+  #popup{width:min(var(--popup-w),calc(100vw - var(--safe-left) - var(--safe-right) - 24px));max-height:calc(100dvh - var(--safe-top) - var(--safe-bottom) - 24px);}
+
+  @media (max-width:374px) and (orientation:portrait){
+    :root{--mini-size:68px;--menu-btn-w:41px;--hud-gap:4px;--stat-w:clamp(124px,37vw,140px);--stat-font:9.2px;--stat-pad:5px;--joy-size:96px;--stick-size:32px;--action-w:52px;--action-h:46px;--action-gap:6px;--action-group-w:110px;--action-group-h:98px;--control-side:9px;--control-bottom:18px;}
+    .row:nth-child(5){font-size:8.8px;}
+    #zoneTag{top:calc(var(--safe-top) + var(--mini-size) + 12px);}
+  }
+  @media (min-width:420px) and (orientation:portrait){
+    :root{--mini-size:84px;--menu-btn-w:50px;--stat-w:clamp(185px,45vw,230px);--stat-font:10.8px;--stat-pad:7px;--joy-size:116px;--stick-size:40px;--action-w:62px;--action-h:54px;--action-group-w:132px;--action-group-h:115px;}
+  }
+  @media (orientation:landscape){
+    :root{--mini-size:78px;--menu-btn-w:52px;--hud-gap:7px;--stat-w:clamp(214px,30vw,300px);--stat-font:10px;--stat-pad:6px;--joy-size:94px;--stick-size:32px;--action-w:56px;--action-h:45px;--action-gap:6px;--action-group-w:118px;--action-group-h:96px;--control-side:14px;--control-bottom:14px;--popup-w:720px;}
+    .hud{left:calc(8px + var(--safe-left));right:calc(8px + var(--safe-right));top:calc(6px + var(--safe-top));}
+    #zoneTag{top:calc(var(--safe-top) + var(--mini-size) + 13px);}
+    .log{left:calc(var(--safe-left) + var(--joy-size) + 34px);right:calc(var(--safe-right) + var(--action-group-w) + 28px);bottom:calc(var(--safe-bottom) + 12px);max-height:38px;}
+    #toast{bottom:calc(var(--safe-bottom) + 68px);}
+    #popup{max-height:calc(100dvh - var(--safe-top) - var(--safe-bottom) - 20px);}
+    .grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .grid3{grid-template-columns:repeat(3,minmax(0,1fr));}
+  }
+  @media (orientation:landscape) and (max-height:430px){
+    :root{--mini-size:64px;--menu-btn-w:46px;--hud-gap:5px;--stat-w:clamp(194px,29vw,260px);--stat-font:9.2px;--stat-pad:5px;--joy-size:82px;--stick-size:28px;--action-w:50px;--action-h:39px;--action-gap:5px;--action-group-w:105px;--action-group-h:83px;--control-bottom:10px;}
+    .bar{height:4px;}
+    .menuBtns button{font-size:9.5px;border-radius:7px;}
+    #actions button{font-size:10px;}
+    .cool{font-size:8px;}
+    #zoneTag{top:calc(var(--safe-top) + var(--mini-size) + 9px);}
+  }
+  @media (max-height:620px) and (orientation:portrait){
+    :root{--joy-size:96px;--stick-size:32px;--action-w:54px;--action-h:46px;--action-gap:6px;--action-group-w:114px;--action-group-h:98px;--control-bottom:14px;}
+    .log{max-height:34px;}
+  }
+
+
+  /* 표시 복구 + 세로 HUD 정렬 패치 */
+  #wrap,#game{display:block!important;visibility:visible!important;opacity:1!important;}
+  .hud{width:auto;max-width:none;}
+  .stats{flex:1 1 auto;width:auto!important;max-width:none!important;min-width:0;}
+  .topBtns{flex:0 0 auto;}
+  .statHeader{display:flex;align-items:center;justify-content:space-between;gap:6px;white-space:nowrap;margin-bottom:2px;}
+  .meter{display:grid;gap:3px;margin-top:5px;}
+  .meter+.meter{margin-top:8px;}
+  .meterLabel{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:.95em;white-space:nowrap;opacity:.92;}
+  .meterLabel span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .statFooter{display:flex;justify-content:space-between;gap:6px;margin-top:7px;white-space:nowrap;opacity:.92;}
+  .statFooter span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  @media (orientation:portrait){
+    .hud{display:flex!important;left:calc(7px + var(--safe-left));right:calc(7px + var(--safe-right));gap:6px;align-items:flex-start;}
+    .stats{flex:1 1 auto;min-height:var(--mini-size);padding:7px;}
+    .topBtns{flex:0 0 auto;}
+  }
+  @media (max-width:374px) and (orientation:portrait){
+    .hud{gap:4px;}
+    .stats{padding:5px;}
+    .meter+.meter{margin-top:5px;}
+    .statFooter{margin-top:5px;font-size:8.7px;}
+  }
+  @media (min-width:420px) and (orientation:portrait){
+    .hud{gap:8px;}
+    .stats{padding:8px;}
+  }
+
+
+  /* 요청 반영: 장소 표시를 미니맵/기능버튼 바로 아래 빈칸에 고정 */
+  .topBtns{
+    display:grid!important;
+    grid-template-columns:var(--mini-size) calc(var(--menu-btn-w) * 2 + var(--menu-gap))!important;
+    grid-template-rows:var(--mini-size) 24px!important;
+    gap:var(--hud-gap)!important;
+    height:auto!important;
+    align-items:stretch!important;
+  }
+  .topBtns #zoneTag{
+    position:static!important;
+    left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;
+    transform:none!important;
+    grid-column:1 / -1;
+    width:100%;height:24px;max-width:none;
+    display:flex;align-items:center;justify-content:center;
+    padding:0 8px;margin:0;
+    border-radius:9px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:10.5px;line-height:1;
+    background:rgba(0,0,0,.72);
+    pointer-events:none;
+  }
+  @media (orientation:landscape){.topBtns{grid-template-rows:var(--mini-size) 23px!important}.topBtns #zoneTag{height:23px;font-size:10px}}
+  @media (max-width:374px) and (orientation:portrait){.topBtns{grid-template-rows:var(--mini-size) 21px!important}.topBtns #zoneTag{height:21px;font-size:9.5px}}
+
+
+  /* 확장 패치: 스킬 3슬롯 / 오토 / 상태 표시 */
+  #actions{grid-template-columns:repeat(2,var(--action-w))!important;grid-template-rows:repeat(4,var(--action-h))!important;gap:var(--action-gap)!important;}
+  .statusLine{display:flex;justify-content:space-between;gap:6px;margin-top:6px;font-size:.92em;white-space:nowrap;opacity:.95;}
+  .statusLine span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .autoOn{box-shadow:0 0 16px rgba(0,255,114,.32), inset 0 0 16px rgba(0,255,114,.16)!important;background:rgba(0,255,114,.12)!important;}
+  .rouletteOdds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 10px;}
+  .rouletteOdds .card{text-align:center;padding:8px 5px;}
+  .townNote{font-size:10px;opacity:.75;margin-top:5px;line-height:1.3;}
+  @media (orientation:portrait){:root{--action-group-h:230px;}}
+  @media (orientation:landscape){:root{--action-group-h:198px;}}
+  @media (orientation:landscape) and (max-height:430px){:root{--action-group-h:173px;}#actions button{font-size:9.5px;}}
+
+
+  /* 안정화 패치: 요청 버튼 배치 */
+  #leftQuick{
+    position:absolute;
+    left:calc(var(--control-side) + var(--safe-left));
+    bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--joy-size) + 8px);
+    width:var(--joy-size);
+    z-index:6;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:6px;
+    pointer-events:auto;
+  }
+  #leftQuick button{height:36px;font-size:11px;padding:3px;border-radius:10px;line-height:1.05;}
+  #actions{
+    grid-template-columns:repeat(2,var(--action-w))!important;
+    grid-template-rows:repeat(3,var(--action-h))!important;
+    grid-template-areas:
+      "skill4 skill3"
+      "skill1 skill2"
+      "attack dodge"!important;
+    gap:var(--action-gap)!important;
+  }
+  #skillBtn4{grid-area:skill4;}
+  #skillBtn3{grid-area:skill3;width:auto;justify-self:stretch;}
+  #skillBtn1{grid-area:skill1;}
+  #skillBtn2{grid-area:skill2;}
+  #attackBtn{grid-area:attack;}
+  #dodgeBtn{grid-area:dodge;}
+  #potionBtn,#autoBtn{width:100%;}
+  @media (orientation:portrait){:root{--action-group-h:calc(var(--action-h) * 3 + var(--action-gap) * 2);}}
+  @media (orientation:landscape){:root{--action-group-h:calc(var(--action-h) * 3 + var(--action-gap) * 2);}#leftQuick button{height:32px;font-size:10px;}}
+  @media (orientation:landscape) and (max-height:430px){#leftQuick{bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--joy-size) + 5px);gap:4px;}#leftQuick button{height:28px;font-size:9.5px;}}
+
+  /* 물약 설정 게이지: 바탕 제거, 얇은 선만 표시 */
+  .neonRange{
+    -webkit-appearance:none;
+    appearance:none;
+    width:100%;
+    height:30px;          /* 터치 영역은 넓게 */
+    padding:13px 0;
+    border:0;
+    background:transparent;
+    box-shadow:none;
+    outline:none;
+    touch-action:pan-x;
+  }
+  .neonRange::-webkit-slider-runnable-track{
+    height:2px;
+    border-radius:999px;
+    background:rgba(0,255,114,.9);
+    box-shadow:0 0 8px rgba(0,255,114,.45);
+  }
+  .neonRange::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:12px;
+    height:16px;
+    margin-top:-7px;
+    border-radius:3px;
+    border:1px solid rgba(0,255,114,.95);
+    background:#000;
+    box-shadow:0 0 8px rgba(0,255,114,.55);
+  }
+  .neonRange::-moz-range-track{
+    height:2px;
+    border:0;
+    border-radius:999px;
+    background:rgba(0,255,114,.9);
+    box-shadow:0 0 8px rgba(0,255,114,.45);
+  }
+  .neonRange::-moz-range-thumb{
+    width:12px;
+    height:16px;
+    border-radius:3px;
+    border:1px solid rgba(0,255,114,.95);
+    background:#000;
+    box-shadow:0 0 8px rgba(0,255,114,.55);
+  }
+  .neonRangeWrap{
+    position:relative;
+    padding:12px 6px 2px;
+  }
+  .neonRangeText{
+    display:flex;
+    justify-content:space-between;
+    font-size:10px;
+    opacity:.82;
+    margin-top:4px;
+  }
+  .rangeBubble{
+    position:absolute;
+    top:-10px;
+    left:50%;
+    transform:translateX(-50%);
+    min-width:34px;
+    height:18px;
+    padding:2px 6px;
+    border:1px solid rgba(0,255,114,.55);
+    border-radius:999px;
+    background:rgba(0,0,0,.9);
+    color:#00ff72;
+    font-size:10px;
+    line-height:12px;
+    text-align:center;
+    box-shadow:0 0 8px rgba(0,255,114,.25), inset 0 0 6px rgba(0,255,114,.08);
+    pointer-events:none;
+    white-space:nowrap;
+  }
+  .neonRange:active::-webkit-slider-thumb{
+    transform:scale(1.08);
+    box-shadow:0 0 12px rgba(0,255,114,.75);
+  }
+  .neonRange:active::-moz-range-thumb{
+    transform:scale(1.08);
+    box-shadow:0 0 12px rgba(0,255,114,.75);
+  }
+
+  /* 룰렛 원판: 원판 안에 확률 구간 표시 + 상단 고정 눈금 */
+  .rouletteCase{position:relative;width:230px;margin:4px auto 12px;}
+  .topTick{
+    position:absolute;
+    left:50%;
+    top:-3px;
+    transform:translateX(-50%);
+    z-index:3;
+    width:2px;
+    height:32px;
+    background:var(--g);
+    box-shadow:0 0 10px rgba(0,255,114,.8);
+    border-radius:999px;
+  }
+  .topTick:before{
+    content:"";
+    position:absolute;
+    left:50%;
+    top:-5px;
+    transform:translateX(-50%);
+    width:16px;
+    height:8px;
+    border:1px solid var(--g);
+    background:#000;
+    border-radius:2px;
+    box-shadow:0 0 10px rgba(0,255,114,.55);
+  }
+  .rouletteWheel{
+    position:relative;
+    margin:10px auto 12px;
+    width:220px;
+    height:220px;
+    border:2px solid var(--g);
+    border-radius:50%;
+    background:
+      conic-gradient(from -90deg,
+        rgba(0,255,114,.10) 0deg 216deg,
+        rgba(0,255,114,.24) 216deg 342deg,
+        rgba(0,255,114,.46) 342deg 360deg);
+    box-shadow:0 0 24px rgba(0,255,114,.25), inset 0 0 20px rgba(0,255,114,.06);
+    transition:transform 2.1s cubic-bezier(.16,.84,.19,1);
+    overflow:hidden;
+  }
+  .rouletteWheel:before,.rouletteWheel:after{
+    content:"";
+    position:absolute;
+    inset:18px;
+    border:1px dashed rgba(0,255,114,.45);
+    border-radius:50%;
+  }
+  .rouletteWheel:after{inset:62px;border-style:solid;}
+  .wheelLine{position:absolute;left:50%;top:50%;width:1px;height:110px;background:rgba(0,255,114,.55);transform-origin:bottom center;}
+  .wheelLine.l60{transform:translate(-50%,-100%) rotate(216deg);}
+  .wheelLine.l95{transform:translate(-50%,-100%) rotate(342deg);}
+  .wheelText{
+    position:absolute;
+    left:50%;
+    top:50%;
+    width:78px;
+    font-size:10px;
+    line-height:1.25;
+    text-align:center;
+    color:var(--g);
+    text-shadow:0 0 8px rgba(0,255,114,.7);
+    pointer-events:none;
+  }
+  .wheelText.fail{transform:translate(-50%,-50%) rotate(108deg) translateY(-70px) rotate(-108deg);}
+  .wheelText.two{transform:translate(-50%,-50%) rotate(279deg) translateY(-70px) rotate(-279deg);}
+  .wheelText.three{transform:translate(-50%,-50%) rotate(351deg) translateY(-70px) rotate(-351deg);font-weight:900;}
+
+  /* 스킬 버튼: 이름 표시, 긴 이름 이동, 쿨타임 음영 */
+  #actions button{
+    position:relative;
+    overflow:hidden;
+    --cdp:0%;
+  }
+  #actions button::before{
+    content:"";
+    position:absolute;
+    left:0;right:0;bottom:0;
+    height:var(--cdp,0%);
+    background:rgba(0,255,114,.20);
+    box-shadow:inset 0 0 12px rgba(0,255,114,.18);
+    pointer-events:none;
+    transition:height .12s linear;
+    z-index:0;
+  }
+  #actions button .skillName,#actions button .cool{
+    position:relative;
+    z-index:1;
+  }
+  .skillName{
+    display:block;
+    width:100%;
+    overflow:hidden;
+    white-space:nowrap;
+    line-height:1.08;
+  }
+  .skillName.marquee{
+    display:inline-block;
+    min-width:100%;
+    animation:skillNameSlide 3.4s linear infinite;
+  }
+  @keyframes skillNameSlide{
+    0%,18%{transform:translateX(0)}
+    76%{transform:translateX(-42%)}
+    100%{transform:translateX(0)}
+  }
+
+  /* 룰렛: 다수 구역 방식 */
+  .rouletteCase.multiCase{position:relative;width:246px;margin:4px auto 12px;}
+  .rouletteWheel.multi{
+    width:230px;height:230px;
+    background:repeating-conic-gradient(from -90deg,
+      rgba(0,255,114,.10) 0deg 30deg,
+      rgba(0,255,114,.18) 30deg 60deg);
+    overflow:hidden;
+  }
+  .rouletteWheel.multi:before{inset:20px;border:1px dashed rgba(0,255,114,.38);}
+  .rouletteWheel.multi:after{inset:68px;border:1px solid rgba(0,255,114,.52);}
+  .wheelCut{
+    position:absolute;
+    left:50%;top:50%;
+    width:1px;height:115px;
+    transform-origin:bottom center;
+    background:rgba(0,255,114,.42);
+    box-shadow:0 0 5px rgba(0,255,114,.45);
+  }
+  .wheelSeg{
+    position:absolute;
+    left:50%;top:50%;
+    width:58px;
+    font-size:10px;
+    line-height:1;
+    text-align:center;
+    color:var(--g);
+    text-shadow:0 0 7px rgba(0,255,114,.75);
+    pointer-events:none;
+  }
+  .wheelHub{
+    position:absolute;
+    left:50%;top:50%;
+    width:42px;height:42px;
+    transform:translate(-50%,-50%);
+    border:1px solid var(--g);
+    border-radius:50%;
+    background:#000;
+    box-shadow:0 0 12px rgba(0,255,114,.35), inset 0 0 10px rgba(0,255,114,.08);
+    z-index:2;
+  }
+
+  /* 스킬명 잘림 보정: 버튼 안에서 이름 영역 확보 + 긴 이름은 전체 글자 이동 */
+  #actions button{
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:1px!important;
+    padding:2px!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  #actions button .skillName{
+    display:block!important;
+    max-width:100%!important;
+    width:100%!important;
+    min-height:12px!important;
+    font-size:8px!important;
+    line-height:1.15!important;
+    letter-spacing:-.7px!important;
+    overflow:hidden!important;
+    white-space:nowrap!important;
+    text-overflow:clip!important;
+    box-sizing:border-box!important;
+  }
+  #actions button .skillName.marquee{
+    width:max-content!important;
+    min-width:100%!important;
+    max-width:none!important;
+    overflow:visible!important;
+    padding-left:2px!important;
+    padding-right:18px!important;
+    animation:skillNameSlideFull 4.2s linear infinite!important;
+  }
+  @keyframes skillNameSlideFull{
+    0%,16%{transform:translateX(0)}
+    76%{transform:translateX(calc(-100% + var(--action-w) - 8px))}
+    100%{transform:translateX(0)}
+  }
+  #actions button .cool{
+    font-size:7.5px!important;
+    line-height:1!important;
+    margin-top:0!important;
+  }
+
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div class="hud">
+    <div class="panel stats" id="statPanel"></div>
+    <div class="topBtns">
+      <canvas id="mini"></canvas>
+      <div class="menuBtns">
+        <button id="statBtn">스텟</button><button id="bagBtn">가방</button>
+        <button id="codexBtn">도감</button><button id="settingBtn">설정</button>
+      </div>
+      <div id="zoneTag">마을</div>
+    </div>
+  </div>
+  <div id="leftQuick">
+    <button id="autoBtn">오토<span class="cool" id="autoCool">OFF</span></button>
+    <button id="potionBtn">물약<span class="cool" id="potCount">0</span></button>
+  </div>
+  <div id="joy"><div id="stick"></div></div>
+  <div id="actions">
+    <button id="skillBtn4"><span class="skillName" id="skName4">스킬4</span><span class="cool" id="skCool4">-</span></button>
+    <button id="skillBtn3"><span class="skillName" id="skName3">스킬3</span><span class="cool" id="skCool3">-</span></button>
+    <button id="skillBtn1"><span class="skillName" id="skName1">스킬1</span><span class="cool" id="skCool1">-</span></button>
+    <button id="skillBtn2"><span class="skillName" id="skName2">스킬2</span><span class="cool" id="skCool2">-</span></button>
+    <button id="attackBtn">공격<span class="cool" id="atkCool">READY</span></button>
+    <button id="dodgeBtn">회피<span class="cool" id="dodgeCool">READY</span></button>
+  </div>
+  <button id="talkPrompt">말걸기</button>
+  <div class="log" id="log"></div>
+  <div id="toast"></div>
+  <div id="popupLayer"><div id="popup"></div></div>
+</div>
+<script>
+window.addEventListener('error', function(e){
+  try{
+    var box=document.createElement('div');
+    box.style.cssText='position:fixed;inset:12px;z-index:99999;border:1px solid #00ff72;background:#000;color:#00ff72;padding:14px;font:12px monospace;white-space:pre-wrap;overflow:auto;box-shadow:0 0 20px rgba(0,255,114,.35)';
+    box.textContent='게임 로딩 오류\n' + (e.message||'unknown') + '\n' + (e.filename||'') + ':' + (e.lineno||'');
+    document.body.appendChild(box);
+  }catch(_){}
+});
+window.addEventListener('unhandledrejection', function(e){
+  try{
+    var box=document.createElement('div');
+    box.style.cssText='position:fixed;inset:12px;z-index:99999;border:1px solid #00ff72;background:#000;color:#00ff72;padding:14px;font:12px monospace;white-space:pre-wrap;overflow:auto;box-shadow:0 0 20px rgba(0,255,114,.35)';
+    box.textContent='게임 로딩 오류\n' + ((e.reason&&e.reason.message)||e.reason||'unknown');
+    document.body.appendChild(box);
+  }catch(_){}
+});
+(() => {
+'use strict';
+
+const $ = id => document.getElementById(id);
+const canvas = $('game'), ctx = canvas.getContext('2d');
+const mini = $('mini'), mctx = mini.getContext('2d');
+const popupLayer = $('popupLayer'), popup = $('popup');
+const zoneTag = $('zoneTag');
+const logBox = $('log'), toastBox = $('toast');
+let W=0,H=0,DPR=1, last=0, gamePaused=false;
+
+const RARITIES = [
+  {name:'일반', mult:1, weight:48}, {name:'레어', mult:1.25, weight:25}, {name:'희귀', mult:1.55, weight:14},
+  {name:'에픽', mult:2.05, weight:8}, {name:'전설', mult:2.8, weight:4}, {name:'신화', mult:4.0, weight:1}
+];
+const ITEM_TYPES = [
+  {slot:'weapon', name:'검', stats:['atk','crit','aspd']}, {slot:'weapon', name:'활', stats:['atk','range','crit']},
+  {slot:'weapon', name:'지팡이', stats:['atk','skillPower','mpRegen']}, {slot:'weapon', name:'기어블레이드', stats:['atk','summonPower','reflect']},
+  {slot:'armor', name:'갑옷', stats:['hp','def','reflect']}, {slot:'helmet', name:'투구', stats:['hp','crit','expBonus']},
+  {slot:'boots', name:'장화', stats:['speed','dodge','aspd','magnet']}, {slot:'ring', name:'반지', stats:['lifesteal','critDmg','goldBonus','magnet']},
+  {slot:'amulet', name:'목걸이', stats:['skillPower','hpRegen','lifesteal','magnet']}, {slot:'relic', name:'유물', stats:['all','summonPower','cooldown','magnet']}
+];
+const STAT_LABEL = {atk:'공격력', aspd:'공속', speed:'이속', crit:'크리', critDmg:'치피', hp:'체력', def:'방어', lifesteal:'흡혈', hpRegen:'재생', skillPower:'스킬', range:'사거리', dodge:'회피', reflect:'반사', expBonus:'경험치', goldBonus:'골드', summonPower:'소환', cooldown:'쿨감', mpRegen:'마력재생', magnet:'흡입', all:'전체'};
+const SLOT_LABEL = {weapon:'무기', armor:'갑옷', helmet:'투구', boots:'신발', ring:'반지', amulet:'목걸이', relic:'유물'};
+const PERCENT_STATS=new Set(['aspd','crit','critDmg','lifesteal','dodge','reflect','expBonus','goldBonus','cooldown','skillPower','summonPower','mpRegen']);
+const CONSUMABLES={potion:{name:'소형 물약',cost:35,heal:.28,desc:'최대 체력 28% 회복'},potionL:{name:'대형 물약',cost:95,heal:.55,desc:'최대 체력 55% 회복'},elixir:{name:'재생 엘릭서',cost:160,heal:.25,buff:{name:'재생',duration:8,hpRegen:4},desc:'즉시 회복 + 8초 재생'},shield:{name:'보호막 물약',cost:180,heal:.12,buff:{name:'보호막',duration:5,shield:1},desc:'회복 + 보호막'},haste:{name:'가속 시약',cost:140,heal:0,buff:{name:'가속',duration:7,speed:.22,aspd:.16},desc:'7초 이속/공속 증가'},bomb:{name:'휴대 폭탄',cost:130,heal:0,active:'bomb',desc:'전방 폭발'}};
+
+const JOBS = [
+  {id:'blade', name:'검투사', type:'근접전투형', desc:'검으로 빠르게 붙어 싸우며 흡혈 성장 효율이 높다.', base:{atk:8,hp:120,def:4,speed:132,aspd:1.05,crit:.05,lifesteal:.02}, skill:'돌진참', effect:'전방 짧은 돌진 + 근접 폭딜'},
+  {id:'ranger', name:'레인저', type:'원거리형', desc:'먼 거리에서 네온 화살을 쏘며 안전하게 사냥한다.', base:{atk:7,hp:95,def:2,speed:142,aspd:1.18,crit:.09,range:150}, skill:'삼연사', effect:'가장 가까운 적에게 3발 투사체'},
+  {id:'summoner', name:'소환사', type:'소환형', desc:'소환체가 함께 공격한다. 장기전이 강하다.', base:{atk:5,hp:105,def:2,speed:124,aspd:.95,crit:.04,summonPower:1.25}, skill:'네온 분신', effect:'일정 시간 소환체 추가'},
+  {id:'mage', name:'마도사', type:'마법형', desc:'광역 파동과 스킬 피해가 강하다.', base:{atk:9,hp:88,def:1,speed:118,aspd:.85,crit:.06,skillPower:1.35}, skill:'마력폭발', effect:'원형 광역 피해'},
+  {id:'hexer', name:'저주술사', type:'디버프형', desc:'감속, 약화, 지속 피해로 적을 깎는다.', base:{atk:6,hp:100,def:2,speed:120,aspd:1,crit:.05,skillPower:1.15}, skill:'부식저주', effect:'주변 적 중독/둔화/방어 약화'},
+  {id:'mechanic', name:'기계공', type:'메카닉형', desc:'터렛과 기계 드론을 설치한다.', base:{atk:6,hp:110,def:3,speed:116,aspd:.95,crit:.04,summonPower:1.15}, skill:'터렛설치', effect:'고정 터렛 소환'},
+  {id:'mirror', name:'반사기사', type:'데미지반사형', desc:'맞을수록 반사 피해를 돌려준다.', base:{atk:6,hp:145,def:6,speed:108,aspd:.9,crit:.03,reflect:.16}, skill:'거울장막', effect:'반사율 상승 + 보호막'},
+  {id:'assassin', name:'암살자', type:'치명타형', desc:'빠른 이동, 높은 크리티컬, 순간 폭딜.', base:{atk:9,hp:92,def:1,speed:158,aspd:1.26,crit:.16,critDmg:.75}, skill:'그림자베기', effect:'순간이동 + 확정 치명타'},
+  {id:'paladin', name:'성기사', type:'회복방어형', desc:'회복 오라와 높은 생존력으로 안정적이다.', base:{atk:6,hp:135,def:5,speed:114,aspd:.95,crit:.04,hpRegen:1.2}, skill:'성역', effect:'회복 + 주변 적 밀쳐내기'},
+  {id:'alchemist', name:'연금술사', type:'폭탄지원형', desc:'폭발 플라스크와 회복 보너스가 강하다.', base:{atk:7,hp:108,def:2,speed:122,aspd:1,crit:.07,goldBonus:.08}, skill:'연금폭탄', effect:'지연 폭발 장판'}
+];
+
+
+// 추가 직업 10종 및 직업별 성장 테이블
+JOBS.push(
+  {id:'monk',name:'권투가',type:'격투형',weaponName:'초록 권갑',skillBase:'assassin',weaponBase:'assassin',attackBase:'blade',desc:'빠른 공속과 회피로 붙어서 싸운다.',base:{atk:8,hp:116,def:3,speed:150,aspd:1.38,crit:.08,dodge:.08},growthStats:['atk','aspd','speed','dodge','crit','hp','lifesteal']},
+  {id:'gunner',name:'거너',type:'원거리형',weaponName:'초록 권총',skillBase:'ranger',weaponBase:'mechanic',attackBase:'mechanic',desc:'탄환과 미사일을 쓰는 원거리 화력형.',base:{atk:8,hp:98,def:2,speed:136,aspd:1.2,crit:.09,range:185},growthStats:['atk','aspd','range','crit','critDmg','speed','goldBonus']},
+  {id:'druid',name:'정령술사',type:'소환/회복형',weaponName:'초록 정령봉',skillBase:'summoner',weaponBase:'summoner',attackBase:'summoner',desc:'정령 소환과 재생에 특화됐다.',base:{atk:5,hp:118,def:3,speed:126,aspd:.95,crit:.04,summonPower:1.22,hpRegen:1.1},growthStats:['summonPower','hpRegen','hp','def','skillPower','cooldown','expBonus']},
+  {id:'chronomancer',name:'시간술사',type:'쿨타임형',weaponName:'초록 시계지팡이',skillBase:'mage',weaponBase:'mage',attackBase:'mage',desc:'쿨타임 감소와 빠른 스킬 순환에 강하다.',base:{atk:7,hp:90,def:1,speed:130,aspd:1.02,crit:.06,skillPower:1.18,cooldown:.08,range:150},growthStats:['cooldown','skillPower','speed','aspd','range','dodge','mpRegen']},
+  {id:'berserker',name:'광전사',type:'고위험근접형',weaponName:'초록 대검',skillBase:'blade',weaponBase:'blade',attackBase:'blade',desc:'높은 체력과 공격력, 낮은 속도. 흡혈로 버틴다.',base:{atk:12,hp:150,def:3,speed:108,aspd:.82,crit:.08,critDmg:.65,lifesteal:.035},growthStats:['atk','hp','lifesteal','critDmg','def','crit','speed']},
+  {id:'sniper',name:'저격수',type:'장거리형',weaponName:'초록 장궁',skillBase:'ranger',weaponBase:'ranger',attackBase:'ranger',desc:'긴 사거리와 높은 한 방 피해.',base:{atk:10,hp:84,def:1,speed:118,aspd:.72,crit:.18,critDmg:.95,range:250},growthStats:['atk','range','crit','critDmg','cooldown','dodge','expBonus']},
+  {id:'necromancer',name:'사령술사',type:'소환/디버프형',weaponName:'초록 사령낫',skillBase:'hexer',weaponBase:'hexer',attackBase:'hexer',desc:'저주와 소환 보조를 함께 사용한다.',base:{atk:6,hp:102,def:2,speed:116,aspd:.95,crit:.04,skillPower:1.18,summonPower:1.15},growthStats:['skillPower','summonPower','cooldown','hp','hpRegen','range','goldBonus']},
+  {id:'engineer',name:'공병',type:'설치/폭발형',weaponName:'초록 공구총',skillBase:'mechanic',weaponBase:'mechanic',attackBase:'mechanic',desc:'설치물과 폭발 범위가 강하다.',base:{atk:8,hp:118,def:4,speed:112,aspd:.9,crit:.05,summonPower:1.12,skillPower:1.08},growthStats:['atk','skillPower','summonPower','def','hp','cooldown','goldBonus']},
+  {id:'warden',name:'수호자',type:'방어제어형',weaponName:'초록 방패봉',skillBase:'paladin',weaponBase:'mirror',attackBase:'blade',desc:'반사 없이 보호막과 방어로 버티는 탱커.',base:{atk:6,hp:158,def:8,speed:106,aspd:.85,crit:.03,hpRegen:.8},growthStats:['hp','def','hpRegen','skillPower','cooldown','atk']},
+  {id:'psion',name:'염동술사',type:'마법원거리형',weaponName:'초록 염동구',skillBase:'mage',weaponBase:'mage',attackBase:'mage',desc:'마법 투사체와 범위 폭발을 강화한다.',base:{atk:8,hp:94,def:1,speed:128,aspd:1.05,crit:.07,skillPower:1.24,range:175},growthStats:['skillPower','range','crit','cooldown','speed','mpRegen','dodge']}
+);
+const BASE_GROWTH={blade:['atk','aspd','speed','crit','critDmg','hp','def','lifesteal','dodge'],ranger:['atk','aspd','speed','crit','critDmg','range','dodge','expBonus'],summoner:['summonPower','skillPower','hp','def','hpRegen','cooldown','expBonus'],mage:['atk','skillPower','cooldown','range','crit','critDmg','mpRegen'],hexer:['skillPower','cooldown','range','hp','def','hpRegen','goldBonus'],mechanic:['atk','summonPower','cooldown','range','def','hp','goldBonus'],mirror:['hp','def','reflect','hpRegen','atk','cooldown'],assassin:['atk','aspd','speed','crit','critDmg','dodge','cooldown'],paladin:['hp','def','hpRegen','skillPower','atk','lifesteal','cooldown'],alchemist:['atk','skillPower','cooldown','goldBonus','hpRegen','range','speed']};
+for(const j of JOBS){if(!j.growthStats)j.growthStats=BASE_GROWTH[j.id]||BASE_GROWTH[j.skillBase]||['atk','hp','def','speed','aspd','crit'];if(j.id!=='mirror')j.growthStats=j.growthStats.filter(s=>s!=='reflect');}
+
+const SKILL_COSTS = [120,240,450,800,1300,2100,3300,5100,7600,11000];
+const SKILL_BOOK = {
+  blade:[
+    {name:'선검 찌르기', desc:'가까운 적을 빠르게 찌르는 1성 기본 검술'},
+    {name:'전진 베기', desc:'짧게 돌진하며 전방 적을 베는 2성 검술'},
+    {name:'십자참', desc:'주변 적을 십자 방향으로 베는 3성 검술'},
+    {name:'회전검', desc:'몸 주변을 넓게 베는 4성 범위 검술'},
+    {name:'연속참', desc:'가까운 적 여러 마리를 연속 타격하는 5성 검술'},
+    {name:'파쇄검', desc:'강한 단일 피해와 주변 충격파를 주는 6성 검술'},
+    {name:'검기폭발', desc:'검기를 폭발시켜 넓은 적을 베는 7성 검술'},
+    {name:'폭풍검무', desc:'여러 적에게 연속 베기 피해를 주는 8성 검술'},
+    {name:'공허참', desc:'먼 거리 적까지 베는 9성 고위 검술'},
+    {name:'네온 천검', desc:'전장에 거대한 검격을 터뜨리는 10성 궁극 검술'}
+  ],
+  ranger:[
+    {name:'정조준', desc:'가장 가까운 적에게 강한 화살 1발'},
+    {name:'쌍화살', desc:'화살 2발을 빠르게 발사'},
+    {name:'관통화살', desc:'강한 화살과 작은 관통 충격'},
+    {name:'폭발화살', desc:'명중 지점 주변 폭발 피해'},
+    {name:'화살비', desc:'목표 주변에 다수 화살 피해'},
+    {name:'추적화살', desc:'여러 적을 추적하는 화살'},
+    {name:'네온 덫화살', desc:'피해와 둔화를 주는 덫 화살'},
+    {name:'폭풍연사', desc:'많은 화살을 빠르게 난사'},
+    {name:'별빛사격', desc:'강한 광역 화살 폭발'},
+    {name:'천공화살비', desc:'넓은 범위에 궁극 화살비'}
+  ],
+  summoner:[
+    {name:'작은 분신', desc:'짧은 시간 작은 소환체 1기'},
+    {name:'쌍분신', desc:'소환체 2기 호출'},
+    {name:'수호령', desc:'더 오래 유지되는 수호 소환체'},
+    {name:'사역탄', desc:'소환탄을 함께 발사'},
+    {name:'네온 무리', desc:'다수 소환체 호출'},
+    {name:'강화 사역마', desc:'높은 공격력의 소환체'},
+    {name:'영혼 원진', desc:'주변 적을 동시에 타격'},
+    {name:'분신 군단', desc:'여러 분신이 장시간 공격'},
+    {name:'계약 파동', desc:'소환체와 함께 광역 파동'},
+    {name:'초월 소환진', desc:'강력한 소환 군단과 폭발'}
+  ],
+  mage:[
+    {name:'마력탄', desc:'강한 마법탄 1발'},
+    {name:'쌍마력탄', desc:'마법탄 2발 발사'},
+    {name:'화염고리', desc:'주변에 원형 마법 피해'},
+    {name:'빙결파동', desc:'범위 피해와 감속'},
+    {name:'낙뢰', desc:'가까운 적 다수에게 번개 피해'},
+    {name:'마력폭발', desc:'넓은 원형 폭발'},
+    {name:'유성탄', desc:'목표 지점에 강한 폭발'},
+    {name:'연쇄번개', desc:'여러 적에게 연쇄 피해'},
+    {name:'공허구체', desc:'큰 마법 구체 폭발'},
+    {name:'네온 대마법진', desc:'전방위 궁극 마법 폭발'}
+  ],
+  hexer:[
+    {name:'약화저주', desc:'적을 약화시키는 기본 저주'},
+    {name:'둔화낙인', desc:'피해와 감속 부여'},
+    {name:'독안개', desc:'주변 적에게 독 피해'},
+    {name:'부식저주', desc:'방어 약화와 지속 피해'},
+    {name:'공포선', desc:'넓은 범위 둔화/약화'},
+    {name:'저주사슬', desc:'여러 적에게 저주 전염'},
+    {name:'영혼흡수', desc:'피해와 회복 동시 발생'},
+    {name:'파멸낙인', desc:'강한 지속 피해와 약화'},
+    {name:'심연저주', desc:'큰 범위의 독/둔화/약화'},
+    {name:'종말의 낙인', desc:'전장급 궁극 저주'}
+  ],
+  mechanic:[
+    {name:'소형 터렛', desc:'짧은 시간 터렛 1개 설치'},
+    {name:'기어탄', desc:'기계 탄환 발사'},
+    {name:'쌍터렛', desc:'터렛 2개 설치'},
+    {name:'미사일 포드', desc:'미사일 폭발 공격'},
+    {name:'전기장판', desc:'주변 적에게 전기 피해'},
+    {name:'드론 호출', desc:'이동형 공격 드론 호출'},
+    {name:'폭격 터렛', desc:'강한 폭발 터렛 설치'},
+    {name:'기계 요새', desc:'다수 터렛과 보호막'},
+    {name:'위성 조준', desc:'목표 주변 대형 폭발'},
+    {name:'오버로드 코어', desc:'기계 병기 전체 폭발 공격'}
+  ],
+  mirror:[
+    {name:'반사막', desc:'짧은 보호막과 반사 피해'},
+    {name:'가시방패', desc:'주변 적에게 반사 충격'},
+    {name:'거울장막', desc:'피해 감소와 광역 충격'},
+    {name:'되받아치기', desc:'근처 적에게 반격 피해'},
+    {name:'반사파동', desc:'넓은 반사 파동'},
+    {name:'강철거울', desc:'긴 보호막과 높은 반사'},
+    {name:'파열방패', desc:'보호막과 폭발 피해'},
+    {name:'역류장', desc:'근접 적 다수에게 역류 피해'},
+    {name:'심판거울', desc:'큰 반사 폭발'},
+    {name:'무한반사벽', desc:'궁극 보호막과 전장 반사'}
+  ],
+  assassin:[
+    {name:'급습', desc:'가까운 적에게 순간 접근'},
+    {name:'암습', desc:'강한 단일 치명 피해'},
+    {name:'이중단검', desc:'두 번 연속 베기'},
+    {name:'그림자베기', desc:'순간이동 후 광역 베기'},
+    {name:'혈흔추적', desc:'가까운 적 여러 마리 타격'},
+    {name:'사각절단', desc:'높은 치명 피해'},
+    {name:'연막참', desc:'타격 후 회피 증가'},
+    {name:'그림자난무', desc:'다수 적 연속 암살'},
+    {name:'절명선', desc:'강력한 마무리 피해'},
+    {name:'무영살', desc:'전장급 궁극 암살'}
+  ],
+  paladin:[
+    {name:'신성타', desc:'가까운 적 피해와 소량 회복'},
+    {name:'작은 성역', desc:'체력 회복과 밀쳐내기'},
+    {name:'방패축복', desc:'보호막 부여'},
+    {name:'심판망치', desc:'주변 적 피해'},
+    {name:'치유의 빛', desc:'큰 회복과 광역 피해'},
+    {name:'신성파동', desc:'넓은 신성 피해'},
+    {name:'수호성역', desc:'보호막과 회복 강화'},
+    {name:'천벌의 빛', desc:'적 다수에게 강한 피해'},
+    {name:'불멸기도', desc:'큰 회복과 긴 보호막'},
+    {name:'대성역', desc:'궁극 회복과 전장 신성 피해'}
+  ],
+  alchemist:[
+    {name:'작은 플라스크', desc:'작은 폭발 병 투척'},
+    {name:'독성 플라스크', desc:'독 피해를 주는 투척'},
+    {name:'쌍폭탄', desc:'폭탄 2개 투척'},
+    {name:'점착폭탄', desc:'느린 적에게 큰 피해'},
+    {name:'산성지대', desc:'범위 지속 피해'},
+    {name:'연쇄폭약', desc:'여러 폭발 연쇄'},
+    {name:'회복시약', desc:'회복과 폭발을 동시에 발생'},
+    {name:'대형폭탄', desc:'큰 범위 폭발'},
+    {name:'금단의 혼합물', desc:'강한 폭발과 독'},
+    {name:'현자의 폭발식', desc:'궁극 연금 폭발'}
+  ]
+};
+
+Object.assign(SKILL_BOOK,{monk:['원투 펀치','파쇄권','돌진권','연환격','기공탄','철산고','분신타','폭렬난무','진각파','무극권'].map((name,i)=>({name,desc:`권투가 ${i+1}성 기술`})),gunner:['속사','철갑탄','산탄','유탄','집중사격','관통탄','로켓연사','탄막전개','위성탄','네온 포격'].map((name,i)=>({name,desc:`거너 ${i+1}성 기술`})),druid:['새싹정령','쌍정령','수호나무','정령탄','치유숲','정령무리','생명의 고리','대지수호','숲의 군단','세계수 소환'].map((name,i)=>({name,desc:`정령술사 ${i+1}성 기술`})),chronomancer:['시간침','가속장','느림고리','시간탄','초침폭발','쿨타임 왜곡','시간균열','역행파동','정지장','시공붕괴'].map((name,i)=>({name,desc:`시간술사 ${i+1}성 기술`})),berserker:['분노참','피의 돌진','대검압','광폭회전','피흡검','파괴검','붉은폭풍','광란난무','혈검파','광전신 강림'].map((name,i)=>({name,desc:`광전사 ${i+1}성 기술`})),sniper:['정밀사격','관통저격','속박화살','폭발저격','연속조준','거리보정','저격비','별빛관통','사신탄','절대조준'].map((name,i)=>({name,desc:`저격수 ${i+1}성 기술`})),necromancer:['망령탄','약화혼','독혼무리','사령사슬','망자의 손','영혼흡수','부패장','사령군단','죽음낙인','망자의 왕'].map((name,i)=>({name,desc:`사령술사 ${i+1}성 기술`})),engineer:['기뢰','점착폭탄','소형드론','지뢰밭','화염포탑','전기장','중장터렛','폭격신호','기계요새','종말병기'].map((name,i)=>({name,desc:`공병 ${i+1}성 기술`})),warden:['수호타','방벽','도발파동','철벽장','수호성역','대지방패','응징벽','불굴의 맹세','성채소환','절대수호'].map((name,i)=>({name,desc:`수호자 ${i+1}성 기술`})),psion:['염동탄','쌍구체','중력장','정신파','염동폭발','구체난사','정신절단','중력붕괴','초능력장','네온 염동폭풍'].map((name,i)=>({name,desc:`염동술사 ${i+1}성 기술`}))});
+function skillList(jobId=player.job){return SKILL_BOOK[jobId] || SKILL_BOOK.blade;}
+function skillStar(jobId=player.job){
+  player.skillStars = player.skillStars || {};
+  return clamp(Number(player.skillStars[jobId]||0),0,10);
+}
+function skillByRank(jobId=player.job, rank=skillStar(jobId)){
+  const list=skillList(jobId); const r=clamp(Number(rank)||1,1,10);
+  return list[r-1] || list[0];
+}
+function skillInfo(jobId=player.job){
+  const s=skillStar(jobId);
+  return s>0?skillByRank(jobId,s):{name:'미습득', desc:`다음 스킬: ${skillByRank(jobId,1).name} · ${skillByRank(jobId,1).desc}`};
+}
+function skillCost(jobId=player.job){const s=skillStar(jobId); return s>=10?0:(skillByRank(jobId,s+1).cost||SKILL_COSTS[s]);}
+function skillScale(rank=skillStar()){
+  rank=clamp(rank,0,10);
+  return {
+    power:1+rank*.24,
+    radius:1+rank*.075,
+    duration:1+rank*.10,
+    countBonus:Math.floor((rank+1)/2),
+    cooldown:Math.max(.54,1-rank*.035)
+  };
+}
+function skillStageText(jobId=player.job){const s=skillStar(jobId); return s>=10?'10성 스킬 보유':s>0?`${s}성 ${skillByRank(jobId,s).name}`:'미습득';}
+
+const FIELDS = [
+  {id:'town', name:'네온 마을', bg:0, level:0, size:1800},
+  {id:'plain', name:'선형 폐허', bg:1, level:1, size:2200, theme:'폐허', boss:'폐허 감시자'},
+  {id:'maze', name:'격자 미궁', bg:2, level:5, size:2400, theme:'미궁', boss:'격자 왕'},
+  {id:'cavern', name:'공명 동굴', bg:3, level:10, size:2500, theme:'동굴', boss:'공명 핵'},
+  {id:'factory', name:'기계 회랑', bg:4, level:16, size:2600, theme:'기계', boss:'중앙 기어'},
+  {id:'abyss', name:'심연 관문', bg:5, level:24, size:2800, theme:'심연', boss:'무한선 군주'}
+];
+
+FIELDS.push(
+  {id:'forest',name:'광섬유 숲',bg:6,level:32,size:2850,theme:'숲',boss:'광섬유 장로'},
+  {id:'rail',name:'네온 철로',bg:7,level:42,size:3000,theme:'철로',boss:'궤도 파괴자'},
+  {id:'tower',name:'수직 탑',bg:8,level:55,size:3150,theme:'탑',boss:'탑의 감시눈'},
+  {id:'harbor',name:'암흑 항구',bg:9,level:70,size:3300,theme:'항구',boss:'검은 등대'},
+  {id:'lab',name:'실험 구역',bg:10,level:88,size:3450,theme:'실험',boss:'녹색 실험체'},
+  {id:'citadel',name:'최종 성채',bg:11,level:110,size:3600,theme:'성채',boss:'네온 성주'}
+);
+const SHAPES = ['삼각괴','사각병','날개충','가시뱀','쌍도끼','중심핵','십자귀','거미선','방패령','나선체'];
+
+function makeMonsterBook(){
+  const book={};
+  for(const f of FIELDS.filter(x=>x.id!=='town')){
+    book[f.id]=[];
+    for(let i=0;i<10;i++) book[f.id].push({name:`${f.theme} ${SHAPES[i]}`, shape:i, boss:false, seen:0,kills:0});
+    book[f.id].push({name:f.boss, shape:10, boss:true, seen:0,kills:0});
+  }
+  return book;
+}
+
+const basePlayer = () => ({
+  x:900,y:900,vx:0,vy:0,dir:-Math.PI/2,hp:100,maxHp:100,level:1,exp:0,nextExp:32,gold:160,potions:5,nickname:'플레이어',
+  job:null, classChosen:false, atkTimer:0, skillTimer:0, skillTimers:[0,0,0,0], skillTimerMax:[0,0,0,0], potionTimer:0, dodgeTimer:0, dashTime:0, attackAnim:0, hurt:0, shield:0, autoMode:false, activeBuffs:[], activeDebuffs:[], consumables:{potion:5,potionL:0,elixir:0,shield:0,haste:0,bomb:0}, potionSlot:'potion', autoPotionPct:.42, skillSlots:[1,2,3,4],
+  growths:[], inventory:[], equip:{weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},
+  quest:0, questKills:0, guildRank:'신입', guildTokens:0, skillStars:{}, codex:makeMonsterBook(), discoveredItems:{}, totalKills:0
+});
+let player = basePlayer();
+let mode='class', currentField='town', fieldSize=1800, camera={x:0,y:0}, monsters=[], drops=[], projectiles=[], effects=[], summons=[], npcs=[];
+let talkTarget=null, portalArmed=true;
+let joystick={active:false,id:null,cx:0,cy:0,dx:0,dy:0};
+let attackHeld=false, skillHeld=[false,false,false,false];
+let pendingLevelUps=0, growthOptions=[], growthSelectNeed=1, growthSelected=[], rouletteUsed=false, rouletteSpinning=false, popupMode='';
+const saveKey='green_line_full_world_v1';
+let memorySave='';
+function storageGet(k){try{return window.localStorage?localStorage.getItem(k):memorySave;}catch(e){return memorySave||null;}}
+function storageSet(k,v){memorySave=String(v);try{if(window.localStorage)localStorage.setItem(k,v);return true;}catch(e){return false;}}
+function storageRemove(k){memorySave='';try{if(window.localStorage)localStorage.removeItem(k);}catch(e){}}
+function normalizePlayer(){const b=basePlayer();player=Object.assign(b,player||{});player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,10));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign(fresh[fid][i],player.codex[fid][i]||{});}player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
+function addBuff(name,duration=2,mods={}){const old=player.activeBuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);Object.assign(old,mods);return;}player.activeBuffs.push(Object.assign({name,time:duration},mods));}
+function addDebuff(name,duration=2){const old=player.activeDebuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);return;}player.activeDebuffs.push({name,time:duration});}
+function updateStatusTimers(dt){for(const b of player.activeBuffs||[]){b.time-=dt;if(b.hpRegen)player.hp=clamp(player.hp+b.hpRegen*dt,0,player.maxHp);}for(const d of player.activeDebuffs||[])d.time-=dt;player.activeBuffs=(player.activeBuffs||[]).filter(b=>b.time>0);player.activeDebuffs=(player.activeDebuffs||[]).filter(d=>d.time>0);}
+function statusSummary(){const parts=[];for(const b of (player.activeBuffs||[]).slice(0,2))parts.push(`버프:${b.name}`);for(const d of (player.activeDebuffs||[]).slice(0,2))parts.push(`상태:${d.name}`);if(player.autoMode)parts.unshift('AUTO');return parts.length?parts.join(' · '):'상태 이상 없음';}
+function buffMod(stat){let v=0;for(const b of player.activeBuffs||[])if(typeof b[stat]==='number')v+=b[stat];return v;}
+
+
+function syncMiniCanvas(){
+  const r=mini.getBoundingClientRect();
+  const size=Math.max(56,Math.round(Math.min(r.width||80,r.height||80)));
+  mini.width=Math.floor(size*DPR); mini.height=Math.floor(size*DPR);
+  mctx.setTransform(DPR,0,0,DPR,0,0);
+}
+function resize(){
+  DPR=Math.min(2,window.devicePixelRatio||1);
+  W=Math.max(1,Math.floor(window.visualViewport?.width||innerWidth||document.documentElement.clientWidth||360));
+  H=Math.max(1,Math.floor(window.visualViewport?.height||innerHeight||document.documentElement.clientHeight||640));
+  canvas.width=Math.floor(W*DPR);canvas.height=Math.floor(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);
+  syncMiniCanvas(); updateCamera();
+}
+window.addEventListener('resize',resize,{passive:true});
+window.addEventListener('orientationchange',()=>setTimeout(resize,90),{passive:true});
+if(window.visualViewport)window.visualViewport.addEventListener('resize',resize,{passive:true});
+resize();
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function dist(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}
+function rnd(a,b){return a+Math.random()*(b-a);}function irnd(a,b){return Math.floor(rnd(a,b+1));}
+function chooseWeighted(list){const sum=list.reduce((s,x)=>s+x.weight,0);let r=Math.random()*sum;for(const x of list){r-=x.weight;if(r<=0)return x;}return list[0];}
+function fmt(v){return Math.round(v*10)/10;}
+function fmtSmall(v){return Math.round(v*1000)/1000;}
+function sanitizeNickname(v){return String(v||'').replace(/[<>\"'`]/g,'').trim().slice(0,12)||'플레이어';}
+function escapeHtml(v){return String(v||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function pctText(v){
+  const pct=Math.round(v*1000)/10;
+  return (pct%1===0?String(Math.round(pct)):pct.toFixed(1))+'%';
+}
+function growthValueText(stat,value){
+  if(['aspd','crit','critDmg','lifesteal','skillPower','summonPower','dodge','reflect','expBonus','goldBonus','cooldown'].includes(stat)) return pctText(value);
+  if(stat==='hp'||stat==='range'||stat==='speed') return String(Math.round(value));
+  return String(Math.round(value*10)/10);
+}
+function msg(t){logBox.innerHTML=`&gt; ${t}<br>`+logBox.innerHTML;}
+function toast(t){toastBox.textContent=t;toastBox.style.display='block';clearTimeout(toastBox._t);toastBox._t=setTimeout(()=>toastBox.style.display='none',1400);}
+function openPopup(html){popup.innerHTML=html;popupLayer.style.display='flex';gamePaused=true;}
+function closePopup(){popupLayer.style.display='none';popup.innerHTML='';gamePaused=false;popupMode='';}
+function lineStyle(alpha=1,width=2){ctx.strokeStyle=`rgba(0,255,114,${alpha})`;ctx.lineWidth=width;ctx.shadowColor='rgba(0,255,114,.72)';ctx.shadowBlur=8;ctx.lineCap='round';ctx.lineJoin='round';}
+function fillStyle(alpha=.12){ctx.fillStyle=`rgba(0,255,114,${alpha})`;ctx.shadowColor='rgba(0,255,114,.5)';ctx.shadowBlur=8;}
+
+function jobById(id){return JOBS.find(j=>j.id===id)||JOBS[0];}
+function computeStats(){
+  const job=player.job?jobById(player.job):JOBS[0];
+  const s=Object.assign({atk:5,hp:100,def:0,speed:120,aspd:1,crit:0,critDmg:.5,lifesteal:0,hpRegen:0,skillPower:1,range:80,dodge:0,reflect:0,expBonus:0,goldBonus:0,summonPower:1,cooldown:0,mpRegen:0,magnet:80},job.base||{});
+  s.atk += (player.level-1)*1.6; s.hp += (player.level-1)*9; s.def += Math.floor((player.level-1)/3);
+  for(const g of player.growths) applyStat(s,g.stat,g.value);
+  for(const slot in player.equip){const item=player.equip[slot]; if(item) for(const k in item.stats) applyStat(s,k,item.stats[k]);}
+  s.speed*=1+buffMod('speed'); s.aspd+=buffMod('aspd'); s.skillPower+=buffMod('skillPower'); s.def+=buffMod('def');
+  s.maxHp=Math.max(1,Math.round(s.hp)); s.speed=clamp(s.speed,80,260); s.aspd=clamp(s.aspd,.45,3.8); s.crit=clamp(s.crit,0,.85); s.lifesteal=clamp(s.lifesteal,0,.65); s.dodge=clamp(s.dodge,0,.55); s.reflect=clamp(s.reflect,0,1.2); s.cooldown=clamp(s.cooldown,0,.55); s.magnet=clamp(s.magnet||80,40,520);
+  return s;
+}
+function applyStat(s,k,v){
+  if(k==='all'){s.atk+=v;s.hp+=v*6;s.def+=v*.5;s.speed+=v*.6;return;}
+  if(k in s) s[k]+=v;
+}
+function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(player.hp,0,player.maxHp);return st;}
+
+function startClassSelect(){
+  mode='class';
+  zoneTag.textContent='직업 선택';
+  const current=player.job||'blade';
+  const nick=sanitizeNickname(player.nickname||'플레이어');
+  const cards=JOBS.map(j=>{
+    const b=j.base||{};
+    const skillName=(skillByRank(j.id,1)||{}).name || j.skill || '기본 스킬';
+    return `<button class="card ${current===j.id?'selected':''}" onclick="Game.pickJob('${j.id}')"><h3>${current===j.id?'[현재] ':''}${j.name}</h3><b>${j.type}</b><br>${j.desc}<br><span class="small">공격 ${b.atk||0} · HP ${b.hp||0} · 이속 ${b.speed||0} · 공속 ${(b.aspd||1).toFixed(2)}<br>1성 스킬: ${skillName}</span></button>`;
+  }).join('');
+  const canClose=player.classChosen?`<button onclick="Game.closePopup()">닫기</button>`:'';
+  openPopup(`<div class="title">직업 선택 (20종)</div><div class="sub">시작 직업과 닉네임을 선택하세요. 직업에 따라 무기, 일반공격, 이동속도, 공격속도, 오토 전투 방식이 달라집니다.</div><div class="card"><h3>닉네임</h3><input id="nickInput" maxlength="12" value="${escapeHtml(nick)}" style="width:100%;height:40px;border:1px solid rgba(0,255,114,.55);background:#000;color:#00ff72;border-radius:10px;padding:0 10px;font:14px monospace;outline:none;" placeholder="닉네임 입력"><div class="small" style="margin-top:6px;">최대 12자 · 캐릭터 머리 위에 레벨과 함께 표시됩니다.</div></div><div class="grid">${cards}</div><div class="footerBtns">${canClose}</div>`);
+}
+function pickJob(id){
+  const job=jobById(id);
+  const nickEl=$('nickInput');
+  if(nickEl) player.nickname=sanitizeNickname(nickEl.value);
+  else player.nickname=sanitizeNickname(player.nickname||'플레이어');
+  player.job=id;
+  player.classChosen=true;
+  if(!player.skillStars)player.skillStars={};
+  if(!player.skillSlots)player.skillSlots=[1,2,3,4];
+  syncHp();
+  const hasEquippedWeapon=!!player.equip?.weapon;
+  const hasInventory=Array.isArray(player.inventory)&&player.inventory.length>0;
+  const w=makeItem(Math.max(1,player.level||1),'일반','weapon');
+  w.name=job.weaponName||'초록 직업무기';
+  player.inventory.push(w);
+  equipItem(w.id,true);
+  closePopup();
+  mode=currentField==='town'?'town':'field';
+  if(!hasInventory && !hasEquippedWeapon) giveStarterItems();
+  toast(`${job.name} 직업으로 변경`);
+  msg(`${job.name} 선택. 일반공격/무기/오토 방식 변경`);
+  updateHud();
+}
+function giveStarterItems(){
+  const job=jobById(player.job||'blade');
+  const w=makeItem(1,'일반','weapon'); w.name=job.weaponName||'초록 직업무기'; player.inventory.push(w); equipItem(w.id,true);
+  player.inventory.push(makeItem(1,'일반','armor')); player.inventory.push(makeItem(1,'일반','boots'));
+}
+
+function enterField(id){
+  currentField=id; const f=FIELDS.find(x=>x.id===id)||FIELDS[0]; fieldSize=f.size; zoneTag.textContent=f.name;
+  player.x=fieldSize/2; player.y=fieldSize/2; monsters=[]; drops=[]; projectiles=[]; effects=[]; summons=[]; npcs=[];
+  if(id==='town') setupTown(); else setupField(f);
+}
+function setupTown(){
+  mode='town'; fieldSize=1800; player.x=900; player.y=1080;
+  npcs=[{x:900,y:545,name:'촌장',kind:'quest'},{x:555,y:855,name:'아이템 상점',kind:'shop'},{x:1255,y:855,name:'길드',kind:'guild'},{x:900,y:1465,name:'포털',kind:'portal'}];
+  portalArmed=true;
+}
+function setupField(f){
+  mode='field'; const count=10;
+  for(let i=0;i<count;i++){spawnMonster(false,i%10);}
+  spawnMonster(true,10);
+  msg(`${f.name}: 몬스터 10종 + 보스 1종 출현`);
+}
+function spawnMonster(boss=false,shape=null){
+  const f=FIELDS.find(x=>x.id===currentField); if(!f||f.id==='town')return;
+  const level=f.level+irnd(0,3)+(boss?4:0); const hp=(boss?180:42)+level*(boss?22:8);
+  const idx=shape===null?irnd(0,9):shape; const book=player.codex[f.id]; const entry=book[boss?10:idx]; if(entry) entry.seen++;
+  monsters.push({id:cryptoId(),x:rnd(160,fieldSize-160),y:rnd(180,fieldSize-180),shape:idx,boss,level,name:entry?entry.name:'몬스터',hp,maxHp:hp,atk:(boss?14:6)+level*1.35,def:level*.45,speed:(boss?56:75)+Math.random()*20,hit:0,dead:false,slow:0,poison:0,weak:0,shoot:0});
+}
+function cryptoId(){return Math.random().toString(36).slice(2)+Date.now().toString(36);}
+
+
+function jobPreferredWeaponType(jobId){
+  const j=jobById(jobId||(typeof player!=='undefined'&&player.job)||'blade');
+  const base=j.attackBase||j.weaponBase||j.skillBase||j.id;
+  if(['ranger','sniper'].includes(base)||['ranger','sniper'].includes(j.id)) return ITEM_TYPES.find(t=>t.slot==='weapon'&&t.name==='활')||ITEM_TYPES[0];
+  if(['mage','hexer','summoner','psion','druid','chronomancer','necromancer'].includes(base)||['mage','hexer','summoner','psion','druid','chronomancer','necromancer'].includes(j.id)) return ITEM_TYPES.find(t=>t.slot==='weapon'&&t.name==='지팡이')||ITEM_TYPES[0];
+  if(['mechanic','gunner','engineer'].includes(base)||['mechanic','gunner','engineer'].includes(j.id)) return ITEM_TYPES.find(t=>t.slot==='weapon'&&t.name==='기어블레이드')||ITEM_TYPES[0];
+  return ITEM_TYPES.find(t=>t.slot==='weapon'&&t.name==='검')||ITEM_TYPES[0];
+}
+function pickItemTypeForJob(slot=null,jobId=null){
+  if(slot==='weapon') return jobPreferredWeaponType(jobId);
+  if(slot) return ITEM_TYPES.filter(t=>t.slot===slot)[0]||ITEM_TYPES[0];
+  const j=jobById(jobId||(typeof player!=='undefined'&&player.job)||'blade');
+  if(Math.random()<.36) return jobPreferredWeaponType(j.id);
+  const pool=ITEM_TYPES.filter(t=>t.slot!=='weapon');
+  return pool[irnd(0,pool.length-1)]||ITEM_TYPES[0];
+}
+function itemValue(it){
+  if(!it)return 0;
+  const r=RARITIES.find(x=>x.name===it.rarity)||RARITIES[0];
+  const statSum=Object.values(it.stats||{}).reduce((s,v)=>s+(Number(v)||0),0);
+  return Math.max(5,Math.round((it.level+1)*14*r.mult + statSum*3));
+}
+function itemScore(it){
+  if(!it)return -1;
+  const job=jobById(player.job||'blade');
+  const base=job.attackBase||job.weaponBase||job.skillBase||job.id;
+  const weights={atk:3,hp:.28,def:2.2,speed:1.1,aspd:28,crit:38,critDmg:25,lifesteal:34,hpRegen:5,skillPower:32,range:1.2,dodge:26,reflect:20,expBonus:8,goldBonus:8,summonPower:30,cooldown:34,mpRegen:10,magnet:.85,all:18};
+  if(['ranger','sniper','gunner'].includes(base)){weights.range=2.2;weights.crit=48;weights.aspd=34;}
+  if(['mage','hexer','psion','chronomancer','alchemist'].includes(base)){weights.skillPower=48;weights.cooldown=42;weights.range=1.6;}
+  if(['summoner','druid','mechanic','engineer'].includes(base)){weights.summonPower=48;weights.cooldown=34;}
+  if(['mirror'].includes(base)||job.id==='mirror'){weights.reflect=62;weights.hp=0.45;weights.def=3;}
+  if(['blade','assassin','monk','berserker'].includes(base)||['blade','assassin','monk','berserker'].includes(job.id)){weights.atk=3.7;weights.lifesteal=42;weights.aspd=35;}
+  let score=(it.level||1)*8 + (RARITIES.find(r=>r.name===it.rarity)?.mult||1)*30;
+  for(const [k,v] of Object.entries(it.stats||{})) score+=(weights[k]||1)*(Number(v)||0);
+  if(it.slot==='weapon' && jobPreferredWeaponType(job.id).name && it.name.includes(jobPreferredWeaponType(job.id).name)) score+=18;
+  return score;
+}
+function makeItem(level=1,rarityName=null,slot=null,jobId=null){
+  const rarity = rarityName ? RARITIES.find(r=>r.name===rarityName) : chooseWeighted(RARITIES);
+  const type = pickItemTypeForJob(slot, jobId||(typeof player!=='undefined'&&player.job)||'blade');
+  const prefix = ['네온','광선','초록','선형','공명','심연','기어','룬','파동','격자'][irnd(0,9)];
+  const item={id:cryptoId(),name:`${prefix} ${type.name}`,slot:type.slot,level,rarity:rarity.name,stats:{},equipped:false};
+  const statCount = rarity.name==='일반'?2:(rarity.name==='레어'?2:(rarity.name==='희귀'?3:(rarity.name==='에픽'?3:(rarity.name==='전설'?4:5))));
+  const pool=[...type.stats];
+  for(let i=0;i<statCount;i++){
+    if(pool.length===0)pool.push(...type.stats);
+    const st=pool.splice(irnd(0,pool.length-1),1)[0]||type.stats[0];
+    const base=(level+2)*rarity.mult;
+    let val=1;
+    if(st==='atk') val=fmt(base*rnd(.7,1.22));
+    else if(st==='hp') val=Math.max(5,Math.round(base*rnd(6,12)));
+    else if(st==='def') val=Math.max(.5,fmt(base*rnd(.32,.82)));
+    else if(st==='speed') val=Math.max(2,fmt(rnd(4,10)*rarity.mult));
+    else if(st==='aspd') val=Math.max(.02,fmtSmall(rnd(.025,.075)*rarity.mult));
+    else if(st==='crit'||st==='lifesteal'||st==='dodge'||st==='reflect'||st==='expBonus'||st==='goldBonus'||st==='cooldown') val=Math.max(.01,fmtSmall(rnd(.02,.06)*rarity.mult));
+    else if(st==='critDmg') val=Math.max(.05,fmtSmall(rnd(.08,.22)*rarity.mult));
+    else if(st==='hpRegen') val=Math.max(.2,fmt(rnd(.5,1.6)*rarity.mult));
+    else if(st==='skillPower'||st==='summonPower'||st==='mpRegen') val=Math.max(.04,fmtSmall(rnd(.08,.24)*rarity.mult));
+    else if(st==='range') val=Math.max(6,fmt(rnd(10,28)*rarity.mult));
+    else if(st==='magnet') val=Math.max(8,fmt(rnd(12,38)*rarity.mult));
+    else if(st==='all') val=Math.max(.5,fmt(rnd(1.0,2.8)*rarity.mult));
+    item.stats[st]=(item.stats[st]||0)+val;
+  }
+  if(type.slot==='weapon'){
+    const j=jobById(jobId||(typeof player!=='undefined'&&player.job)||'blade');
+    if(j.weaponName && Math.random()<.55)item.name=j.weaponName;
+  }
+  return item;
+}
+function statText(stats){return Object.entries(stats).map(([k,v])=>{
+  const label=STAT_LABEL[k]||k;
+  if(PERCENT_STATS.has(k)){
+    const p=Math.max(.1,Math.round((Number(v)||0)*1000)/10);
+    return `${label} +${p%1===0?Math.round(p):p.toFixed(1)}%`;
+  }
+  const n=Number(v)||0;
+  return `${label} +${Math.abs(n)>=10?Math.round(n):Math.round(n*10)/10}`;
+}).join(' / ');}
+function equipItem(id,silent=false){
+  const it=player.inventory.find(x=>x.id===id); if(!it)return;
+  const old=player.equip[it.slot]; if(old) old.equipped=false;
+  player.equip[it.slot]=it; it.equipped=true; syncHp(); if(!silent){toast(`${it.name} 착용`); renderBag();}
+}
+function sellItem(id,fromShop=false){
+  const it=player.inventory.find(x=>x.id===id); if(!it||it.equipped)return;
+  const price=itemValue(it);
+  player.gold+=price; player.inventory=player.inventory.filter(x=>x.id!==id); toast(`${price}G 획득`); fromShop?showShopSell():renderBag();
+}
+function sellAllUnequipped(fromShop=false){
+  const sell=player.inventory.filter(x=>!x.equipped);
+  if(!sell.length){toast('판매할 장비 없음');return;}
+  const gain=sell.reduce((s,it)=>s+itemValue(it),0);
+  player.gold+=gain; player.inventory=player.inventory.filter(x=>x.equipped);
+  toast(`전체 판매 ${gain}G`);
+  fromShop?showShopSell():renderBag();
+}
+function autoEquipBest(){
+  let changed=0;
+  for(const slot of Object.keys(player.equip)){
+    const candidates=player.inventory.filter(it=>it.slot===slot);
+    if(!candidates.length)continue;
+    const best=candidates.slice().sort((a,b)=>itemScore(b)-itemScore(a))[0];
+    if(best && itemScore(best)>itemScore(player.equip[slot])){equipItem(best.id,true);changed++;}
+  }
+  syncHp(); toast(changed?`자동장착 ${changed}부위 교체`:'교체할 장비 없음'); renderBag();
+}
+
+function doDamage(target,base,kind='hit',canCrit=true){
+  if(!target || target.dead)return 0;
+  const st=computeStats(); let dmg=Math.max(1,base-(target.def||0)*0.45);
+  let crit=false; if(canCrit && Math.random()<st.crit){crit=true;dmg*=1.5+st.critDmg;}
+  if(target.weak)dmg*=1.25;
+  dmg=Math.round(dmg*rnd(.88,1.12));
+  target.hp-=dmg; target.hit=.18;
+  effects.push({type:'text',x:target.x,y:target.y-22,t:crit?`CRIT ${dmg}`:`${dmg}`,life:.75,vy:-28,big:crit});
+  effects.push({type:'spark',x:target.x,y:target.y,life:.25,r:8+Math.random()*8});
+  // 흡혈 수정: 실제 피해량 기준으로 즉시 회복한다. 장비/성장/직업 흡혈이 모두 여기로 들어온다.
+  if(st.lifesteal>0 && dmg>0){
+    const heal=Math.max(1,Math.floor(dmg*st.lifesteal));
+    if(player.hp<player.maxHp){player.hp=clamp(player.hp+heal,0,player.maxHp);}
+  }
+  if(target.hp<=0) killMonster(target);
+  return dmg;
+}
+function killMonster(m){
+  if(m.dead)return; m.dead=true; player.totalKills++; player.questKills++;
+  const f=FIELDS.find(x=>x.id===currentField); const book=player.codex[f.id]; const entry=book[m.boss?10:m.shape]; if(entry) entry.kills++;
+  const st=computeStats(); const exp=Math.round((m.boss?45:13)+m.level*4)*(1+st.expBonus); const gold=Math.round((m.boss?70:10)+m.level*3)*(1+st.goldBonus);
+  player.exp+=Math.round(exp); player.gold+=Math.round(gold); effects.push({type:'ring',x:m.x,y:m.y,life:.55,r:m.boss?40:24});
+  if(Math.random()<(m.boss?.95:.28)){ const item=makeItem(Math.max(1,m.level+irnd(-1,2)),null,null,player.job); drops.push({x:m.x+irnd(-20,20),y:m.y+irnd(-20,20),item,life:18}); effects.push({type:'text',x:m.x,y:m.y-38,t:`${item.rarity} 장비`,life:1.1,vy:-22});}
+  while(player.exp>=player.nextExp){player.exp-=player.nextExp;player.level++;player.nextExp=Math.round(player.nextExp*1.32+18);pendingLevelUps++;player.hp=player.maxHp;}
+  if(pendingLevelUps>0 && !popupLayer.style.display.includes('flex')) openGrowth();
+  if(mode==='field' && monsters.filter(x=>!x.dead).length<7 && !m.boss) spawnMonster(false);
+}
+
+function rangedAttackProfile(jobId, st){
+  const jb=jobById(jobId||'blade'); const job=jb.attackBase||jobId||'blade';
+  const baseRange=st.range||82;
+  if(job==='ranger') return {kind:'arrow', label:'화살', range:baseRange+230, speed:660, damage:st.atk*.96, life:1.15, radius:0};
+  if(job==='mage') return {kind:'magic', label:'마법탄', range:baseRange+205, speed:470, damage:st.atk*1.02*st.skillPower, life:1.45, radius:34};
+  if(job==='hexer') return {kind:'curse', label:'저주탄', range:baseRange+190, speed:430, damage:st.atk*.78*st.skillPower, life:1.55, radius:24, debuff:true};
+  if(job==='mechanic') return {kind:'missile', label:'미사일', range:baseRange+210, speed:560, damage:st.atk*1.05, life:1.35, radius:42};
+  if(job==='alchemist') return {kind:'flask', label:'플라스크', range:baseRange+165, speed:390, damage:st.atk*.92, life:1.75, radius:48};
+  if(job==='summoner') return {kind:'spirit', label:'소환탄', range:baseRange+165, speed:430, damage:st.atk*.82*st.summonPower, life:1.55, radius:22};
+  return null;
+}
+function spawnProjectile(target, profile, ox=0, oy=0){
+  if(!target||!profile)return;
+  const a=Math.atan2(target.y-player.y,target.x-player.x);
+  const px=player.x+Math.cos(a)*18-Math.sin(a)*oy+Math.cos(a+Math.PI/2)*ox;
+  const py=player.y+Math.sin(a)*18+Math.cos(a)*oy+Math.sin(a+Math.PI/2)*ox;
+  projectiles.push({x:px,y:py,target:target.id,speed:profile.speed,damage:profile.damage,life:profile.life,kind:profile.kind,radius:profile.radius||0,debuff:!!profile.debuff,angle:a,trail:0,free:false});
+}
+function spawnFreeProjectile(profile){
+  if(!profile)return;
+  const a=Number.isFinite(player.dir)?player.dir:0;
+  const px=player.x+Math.cos(a)*20;
+  const py=player.y+Math.sin(a)*20;
+  projectiles.push({x:px,y:py,target:null,speed:profile.speed,damage:profile.damage,life:profile.life,kind:profile.kind,radius:profile.radius||0,debuff:!!profile.debuff,angle:a,trail:0,free:true});
+}
+function projectileHit(p,t){
+  if(!p||!t||t.dead)return;
+  if(p.kind==='curse'){
+    t.poison=Math.max(t.poison||0,1.8); t.slow=Math.max(t.slow||0,1.1); t.weak=Math.max(t.weak||0,1.2);
+  }
+  if(p.radius>0){
+    effects.push({type:p.kind==='curse'?'hex':'ring',x:t.x,y:t.y,life:.42,r:p.radius});
+    for(const m of monsters){
+      if(m.dead)continue;
+      const d=Math.hypot(m.x-t.x,m.y-t.y);
+      if(d<=p.radius){
+        const splash=m===t?1:.48;
+        doDamage(m,p.damage*splash,p.kind);
+        if(p.kind==='curse' && m!==t){m.slow=Math.max(m.slow||0,.8);m.weak=Math.max(m.weak||0,.8);}
+      }
+    }
+  }else{
+    doDamage(t,p.damage,p.kind);
+  }
+  if(p.kind==='missile'||p.kind==='flask') effects.push({type:'spark',x:t.x,y:t.y,life:.35,r:22});
+}
+function normalAttack(){
+  const st=computeStats(); if(player.atkTimer>0)return;
+  player.atkTimer=Math.max(.16,.62/st.aspd); player.attackAnim=.22;
+  const profile=rangedAttackProfile(player.job, st);
+  if(profile){
+    const target=nearestMonster(profile.range);
+    if(target) spawnProjectile(target, profile);
+    else spawnFreeProjectile(profile);
+    effects.push({type:'spark',x:player.x,y:player.y-8,life:.12,r:profile.kind==='missile'?13:8});
+    return;
+  }
+  const range=st.range||82;
+  for(const m of monsters){if(!m.dead && dist(player,m)<range) doDamage(m,st.atk,'sword');}
+}
+function damageArea(cx,cy,radius,damage,kind='skill',canCrit=true){
+  let hit=0;
+  for(const m of monsters){
+    if(m.dead)continue;
+    if(Math.hypot(m.x-cx,m.y-cy)<=radius){doDamage(m,damage,kind,canCrit);hit++;}
+  }
+  return hit;
+}
+function damageNearestMany(count,range,damage,kind='skill',canCrit=true){
+  const list=monsters.filter(m=>!m.dead&&dist(player,m)<=range).sort((a,b)=>dist(player,a)-dist(player,b)).slice(0,count);
+  for(const m of list)doDamage(m,damage,kind,canCrit);
+  return list.length;
+}
+function fireSkillProjectiles(kind,count,range,damage,speed=520,radius=0,debuff=false){
+  let fired=0;
+  for(let i=0;i<count;i++){
+    const t=nearestMonster(range);
+    if(!t)break;
+    projectiles.push({x:player.x+rnd(-12,12),y:player.y+rnd(-12,12),target:t.id,speed,damage,life:1.25+range/900,kind,radius,debuff,angle:player.dir,trail:0});
+    fired++;
+  }
+  return fired;
+}
+function skillRankForSlot(slot=1){normalizePlayer();const learned=skillStar();const idx=clamp(Number(slot)||1,1,4)-1;const rank=clamp(Number(player.skillSlots[idx])||0,0,10);return rank>=1&&rank<=learned?rank:0;}
+
+function autoSkillCanCast(aj,rank,st,radius,range){
+  if(currentField==='town')return false;
+  if(['summoner','mechanic','mirror','paladin'].includes(aj))return true;
+  let need=range+80;
+  if(aj==='ranger')need=range+260;
+  else if(aj==='mage')need=rank<=5?radius+55:range+190;
+  else if(aj==='hexer')need=radius+65;
+  else if(aj==='alchemist')need=range+120;
+  else if(aj==='blade'||aj==='assassin')need=range+80;
+  return !!nearestMonster(need);
+}
+function useSkill(slot=1,fromAuto=false){
+  slot=clamp(Number(slot)||1,1,4); const idx=slot-1;
+  const st=computeStats(); if((player.skillTimers&&player.skillTimers[idx]>0)||player.skillTimer>0)return;
+  const rank=skillRankForSlot(slot);
+  if(rank<=0){toast(`스킬${slot} 미습득`);return;}
+  const sc=skillScale(rank), j=player.job, aj=(jobById(j).skillBase||j), info=skillByRank(j,rank);
+  const cdBase=Math.max(2.1,6.4-rank*.28);
+  const pow=(1+rank*.26)*st.skillPower;
+  const radius=Math.round((70+rank*13)*sc.radius);
+  const range=190+rank*24;
+
+  if(fromAuto && !autoSkillCanCast(aj,rank,st,radius,range))return;
+  const cd=Math.max(1.05,cdBase*(1-st.cooldown)*sc.cooldown);
+  player.skillTimers[idx]=cd;
+  player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];
+  player.skillTimerMax[idx]=cd;
+  effects.push({type:'text',x:player.x,y:player.y-52,t:`${rank}성 ${info.name}`,life:.8,vy:-18,big:true});
+
+  if(aj==='blade'){
+    const t=nearestMonster(range);
+    if(rank<=2){
+      if(t){const a=Math.atan2(t.y-player.y,t.x-player.x);player.x=clamp(player.x+Math.cos(a)*(70+rank*18),40,fieldSize-40);player.y=clamp(player.y+Math.sin(a)*(70+rank*18),40,fieldSize-40);doDamage(t,st.atk*(1.7+rank*.42),'blade');damageArea(player.x,player.y,54+rank*10,st.atk*(.55+rank*.12),'bladewave');}
+    }else if(rank<=4){damageArea(player.x,player.y,radius,st.atk*(1.15+rank*.26)*pow,'cross');effects.push({type:'ring',x:player.x,y:player.y,life:.45,r:radius});
+    }else if(rank<=8){damageNearestMany(2+rank,range+80,st.atk*(1.05+rank*.22)*pow,'combo');damageArea(player.x,player.y,radius+25,st.atk*(.7+rank*.11)*pow,'swordstorm');effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:radius+25});
+    }else{damageArea(player.x,player.y,230+rank*12,st.atk*(2.25+rank*.36)*pow,'heavensword');effects.push({type:'ring',x:player.x,y:player.y,life:.9,r:230+rank*12});}
+  } else if(aj==='ranger'){
+    if(rank<=3){fireSkillProjectiles('arrow',rank+1,range+120,st.atk*(1.05+rank*.23),650+rank*20,rank>=3?18:0);
+    }else if(rank<=6){const t=nearestMonster(range+180); if(t){fireSkillProjectiles('arrow',rank+2,range+180,st.atk*(.95+rank*.18),690,24+rank*5);damageArea(t.x,t.y,65+rank*10,st.atk*(.95+rank*.15),'arrowrain');effects.push({type:'ring',x:t.x,y:t.y,life:.5,r:65+rank*10});}
+    }else{fireSkillProjectiles('arrow',rank+5,range+260,st.atk*(1.05+rank*.22),760,36+rank*6);const t=nearestMonster(range+260);if(t){damageArea(t.x,t.y,115+rank*13,st.atk*(1.3+rank*.21),'skyarrow');effects.push({type:'ring',x:t.x,y:t.y,life:.8,r:115+rank*13});}}
+  } else if(aj==='summoner'){
+    const count=Math.min(9,rank+1);
+    const life=(5+rank*1.4)*sc.duration;
+    for(let i=0;i<count;i++)summons.push({x:player.x+rnd(-55,55),y:player.y+rnd(-55,55),life,atk:st.atk*(.42+rank*.095)*st.summonPower,cd:rnd(0,.45),kind:rank>=6&&i%3===0?'turret':'spirit'});
+    if(rank>=4)fireSkillProjectiles('spirit',Math.ceil(rank/2),range+80,st.atk*(.85+rank*.15)*st.summonPower,460,20+rank*4);
+    if(rank>=7)damageArea(player.x,player.y,95+rank*16,st.atk*(.95+rank*.18)*st.summonPower,'contract',false);
+    effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:80+rank*13});
+  } else if(aj==='mage'){
+    if(rank<=2){fireSkillProjectiles('magic',rank+1,range+100,st.atk*(1.25+rank*.25)*pow,480,34+rank*8);
+    }else if(rank<=5){damageArea(player.x,player.y,radius+40,st.atk*(1.25+rank*.22)*pow,rank===4?'ice':'magicnova');effects.push({type:'ring',x:player.x,y:player.y,life:.7,r:radius+40});
+    }else if(rank<=8){const t=nearestMonster(range+180);if(t){damageArea(t.x,t.y,95+rank*14,st.atk*(1.65+rank*.28)*pow,'meteor');effects.push({type:'bomb',x:t.x,y:t.y,life:.42,r:20,damage:st.atk*(.85+rank*.15)*pow,range:90+rank*10});}}
+    else{damageArea(player.x,player.y,260+rank*15,st.atk*(2.2+rank*.36)*pow,'grandmagic');effects.push({type:'ring',x:player.x,y:player.y,life:1,r:260+rank*15});}
+  } else if(aj==='hexer'){
+    const r=radius+55;
+    for(const m of monsters){if(!m.dead&&dist(player,m)<r){m.poison=Math.max(m.poison||0,2.2+rank*.55);m.slow=Math.max(m.slow||0,1.3+rank*.35);m.weak=Math.max(m.weak||0,1.5+rank*.42);addDebuff('저주',2.0);doDamage(m,st.atk*(.7+rank*.14)*pow,'curse',false);}}
+    if(rank>=7){const heal=Math.round(player.maxHp*(.04+rank*.012));player.hp=clamp(player.hp+heal,0,player.maxHp);effects.push({type:'text',x:player.x,y:player.y-34,t:`+${heal} 흡수`,life:.8,vy:-22,heal:true});}
+    effects.push({type:'hex',x:player.x,y:player.y,life:.8,r});
+  } else if(aj==='mechanic'){
+    const turrets=Math.min(5,Math.ceil(rank/2));
+    for(let i=0;i<turrets;i++)summons.push({x:player.x+rnd(-65,65),y:player.y+rnd(-65,65),life:(6+rank*1.1)*sc.duration,atk:st.atk*(.55+rank*.11)*st.summonPower,cd:rnd(0,.3),kind:'turret'});
+    fireSkillProjectiles(rank>=4?'missile':'summon',Math.max(1,rank-1),range+120,st.atk*(1+rank*.18),540+rank*18,rank>=4?45+rank*5:12);
+    if(rank>=8)damageArea(player.x,player.y,130+rank*13,st.atk*(1.1+rank*.16)*st.summonPower,'overload',false);
+    effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:70+rank*10});
+  } else if(aj==='mirror'){
+    player.shield=Math.max(player.shield,2.2+rank*.5); addBuff('거울장막',2.2+rank*.5,{def:rank*.25});
+    const r=80+rank*16;
+    damageArea(player.x,player.y,r,st.atk*(.85+rank*.18)*(1+st.reflect*1.4),'mirror',false);
+    if(rank>=5)player.hp=clamp(player.hp+Math.round(player.maxHp*(.03+rank*.006)),0,player.maxHp);
+    effects.push({type:'ring',x:player.x,y:player.y,life:.9,r});
+  } else if(aj==='assassin'){
+    const count=rank<=3?1:rank<=7?Math.min(5,rank-1):Math.min(9,rank);
+    const list=monsters.filter(m=>!m.dead&&dist(player,m)<range+160).sort((a,b)=>dist(player,a)-dist(player,b)).slice(0,count);
+    for(const m of list){player.x=clamp(m.x-28,40,fieldSize-40);player.y=clamp(m.y-28,40,fieldSize-40);doDamage(m,st.atk*(1.85+rank*.34)*(1+st.critDmg*.35),'assassin',rank<6);effects.push({type:'spark',x:m.x,y:m.y,life:.42,r:26+rank*3});}
+    if(rank>=7){player.dodgeTimer=Math.min(player.dodgeTimer,.15);player.dashTime=.08;}
+  } else if(aj==='paladin'){
+    const heal=Math.round(player.maxHp*(.08+rank*.025));player.hp=clamp(player.hp+heal,0,player.maxHp);player.shield=Math.max(player.shield,1.3+rank*.25); addBuff('성역',1.3+rank*.25,{def:rank*.18});
+    const r=90+rank*17; damageArea(player.x,player.y,r,st.atk*(.9+rank*.18)*pow,'holy');
+    effects.push({type:'text',x:player.x,y:player.y-36,t:`+${heal} 성역`,life:1,vy:-22,heal:true});effects.push({type:'ring',x:player.x,y:player.y,life:.85,r});
+  } else if(aj==='alchemist'){
+    const bombs=rank<=2?1:rank<=5?2:rank<=8?3:5;
+    for(let i=0;i<bombs;i++){const tx=player.x+Math.cos(player.dir)*(80+rank*8)+rnd(-55,55), ty=player.y+Math.sin(player.dir)*(80+rank*8)+rnd(-55,55);effects.push({type:'bomb',x:tx,y:ty,life:.9+rnd(0,.3),r:0,damage:st.atk*(1.15+rank*.26)*pow,range:70+rank*10});}
+    if(rank>=5){const r=105+rank*12;for(const m of monsters)if(!m.dead&&dist(player,m)<r)m.poison=Math.max(m.poison||0,2+rank*.35);effects.push({type:'hex',x:player.x,y:player.y,life:.65,r});}
+    if(rank>=7){const heal=Math.round(player.maxHp*(.05+rank*.008));player.hp=clamp(player.hp+heal,0,player.maxHp);effects.push({type:'text',x:player.x,y:player.y-30,t:`+${heal} 시약`,life:.8,vy:-22,heal:true});}
+  }
+}
+function nearestMonster(range=9999){let best=null,bd=range;for(const m of monsters){if(m.dead)continue;const d=dist(player,m);if(d<bd){bd=d;best=m;}}return best;}
+function usePotion(key=null,silent=false){
+  if(player.potionTimer>0)return false; normalizePlayer();
+  let useKey=key&&CONSUMABLES[key]?key:player.potionSlot;
+  if(!CONSUMABLES[useKey]||(player.consumables[useKey]||0)<=0){
+    const order=['potionL','elixir','shield','haste','potion'];
+    useKey=key?null:order.find(k=>(player.consumables[k]||0)>0);
+  }
+  if(!useKey||!CONSUMABLES[useKey]||(player.consumables[useKey]||0)<=0){if(!silent)toast('소모품 없음');return false;}
+  const c=CONSUMABLES[useKey]; player.consumables[useKey]--; player.potions=player.consumables.potion||0; player.potionTimer=1.2;
+  if(c.heal>0){const heal=Math.round(player.maxHp*c.heal);player.hp=clamp(player.hp+heal,0,player.maxHp);effects.push({type:'text',x:player.x,y:player.y-40,t:`+${heal}`,life:.85,vy:-25,heal:true});}
+  if(c.buff){addBuff(c.buff.name,c.buff.duration,c.buff); if(c.buff.shield)player.shield=Math.max(player.shield,c.buff.duration); effects.push({type:'ring',x:player.x,y:player.y,life:.45,r:34});}
+  if(c.active==='bomb'){const tx=player.x+Math.cos(player.dir)*85, ty=player.y+Math.sin(player.dir)*85;effects.push({type:'bomb',x:tx,y:ty,life:.65,r:0,damage:computeStats().atk*2.2,range:92});}
+  if(!silent)toast(`${c.name} 사용`);
+  return true;
+}
+function playerHit(dmg,source){
+  const st=computeStats();
+  if(player.dashTime>0 || Math.random()<st.dodge){effects.push({type:'text',x:player.x,y:player.y-28,t:'회피',life:.65,vy:-22});return;}
+  let final=Math.max(1,Math.round(dmg-st.def*.65));
+  if(player.shield>0 || buffMod('shield')>0) final=Math.max(1,Math.round(final*.45));
+  player.hp-=final; player.hurt=.25;
+  effects.push({type:'text',x:player.x,y:player.y-26,t:`-${final}`,life:.6,vy:-20});
+  if(source && st.reflect>0){const rd=Math.max(1,Math.round(final*st.reflect));doDamage(source,rd,'reflect',false);effects.push({type:'text',x:source.x,y:source.y-40,t:`반사 ${rd}`,life:.7,vy:-22});}
+  if(player.hp<=0){player.hp=player.maxHp;player.gold=Math.max(0,player.gold-50);enterField('town');toast('쓰러졌습니다. 마을로 복귀');}
+}
+
+function openGrowth(){
+  gamePaused=true; pendingLevelUps=Math.max(0,pendingLevelUps-1); growthOptions=makeGrowthOptions(); growthSelectNeed=1; growthSelected=[]; rouletteUsed=false; popupMode='growth';
+  renderGrowth();
+}
+function makeGrowthOptions(){
+  const rarityPool=RARITIES.map(r=>({name:r.name,weight:r.weight}));
+  const job=jobById(player.job||'blade');
+  const stats=(job.growthStats&&job.growthStats.length?job.growthStats:['atk','hp','def','speed','aspd','crit']).filter(s=>s==='reflect'?job.id==='mirror':true);
+  const out=[]; const used=new Set(); let guard=0;
+  while(out.length<3 && guard++<80){
+    const stat=stats[irnd(0,stats.length-1)]; if(!stat||used.has(stat))continue; used.add(stat);
+    const rarity=chooseWeighted(rarityPool).name; const mult=RARITIES.find(r=>r.name===rarity).mult; let value=1;
+    if(stat==='atk') value=fmt((2.4+player.level*.72)*mult); else if(stat==='hp') value=Math.round((22+player.level*5.2)*mult); else if(stat==='def') value=fmt((1.3+player.level*.32)*mult); else if(stat==='speed') value=fmt((4.2+player.level*.14)*mult); else if(stat==='aspd') value=fmtSmall((.04+player.level*.00135)*mult); else if(stat==='crit') value=fmtSmall((.038+player.level*.001)*mult); else if(stat==='critDmg') value=fmtSmall((.12+player.level*.0024)*mult); else if(stat==='lifesteal') value=fmtSmall((.022+player.level*.00055)*mult); else if(stat==='hpRegen') value=fmt((.75+player.level*.09)*mult); else if(stat==='skillPower'||stat==='summonPower') value=fmtSmall((.085+player.level*.0018)*mult); else if(stat==='range') value=fmt((10+player.level*.42)*mult); else if(stat==='dodge') value=fmtSmall((.026+player.level*.00065)*mult); else if(stat==='reflect') value=fmtSmall((.055+player.level*.0011)*mult); else if(stat==='expBonus'||stat==='goldBonus') value=fmtSmall((.045+player.level*.0009)*mult); else if(stat==='cooldown') value=fmtSmall((.022+player.level*.00055)*mult); else if(stat==='mpRegen') value=fmtSmall((.08+player.level*.001)*mult);
+    out.push({id:cryptoId(),stat,value,rarity,name:`${rarity} ${STAT_LABEL[stat]} 성장`});
+  }
+  while(out.length<3){const stat=['atk','hp','def'][out.length];out.push({id:cryptoId(),stat,value:stat==='hp'?30:3,rarity:'일반',name:`일반 ${STAT_LABEL[stat]} 성장`});}
+  return out;
+}
+function renderGrowth(){
+  const selectedCount=growthSelected.length;
+  openPopup(`<div class="title">레벨 ${player.level} 성장 선택</div><div class="sub">직업 특성에 맞는 성장만 등장합니다. 룰렛을 안 돌리면 1개 확정 선택입니다.</div><div class="grid3">${growthOptions.map(o=>`<button class="card rare-${o.rarity} ${growthSelected.includes(o.id)?'selected':''}" onclick="Game.toggleGrowth('${o.id}')"><h3>${o.name}</h3>${STAT_LABEL[o.stat]} +${growthValueText(o.stat,o.value)}<br><span class="small">${o.rarity}</span></button>`).join('')}</div><div class="sub" style="margin-top:8px">선택: ${selectedCount}/${growthSelectNeed}</div><div class="footerBtns"><button onclick="Game.openRoulette()" ${rouletteUsed||selectedCount>0?'disabled':''}>룰렛</button><button onclick="Game.confirmGrowth()" ${selectedCount===growthSelectNeed?'':'disabled'}>선택 확정</button></div>`);
+}
+function toggleGrowth(id){if(popupMode!=='growth')return; const i=growthSelected.indexOf(id); if(i>=0)growthSelected.splice(i,1); else {if(growthSelected.length>=growthSelectNeed){toast(`${growthSelectNeed}개까지만 선택`);return;} growthSelected.push(id);} renderGrowth();}
+function confirmGrowth(){if(growthSelected.length!==growthSelectNeed)return; for(const id of growthSelected){const g=growthOptions.find(x=>x.id===id); if(g) player.growths.push(g);} syncHp(); closePopup(); if(pendingLevelUps>0) setTimeout(openGrowth,120); else toast('성장 적용 완료');}
+function openRoulette(){
+  rouletteUsed=true; popupMode='roulette'; rouletteSpinning=false;
+  const segs=[
+    ['fail','꽝'],['one','1개'],['two','2개'],['fail','꽝'],
+    ['one','1개'],['three','3개'],['fail','꽝'],['two','2개'],
+    ['one','1개'],['fail','꽝'],['two','2개'],['one','1개']
+  ];
+  const marks=segs.map((s,i)=>{
+    const a=i*30+15;
+    return `<div class="wheelCut" style="transform:translate(-50%,-100%) rotate(${i*30}deg)"></div><div class="wheelSeg" style="transform:translate(-50%,-50%) rotate(${a}deg) translateY(-82px) rotate(${-a}deg)">${s[1]}</div>`;
+  }).join('');
+  openPopup(`<div class="title">성장 룰렛</div><div class="sub">12개 구역으로 나뉩니다. 상단 눈금에 걸린 구역이 결과입니다.</div><div class="rouletteCase multiCase"><div class="topTick"></div><div class="rouletteWheel multi" id="wheel">${marks}<div class="wheelHub"></div></div></div><div class="resultBox" id="rouletteResult">상단 눈금에 걸린 구역이 결과입니다.</div><div class="footerBtns"><button id="spinBtn" onclick="Game.spinRoulette()">룰렛 돌리기</button><button id="rouletteOk" class="hidden" onclick="Game.confirmRouletteResult()">결과 확인</button></div>`);
+}
+function spinRoulette(){
+  if(popupMode!=='roulette'||rouletteSpinning)return;
+  const wheel=$('wheel'), result=$('rouletteResult'), spinBtn=$('spinBtn'), okBtn=$('rouletteOk');
+  if(!wheel||!result)return;
+  rouletteSpinning=true;
+  if(spinBtn)spinBtn.disabled=true;
+  result.textContent='회전 중...';
+  const segs=[
+    {outcome:'fail',label:'꽝'},
+    {outcome:'one',label:'1개 선택'},
+    {outcome:'two',label:'2개 선택'},
+    {outcome:'fail',label:'꽝'},
+    {outcome:'one',label:'1개 선택'},
+    {outcome:'three',label:'3개 선택'},
+    {outcome:'fail',label:'꽝'},
+    {outcome:'two',label:'2개 선택'},
+    {outcome:'one',label:'1개 선택'},
+    {outcome:'fail',label:'꽝'},
+    {outcome:'two',label:'2개 선택'},
+    {outcome:'one',label:'1개 선택'}
+  ];
+  const idx=irnd(0,segs.length-1), picked=segs[idx];
+  const duration=rnd(3,7), spins=irnd(5,9);
+  wheel.dataset.outcome=picked.outcome;
+  wheel.dataset.roll=String(idx+1);
+  wheel.dataset.label=picked.label;
+  wheel.style.transition=`transform ${duration.toFixed(2)}s cubic-bezier(.12,.78,.16,1)`;
+  wheel.style.transform=`rotate(${spins*360-(idx*30+15)}deg)`;
+  setTimeout(()=>{
+    rouletteSpinning=false;
+    result.textContent=`상단 눈금 결과 ${idx+1}번 구역 : ${picked.label}`;
+    if(okBtn)okBtn.classList.remove('hidden');
+  },duration*1000+60);
+}
+function confirmRouletteResult(){const outcome=$('wheel').dataset.outcome; if(outcome==='fail'){closePopup(); growthSelected=[]; growthSelectNeed=0; syncHp(); if(pendingLevelUps>0)setTimeout(openGrowth,100); else toast('룰렛 실패: 선택 없이 통과'); return;} growthSelectNeed=outcome==='three'?3:(outcome==='two'?2:1); growthSelected=[]; popupMode='growth'; renderGrowth();}
+
+function showTown(){
+  openPopup(`<div class="title">네온 마을</div><div class="sub">스토리, 상점, 길드, 아이템, 도감을 관리합니다. 필드 이동은 마을 남쪽 포털 근처로 가면 열립니다.</div><div class="grid"><button onclick="Game.showQuest()">스토리 퀘스트</button><button onclick="Game.showShop()">아이템 상점</button><button onclick="Game.showSkillShop()">스킬 상점</button><button onclick="Game.showGuild()">길드</button><button onclick="Game.renderBag()">장비 / 가방</button><button onclick="Game.renderCodex()">몬스터 도감</button><button onclick="Game.showFieldSelect()">포털 이동</button></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+}
+const QUESTS=[
+  {title:'마을 밖의 선형 괴물',need:5,text:'선형 폐허에서 아무 몬스터 5마리 처치',reward:{gold:180,potions:2}},
+  {title:'첫 번째 보스의 흔적',need:1,text:'필드 보스 1마리 처치',reward:{gold:320,potions:3,item:true}},
+  {title:'격자 미궁 조사',need:18,text:'누적 몬스터 18마리 처치',reward:{gold:450,tokens:2,item:true}},
+  {title:'공명 동굴의 진동',need:35,text:'누적 몬스터 35마리 처치',reward:{gold:720,tokens:3,item:true}},
+  {title:'기계 회랑 보급로',need:55,text:'누적 몬스터 55마리 처치',reward:{gold:1000,tokens:4,item:true}},
+  {title:'심연 관문 봉인',need:2,text:'보스 총 2마리 처치',reward:{gold:1500,tokens:5,item:true}},
+  {title:'광섬유 숲 개척',need:85,text:'누적 몬스터 85마리 처치',reward:{gold:2100,tokens:6,item:true}},
+  {title:'네온 철로 복구',need:120,text:'누적 몬스터 120마리 처치',reward:{gold:2800,tokens:8,item:true}},
+  {title:'수직 탑 등반',need:4,text:'보스 총 4마리 처치',reward:{gold:3600,tokens:10,item:true}},
+  {title:'암흑 항구의 등대',need:170,text:'누적 몬스터 170마리 처치',reward:{gold:4600,tokens:12,item:true}},
+  {title:'실험 구역 기록',need:230,text:'누적 몬스터 230마리 처치',reward:{gold:6000,tokens:15,item:true}},
+  {title:'최종 성채 진입',need:6,text:'보스 총 6마리 처치',reward:{gold:8500,tokens:20,item:true}}
+];
+function showQuest(){const q=QUESTS[player.quest]||null;if(!q){openPopup(`<div class="title">스토리 완료</div><div class="sub">현재 공개된 스토리 퀘스트를 모두 완료했습니다.</div><div class="footerBtns"><button onclick="Game.showTown()">돌아가기</button></div>`);return;} const progress=player.quest===1?bossKillsTotal():player.questKills; const done=progress>=q.need; openPopup(`<div class="title">스토리 퀘스트</div><div class="card"><h3>${q.title}</h3>${q.text}<br>진행도: ${progress}/${q.need}<br>보상: ${q.reward.gold||0}G ${q.reward.potions?`/ 물약 ${q.reward.potions}`:''} ${q.reward.item?'/ 장비 상자':''}</div><div class="footerBtns"><button onclick="Game.showTown()">뒤로</button><button ${done?'':'disabled'} onclick="Game.claimQuest()">보상 받기</button></div>`);}
+function bossKillsTotal(){let n=0;for(const fid in player.codex){const boss=player.codex[fid][10];if(boss)n+=boss.kills;}return n;}
+function claimQuest(){const q=QUESTS[player.quest]; if(!q)return; player.gold+=q.reward.gold||0; player.potions+=q.reward.potions||0; player.guildTokens+=q.reward.tokens||0; if(q.reward.item)player.inventory.push(makeItem(player.level,'희귀',null)); player.quest++; player.questKills=0; toast('퀘스트 보상 획득'); showQuest();}
+function showShop(){
+  normalizePlayer();
+  const cards=Object.entries(CONSUMABLES).map(([k,c])=>`<button class="card" onclick="Game.buy('${k}')"><h3>${c.name}</h3>${c.desc}<br><span class="small">${c.cost}G · 보유 ${player.consumables[k]||0}</span></button>`).join('');
+  openPopup(`<div class="title">아이템 상점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G</div><h3>소모품 구매</h3><div class="grid">${cards}</div><h3>장비 구매</h3><div class="grid"><button class="card" onclick="Game.buy('weapon')"><h3>직업 무기 상자</h3>현재 직업에 맞는 무기 위주 · 260G</button><button class="card" onclick="Game.buy('armor')"><h3>직업 방어구 상자</h3>현재 직업에 맞는 방어구 위주 · 240G</button><button class="card" onclick="Game.buy('relic')"><h3>유물 상자</h3>500G</button></div><h3>스킬</h3><div class="grid"><button class="card" onclick="Game.showSkillShop()"><h3>스킬 상점</h3>직업별 스킬 구매</button></div><div class="footerBtns"><button onclick="Game.showTown()">뒤로</button></div>`);
+}
+function showShopSell(){
+  normalizePlayer();
+  const sellables=player.inventory.filter(it=>!it.equipped);
+  const rows=sellables.map(it=>`<div class="card rare-${it.rarity}"><h3>${it.name}</h3>${SLOT_LABEL[it.slot]} · Lv.${it.level} · ${it.rarity}<br><span class="small">${statText(it.stats)}</span><br><span class="small">판매가 ${itemValue(it)}G</span><div class="footerBtns"><button onclick="Game.sellItem('${it.id}',true)">판매</button></div></div>`).join('')||'<div class="sub">판매 가능한 미장착 장비가 없습니다.</div>';
+  const total=sellables.reduce((s,it)=>s+itemValue(it),0);
+  openPopup(`<div class="title">장비 판매</div><div class="sub">장착 중인 장비는 판매 대상에서 제외됩니다.<br>전체 판매 예상: ${total}G</div><div class="footerBtns"><button onclick="Game.sellAllUnequipped(true)">미장착 전체 판매</button><button onclick="Game.showShop()">상점으로</button></div><div class="grid">${rows}</div>`);
+}
+function pickArmorSlotForJob(jobId){
+  const j=jobById(jobId||player.job||'blade'), base=j.skillBase||j.attackBase||j.id;
+  if(['mage','hexer','summoner','psion','chronomancer','necromancer','alchemist'].includes(base)||['mage','hexer','summoner','psion','chronomancer','necromancer','alchemist'].includes(j.id)) return ['armor','boots','amulet'][irnd(0,2)];
+  if(['ranger','sniper','gunner','assassin'].includes(base)||['ranger','sniper','gunner','assassin'].includes(j.id)) return ['boots','helmet','ring'][irnd(0,2)];
+  if(['paladin','berserker','mirror','monk'].includes(base)||['paladin','berserker','mirror','monk'].includes(j.id)) return ['armor','helmet','ring'][irnd(0,2)];
+  return ['armor','helmet','boots'][irnd(0,2)];
+}
+function buy(kind){
+  normalizePlayer();
+  if(CONSUMABLES[kind]){const c=CONSUMABLES[kind]; if(player.gold<c.cost){toast('골드 부족');return;} player.gold-=c.cost; player.consumables[kind]=(player.consumables[kind]||0)+1; player.potions=player.consumables.potion||0; toast(`${c.name} 구매`); showShop(); return;}
+  let cost=0;if(kind==='weapon')cost=260;else if(kind==='armor')cost=240;else cost=500;if(player.gold<cost){toast('골드 부족');return;}player.gold-=cost;const slot=kind==='armor'?pickArmorSlotForJob(player.job):kind;player.inventory.push(makeItem(player.level,null,slot,player.job));showShop();
+}
+function showSkillShop(){
+  const j=player.job||'blade', job=jobById(j), learned=skillStar(j), cost=skillCost(j), list=skillList(j), next=Math.min(10,learned+1);
+  const current=learned>0?`현재 사용 스킬: ${learned}성 ${skillByRank(j,learned).name}`:'현재 사용 스킬: 미습득';
+  const nextText=learned>=10?'모든 스킬 습득 완료':`다음 구매: ${next}성 ${skillByRank(j,next).name} · ${cost}G`;
+  const rows=list.map((s,i)=>{const lv=i+1, owned=learned>=lv, nextSkill=learned+1===lv;return `<div class="card ${owned?'selected':''} ${nextSkill?'rare-희귀':''}"><h3>${lv}성 ${s.name} ${owned?'[보유]':''}</h3>${s.desc}<br><span class="small">${owned?'습득 완료':(nextSkill?'다음 구매 · ':'잠김 · ')+SKILL_COSTS[i]+'G'}</span></div>`;}).join('');
+  openPopup(`<div class="title">스킬 상점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G · 직업마다 서로 다른 10종 스킬을 1성부터 순서대로 구매합니다. 뒤 단계일수록 더 강합니다.</div><div class="card"><h3>${job.name} 스킬 트리</h3>${current}<br>${nextText}</div><div class="footerBtns"><button ${learned>=10?'disabled':''} onclick="Game.buySkill()">${learned>=10?'전체 습득 완료':`${next}성 스킬 구매`}</button><button onclick="Game.showTown()">마을</button><button onclick="Game.closePopup()">닫기</button></div><h3>직업 스킬 10종</h3><div class="grid3">${rows}</div>`);
+}
+function buySkill(){
+  const j=player.job||'blade'; player.skillStars=player.skillStars||{}; const learned=skillStar(j); if(learned>=10){toast('이미 모든 스킬 습득');return;}
+  const cost=skillCost(j); if(player.gold<cost){toast(`골드 부족: ${cost}G 필요`);return;}
+  const next=learned+1, info=skillByRank(j,next);
+  player.gold-=cost; player.skillStars[j]=next; toast(`${next}성 스킬 습득: ${info.name}`); showSkillShop(); updateHud();
+}
+function showGuild(){
+  const rank = player.guildTokens>=20?'마스터':player.guildTokens>=10?'정예':player.guildTokens>=4?'단원':'신입'; player.guildRank=rank;
+  openPopup(`<div class="title">길드</div><div class="card"><h3>길드 계급: ${rank}</h3>토큰: ${player.guildTokens}<br>효과: 계급에 따라 장비 드랍률과 골드 획득이 소폭 증가합니다.</div><div class="grid"><button onclick="Game.guildMission()">길드 의뢰 받기</button><button onclick="Game.guildReward()">토큰 장비 교환</button></div><div class="footerBtns"><button onclick="Game.showTown()">뒤로</button></div>`);
+}
+function guildMission(){player.guildTokens+=1;player.questKills=0;toast('길드 의뢰 등록: 필드 사냥으로 토큰 누적');showGuild();}
+function guildReward(){if(player.guildTokens<3){toast('토큰 부족');return;}player.guildTokens-=3;player.inventory.push(makeItem(player.level,'레어',null));toast('길드 장비 획득');showGuild();}
+function showFieldSelect(){
+  openPopup(`<div class="title">포털 이동</div><div class="sub">각 필드는 몬스터 10종류와 보스 1종류로 구성됩니다.</div><div class="grid">${FIELDS.filter(f=>f.id!=='town').map(f=>`<button class="card" onclick="Game.goField('${f.id}')"><h3>${f.name}</h3>권장 Lv.${f.level}+<br>일반 몬스터 10종 / 보스 1종</button>`).join('')}</div><div class="footerBtns"><button onclick="Game.showTown()">뒤로</button></div>`);
+}
+function goField(id){closePopup();enterField(id);}
+
+function renderBag(){
+  popupMode='bag'; const eq=Object.entries(player.equip).map(([slot,it])=>`<div class="card"><h3>${SLOT_LABEL[slot]}</h3>${it?`${it.rarity} ${it.name}<br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))}</span>`:'비어있음'}</div>`).join('');
+  const inv=player.inventory.map(it=>`<div class="card rare-${it.rarity}"><h3>${it.equipped?'[E] ':''}${it.name}</h3>${SLOT_LABEL[it.slot]} · Lv.${it.level} · ${it.rarity}<br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))} · 판매가 ${itemValue(it)}G</span><div class="footerBtns"><button onclick="Game.equipItem('${it.id}')">장착</button><button ${it.equipped?'disabled':''} onclick="Game.sellItem('${it.id}')">판매</button></div></div>`).join('')||'<div class="sub">아이템 없음</div>';
+  openPopup(`<div class="title">장비 / 가방</div><div class="sub">직업에 맞는 장비 점수를 기준으로 자동장착할 수 있습니다.</div><h3>착용 장비</h3><div class="grid">${eq}</div><div class="footerBtns"><button onclick="Game.autoEquipBest()">자동장착</button><button onclick="Game.sellAllUnequipped()">미장착 전체판매</button></div><h3>보유 아이템</h3><div class="grid">${inv}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+}
+function renderCodex(){
+  const content=FIELDS.filter(f=>f.id!=='town').map(f=>`<div class="card"><h3>${f.name}</h3>${player.codex[f.id].map(e=>`${e.boss?'[보스] ':'· '}${e.name} 발견 ${e.seen} / 처치 ${e.kills}`).join('<br>')}</div>`).join('');
+  openPopup(`<div class="title">몬스터 도감</div><div class="sub">필드마다 일반 몬스터 10종류와 보스 1종류가 기록됩니다.</div>${content}<div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+}
+
+function saveGame(){const ok=storageSet(saveKey,JSON.stringify({player,currentField,mode}));toast(ok?'저장 완료':'임시 저장 완료');}
+function loadGame(){try{const raw=storageGet(saveKey);if(!raw)return false;const s=JSON.parse(raw);player=Object.assign(basePlayer(),s.player||{});normalizePlayer();syncHp();enterField(s.currentField||'town');closePopup();toast('불러오기 완료');return true;}catch(e){console.error(e);return false;}}
+
+function update(dt){
+  if(!player.classChosen)return; const oldX=player.x, oldY=player.y; const st=syncHp(); player.atkTimer=Math.max(0,player.atkTimer-dt);player.skillTimers=player.skillTimers||[player.skillTimer||0,0,0];for(let i=0;i<4;i++)player.skillTimers[i]=Math.max(0,(player.skillTimers[i]||0)-dt);player.skillTimer=0;player.potionTimer=Math.max(0,player.potionTimer-dt);player.dodgeTimer=Math.max(0,player.dodgeTimer-dt);player.dashTime=Math.max(0,player.dashTime-dt);player.attackAnim=Math.max(0,player.attackAnim-dt);player.hurt=Math.max(0,player.hurt-dt);player.shield=Math.max(0,player.shield-dt);
+  if(st.hpRegen>0) player.hp=clamp(player.hp+st.hpRegen*dt,0,player.maxHp);updateStatusTimers(dt);
+  if(player.autoMode) updateAuto(dt);
+  if(attackHeld) normalAttack(); for(let i=0;i<4;i++)if(skillHeld[i])useSkill(i+1);
+  const mag=Math.hypot(joystick.dx,joystick.dy); if(mag>.05){player.dir=Math.atan2(joystick.dy,joystick.dx);player.x=clamp(player.x+joystick.dx*st.speed*dt,28,fieldSize-28);player.y=clamp(player.y+joystick.dy*st.speed*dt,28,fieldSize-28);}
+  if(player.dashTime>0){const dashSpeed=420;player.x=clamp(player.x+Math.cos(player.dir)*dashSpeed*dt,28,fieldSize-28);player.y=clamp(player.y+Math.sin(player.dir)*dashSpeed*dt,28,fieldSize-28);}
+  player.movingAnim=Math.hypot(player.x-oldX,player.y-oldY)>0.05;
+  updateMonsters(dt,st); updateProjectiles(dt); updateSummons(dt); updateEffects(dt); updateDrops(dt); updateCamera(); updateHud(); updateTalkPrompt(); updatePortalTrigger();
+}
+function updateAuto(dt){if(currentField==='town'||popupLayer.style.display==='flex')return;normalizePlayer();const st=computeStats();if(player.hp/player.maxHp<player.autoPotionPct&&player.potionTimer<=0)usePotion(player.potionSlot,true);const t=nearestMonster(900);if(!t)return;const d=dist(player,t),safe=rangedAttackProfile(player.job,st)?Math.min(260,(st.range||150)+120):58;if(d>safe){player.dir=Math.atan2(t.y-player.y,t.x-player.x);player.x=clamp(player.x+Math.cos(player.dir)*st.speed*dt,28,fieldSize-28);player.y=clamp(player.y+Math.sin(player.dir)*st.speed*dt,28,fieldSize-28);}else player.dir=Math.atan2(t.y-player.y,t.x-player.x);normalAttack();for(let i=1;i<=4;i++)if(skillRankForSlot(i)>0&&(player.skillTimers[i-1]||0)<=0)useSkill(i,true);}
+function updateMonsters(dt,st){
+  for(const m of monsters){if(m.dead)continue; if(m.hit>0)m.hit-=dt;if(m.slow>0)m.slow-=dt;if(m.weak>0)m.weak-=dt;if(m.poison>0){m.poison-=dt;if(Math.random()<dt*1.5)doDamage(m,st.atk*.22*st.skillPower,'poison',false);}
+    let d=dist(m,player); if(d<520){const a=Math.atan2(player.y-m.y,player.x-m.x);const sp=m.speed*(m.slow>0?.45:1);m.x+=Math.cos(a)*sp*dt;m.y+=Math.sin(a)*sp*dt;}
+    d=dist(m,player);
+    const gap=m.boss?46:34;
+    if(d<gap){const a=Math.atan2(player.y-m.y,player.x-m.x);const push=(gap-d||1)*0.55; m.x-=Math.cos(a)*push; m.y-=Math.sin(a)*push; player.x=clamp(player.x+Math.cos(a)*push*0.35,28,fieldSize-28); player.y=clamp(player.y+Math.sin(a)*push*0.35,28,fieldSize-28); d=gap;}
+    if(d<(m.boss?52:38)){m.shoot=(m.shoot||0)-dt;if(m.shoot<=0){m.shoot=m.boss?0.7:1.05;playerHit(m.atk,m);}}
+  }
+  for(let i=0;i<monsters.length;i++){
+    const a=monsters[i]; if(!a||a.dead)continue;
+    for(let j=i+1;j<monsters.length;j++){
+      const b=monsters[j]; if(!b||b.dead)continue;
+      const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||0.001, need=(a.boss||b.boss)?42:26;
+      if(d<need){const push=(need-d)/2, ux=dx/d, uy=dy/d; a.x-=ux*push; a.y-=uy*push; b.x+=ux*push; b.y+=uy*push;}
+    }
+  }
+  monsters=monsters.filter(m=>!m.dead || m.hit>-.5);
+}
+function updateProjectiles(dt){
+  for(const p of projectiles){
+    p.life-=dt;
+    const hitRadius=(p.kind==='missile'||p.kind==='flask')?24:20;
+    if(p.free || !p.target){
+      const a=Number.isFinite(p.angle)?p.angle:0;
+      p.trail=(p.trail||0)+dt;
+      p.x+=Math.cos(a)*p.speed*dt;p.y+=Math.sin(a)*p.speed*dt;
+      const hit=monsters.find(m=>!m.dead&&Math.hypot(m.x-p.x,m.y-p.y)<hitRadius);
+      if(hit){projectileHit(p,hit);p.life=0;}
+      continue;
+    }
+    const t=monsters.find(m=>m.id===p.target&&!m.dead);
+    if(!t){p.life=0;continue;}
+    const a=Math.atan2(t.y-p.y,t.x-p.x);p.angle=a;p.trail=(p.trail||0)+dt;
+    p.x+=Math.cos(a)*p.speed*dt;p.y+=Math.sin(a)*p.speed*dt;
+    if(Math.hypot(t.x-p.x,t.y-p.y)<hitRadius){projectileHit(p,t);p.life=0;}
+  }
+  projectiles=projectiles.filter(p=>p.life>0);
+}
+function updateSummons(dt){
+  for(const s of summons){s.life-=dt;s.cd-=dt;if(s.kind==='spirit'){const a=Math.atan2(player.y-s.y,player.x-s.x);if(Math.hypot(player.x-s.x,player.y-s.y)>80){s.x+=Math.cos(a)*120*dt;s.y+=Math.sin(a)*120*dt;}}
+    if(s.cd<=0){const t=nearestFrom(s,220);if(t){s.cd=s.kind==='turret'?.55:.85;projectiles.push({x:s.x,y:s.y,target:t.id,speed:420,damage:s.atk,life:1.2,kind:'summon'});}}
+  } summons=summons.filter(s=>s.life>0);
+}
+function nearestFrom(o,range){let b=null,bd=range;for(const m of monsters){if(m.dead)continue;const d=Math.hypot(m.x-o.x,m.y-o.y);if(d<bd){bd=d;b=m;}}return b;}
+function updateEffects(dt){
+  for(const e of effects){e.life-=dt;if(e.vy)e.y+=e.vy*dt;if(e.type==='bomb'){e.r+=90*dt;if(e.life<.18&&!e.done){e.done=true;const br=e.range||125;for(const m of monsters)if(!m.dead&&Math.hypot(m.x-e.x,m.y-e.y)<br)doDamage(m,e.damage,'bomb');}}}
+  effects=effects.filter(e=>e.life>0);
+}
+function pickupRange(st){return clamp(90+(st.magnet||80)+(st.speed-120)*.28+(player.level-1)*.9,80,620);}
+function collectDrop(d){
+  if(!d||d.picked||!d.item)return;
+  d.picked=true; d.life=-1;
+  player.inventory.push(d.item);
+  player.discoveredItems[d.item.name]=true;
+  effects.push({type:'text',x:player.x,y:player.y-48,t:`획득 ${d.item.name}`,life:1,vy:-22,big:false});
+  toast(`${d.item.rarity} 장비 획득`);
+}
+function updateDrops(dt){
+  const st=computeStats(),range=pickupRange(st);
+  for(const d of drops){
+    if(d.picked)continue;
+    d.life-=dt;
+    const dx=player.x-d.x,dy=player.y-d.y,dd=Math.hypot(dx,dy);
+    if(dd<range){
+      const pull=clamp(160+range*1.2,220,850);
+      const ux=dd>0?dx/dd:0,uy=dd>0?dy/dd:0;
+      d.x+=ux*pull*dt; d.y+=uy*pull*dt;
+      d.life=Math.max(d.life,8);
+    }
+    if(dd<24)collectDrop(d);
+  }
+  drops=drops.filter(d=>!d.picked&&d.life>0);
+}
+function updateCamera(){camera.x=clamp(player.x-W/2,0,Math.max(0,fieldSize-W));camera.y=clamp(player.y-H/2,0,Math.max(0,fieldSize-H));}
+function updateHud(){
+  normalizePlayer(); const st=computeStats();
+  const hpPct=clamp(player.hp/player.maxHp*100,0,100), expPct=clamp(player.exp/player.nextExp*100,0,100);
+  $('statPanel').innerHTML=`<div class="statHeader"><b>${sanitizeNickname(player.nickname||'플레이어')} · ${jobById(player.job||'blade').name} Lv.${player.level}</b><span>${Math.round(player.gold)}G</span></div><div class="meter hpMeter"><div class="meterLabel"><span>체력</span><span>${Math.round(player.hp)}/${player.maxHp}</span></div><div class="bar"><div class="fill" style="width:${hpPct}%"></div></div></div><div class="meter expMeter"><div class="meterLabel"><span>경험치</span><span>${player.exp}/${player.nextExp}</span></div><div class="bar"><div class="fill" style="width:${expPct}%"></div></div></div><div class="statusLine"><span>${statusSummary()}</span><span>처치 ${player.totalKills}</span></div>`;
+  $('atkCool').textContent=player.atkTimer>0?player.atkTimer.toFixed(1):'READY';
+  for(let i=1;i<=4;i++){
+    const rank=skillRankForSlot(i),el=$(`skCool${i}`),nameEl=$(`skName${i}`),btn=$(`skillBtn${i}`);
+    const timer=(player.skillTimers&&player.skillTimers[i-1])||0,max=(player.skillTimerMax&&player.skillTimerMax[i-1])||timer||1;
+    const name=rank>0?skillByRank(player.job,rank).name:`스킬${i}`;
+    if(nameEl){nameEl.textContent=name;nameEl.classList.toggle('marquee',name.length>=5);}
+    if(el)el.textContent=rank>0?(timer>0?'쿨타임':`${rank}성 준비`):'미습득';
+    if(btn)btn.style.setProperty('--cdp',timer>0?`${clamp(timer/max*100,0,100)}%`:'0%');
+  }
+  const totalPot=Object.values(player.consumables||{}).reduce((a,b)=>a+(Number(b)||0),0),slotPot=(player.consumables&&player.consumables[player.potionSlot])||0;$('potCount').textContent=`${slotPot}/${totalPot}`;$('dodgeCool').textContent=player.dodgeTimer>0?player.dodgeTimer.toFixed(1):'READY';
+  const autoCool=$('autoCool'),autoBtn=$('autoBtn'),jobCool=$('jobCool');
+  if(autoCool)autoCool.textContent=player.autoMode?'ON':'OFF';
+  if(autoBtn)autoBtn.classList.toggle('autoOn',!!player.autoMode);
+  if(jobCool)jobCool.textContent=(jobById(player.job||'blade').name||'직업').slice(0,4);
+}
+
+function draw(){ctx.clearRect(0,0,W,H);drawBackground();ctx.save();ctx.translate(-camera.x,-camera.y);drawWorldBounds();if(currentField==='town')drawTown();drawDrops();drawMonsters();drawSummons();drawProjectiles();drawPlayer();drawEffects();ctx.restore();drawMiniMap();}
+function drawBackground(){const f=FIELDS.find(x=>x.id===currentField)||FIELDS[0];ctx.save();ctx.fillStyle='#000';ctx.fillRect(0,0,W,H);lineStyle(.16,1);const t=performance.now()/1000;const bg=f.bg;
+  if(bg===0){for(let x=(-camera.x%90);x<W;x+=90){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}for(let y=(-camera.y%90);y<H;y+=90){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}}
+  else if(bg===1){for(let x=-200;x<W+200;x+=80){ctx.beginPath();ctx.moveTo(x+Math.sin(t+x)*8,0);ctx.lineTo(x+160,H);ctx.stroke();}}
+  else if(bg===2){for(let x=(-camera.x%120);x<W;x+=120){for(let y=(-camera.y%120);y<H;y+=120){ctx.strokeRect(x+20,y+20,60,60);}}}
+  else if(bg===3){for(let r=80;r<Math.max(W,H)*1.3;r+=95){ctx.beginPath();ctx.arc(W/2,H/2,r+Math.sin(t+r)*5,0,Math.PI*2);ctx.stroke();}}
+  else if(bg===4){for(let x=(-camera.x%140);x<W;x+=140){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x+40,H*.35);ctx.lineTo(x-20,H*.7);ctx.lineTo(x+70,H);ctx.stroke();}}
+  else if(bg===6){for(let i=0;i<34;i++){const x=(i*97-camera.x*.25)%W;ctx.beginPath();ctx.moveTo(x,H);ctx.lineTo(x+Math.sin(t+i)*32,H*.25);ctx.lineTo(x+Math.cos(t+i)*48,0);ctx.stroke();}} else if(bg===7){for(let y=(-camera.y%70);y<H;y+=70){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y+Math.sin(t+y)*8);ctx.stroke();}for(let x=(-camera.x%160);x<W;x+=160)ctx.strokeRect(x,0,28,H);} else if(bg===8){for(let y=(-camera.y%110);y<H;y+=110){ctx.beginPath();ctx.moveTo(W*.25,y);ctx.lineTo(W*.75,y);ctx.stroke();}for(let x=W*.25;x<=W*.75;x+=80){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}} else if(bg===9){for(let i=0;i<18;i++){const y=(i*46+t*12)%H;ctx.beginPath();ctx.moveTo(0,y);ctx.bezierCurveTo(W*.25,y+20,W*.65,y-20,W,y+15);ctx.stroke();}} else if(bg===10){for(let x=(-camera.x%100);x<W;x+=100){for(let y=(-camera.y%100);y<H;y+=100){ctx.beginPath();ctx.arc(x,y,22+Math.sin(t+x+y)*3,0,Math.PI*2);ctx.stroke();}}} else {for(let i=0;i<42;i++){const x=(i*73+t*22)%W;ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo((x+40)%W,H);ctx.stroke();}}
+  ctx.restore();}
+function drawWorldBounds(){lineStyle(.35,3);ctx.strokeRect(10,10,fieldSize-20,fieldSize-20);}
+function drawTown(){lineStyle(.28,1.3);for(let x=360;x<=1440;x+=180){ctx.beginPath();ctx.moveTo(x,520);ctx.lineTo(x,1340);ctx.stroke();}for(let y=560;y<=1320;y+=160){ctx.beginPath();ctx.moveTo(380,y);ctx.lineTo(1420,y);ctx.stroke();}const buildings=[{x:770,y:455,w:260,h:180,label:'촌장관',roof:'dome'},{x:430,y:760,w:250,h:190,label:'상점',roof:'flat'},{x:1130,y:760,w:250,h:190,label:'길드',roof:'tower'},{x:740,y:1420,w:320,h:90,label:'포털 광장',roof:'gate'},{x:430,y:1120,w:230,h:150,label:'창고',roof:'flat'},{x:1160,y:1120,w:210,h:150,label:'훈련장',roof:'dome'}];for(const b of buildings){lineStyle(.72,2);ctx.strokeRect(b.x,b.y,b.w,b.h);lineStyle(.36,1);for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(b.x+b.w*i/3,b.y+20);ctx.lineTo(b.x+b.w*i/3,b.y+b.h-20);ctx.stroke();}lineStyle(.82,1.8);ctx.beginPath();if(b.roof==='dome'){ctx.arc(b.x+b.w/2,b.y,Math.min(b.w*.45,75),Math.PI,0);}else if(b.roof==='tower'){ctx.moveTo(b.x+30,b.y);ctx.lineTo(b.x+b.w/2,b.y-70);ctx.lineTo(b.x+b.w-30,b.y);}else if(b.roof==='gate'){ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+b.w/2,b.y-65);ctx.lineTo(b.x+b.w,b.y);}else{ctx.moveTo(b.x+16,b.y-28);ctx.lineTo(b.x+b.w-16,b.y-28);ctx.lineTo(b.x+b.w,b.y);ctx.lineTo(b.x,b.y);ctx.closePath();}ctx.stroke();ctx.font='12px monospace';ctx.fillStyle='rgba(0,255,114,.72)';ctx.textAlign='center';ctx.fillText(b.label,b.x+b.w/2,b.y+b.h+18);}lineStyle(.55,1.5);ctx.beginPath();ctx.arc(900,920,120,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(900,920,58,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(780,920);ctx.lineTo(1020,920);ctx.moveTo(900,800);ctx.lineTo(900,1040);ctx.stroke();for(const n of npcs){lineStyle(.9,2);if(n.kind==='portal'){const spin=performance.now()/700;ctx.beginPath();ctx.arc(n.x,n.y,38,0,Math.PI*2);ctx.stroke();ctx.beginPath();for(let a=0;a<Math.PI*4.5;a+=.28){const r=4+a*2.2;ctx.lineTo(n.x+Math.cos(a+spin)*r,n.y+Math.sin(a+spin)*r);}ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-42,n.y+48);ctx.lineTo(n.x+42,n.y+48);ctx.stroke();}else{ctx.beginPath();ctx.arc(n.x,n.y,20,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-15,n.y+27);ctx.lineTo(n.x+15,n.y+27);ctx.stroke();}ctx.font='12px monospace';ctx.fillStyle='rgba(0,255,114,.95)';ctx.textAlign='center';ctx.fillText(n.name,n.x,n.y-38);}}
+function drawClassWeapon(jobId, gripX, gripY, bladeAngle, atkP, leftGripX, leftGripY){
+  const jb=jobById(jobId||'blade');
+  const job=jb.weaponBase||jb.skillBase||jobId||'blade';
+  const ux=Math.cos(bladeAngle), uy=Math.sin(bladeAngle), px=Math.cos(bladeAngle+Math.PI/2), py=Math.sin(bladeAngle+Math.PI/2);
+  const line=(a,w,fn)=>{lineStyle(a,w);ctx.beginPath();fn();ctx.stroke();};
+  const orb=(x,y,r,a=.85)=>{lineStyle(a,1.4);ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();};
+  if(job==='ranger'){
+    const bowX=gripX+ux*8, bowY=gripY+uy*8, r=23, pull=player.attackAnim>0?Math.sin(atkP*Math.PI)*7:2;
+    line(1,1.8,()=>{ctx.arc(bowX,bowY,r,bladeAngle-Math.PI*.55,bladeAngle+Math.PI*.55);});
+    line(.78,1,()=>{ctx.moveTo(bowX+Math.cos(bladeAngle-Math.PI*.55)*r,bowY+Math.sin(bladeAngle-Math.PI*.55)*r);ctx.lineTo(gripX-px*pull,gripY-py*pull);ctx.lineTo(bowX+Math.cos(bladeAngle+Math.PI*.55)*r,bowY+Math.sin(bladeAngle+Math.PI*.55)*r);});
+    line(.95,1.4,()=>{ctx.moveTo(gripX-ux*11,gripY-uy*11);ctx.lineTo(gripX+ux*26,gripY+uy*26);ctx.moveTo(gripX+ux*26,gripY+uy*26);ctx.lineTo(gripX+ux*18+px*4,gripY+uy*18+py*4);ctx.moveTo(gripX+ux*26,gripY+uy*26);ctx.lineTo(gripX+ux*18-px*4,gripY+uy*18-py*4);});
+    return;
+  }
+  if(job==='summoner'){
+    const len=40, tipX=gripX+ux*len, tipY=gripY+uy*len;
+    line(1,1.8,()=>{ctx.moveTo(gripX-ux*7,gripY-uy*7);ctx.lineTo(tipX,tipY);});
+    orb(tipX,tipY,6,.9); orb(tipX+px*9,tipY+py*9,3,.55); orb(tipX-px*9,tipY-py*9,3,.55);
+    return;
+  }
+  if(job==='mage'){
+    const len=42, tipX=gripX+ux*len, tipY=gripY+uy*len;
+    line(1,1.65,()=>{ctx.moveTo(gripX-ux*6,gripY-uy*6);ctx.lineTo(tipX,tipY);});
+    orb(tipX,tipY,7,.95); line(.65,1,()=>{ctx.moveTo(tipX-7,tipY);ctx.lineTo(tipX+7,tipY);ctx.moveTo(tipX,tipY-7);ctx.lineTo(tipX,tipY+7);});
+    return;
+  }
+  if(job==='hexer'){
+    const len=38, tipX=gripX+ux*len, tipY=gripY+uy*len;
+    line(1,1.75,()=>{ctx.moveTo(gripX-ux*7,gripY-uy*7);ctx.lineTo(tipX,tipY);});
+    line(.9,1.4,()=>{ctx.arc(tipX+px*4,tipY+py*4,10,bladeAngle-Math.PI*.15,bladeAngle+Math.PI*.95);});
+    return;
+  }
+  if(job==='mechanic'){
+    const len=34, tipX=gripX+ux*len, tipY=gripY+uy*len;
+    line(1,2,()=>{ctx.moveTo(gripX-ux*7,gripY-uy*7);ctx.lineTo(tipX,tipY);});
+    line(.9,1.25,()=>{ctx.rect(tipX-6,tipY-6,12,12);ctx.moveTo(tipX-11,tipY);ctx.lineTo(tipX+11,tipY);ctx.moveTo(tipX,tipY-11);ctx.lineTo(tipX,tipY+11);});
+    return;
+  }
+  if(job==='mirror'){
+    const sx=gripX+ux*20, sy=gripY+uy*20;
+    line(1,1.9,()=>{ctx.moveTo(gripX,gripY);ctx.lineTo(sx,sy);ctx.lineTo(sx+px*10,sy+py*10);ctx.lineTo(sx+ux*9,sy+uy*9);ctx.lineTo(sx-px*10,sy-py*10);ctx.closePath();});
+    line(.7,1,()=>{ctx.moveTo(sx-px*7,sy-py*7);ctx.lineTo(sx+px*7,sy+py*7);ctx.moveTo(sx,sy);ctx.lineTo(sx+ux*8,sy+uy*8);});
+    return;
+  }
+  if(job==='assassin'){
+    const len=23, tipX=gripX+ux*len, tipY=gripY+uy*len;
+    line(1,1.8,()=>{ctx.moveTo(gripX-ux*5,gripY-uy*5);ctx.lineTo(tipX,tipY);ctx.moveTo(tipX,tipY);ctx.lineTo(tipX-ux*5+px*3,tipY-uy*5+py*3);ctx.moveTo(tipX,tipY);ctx.lineTo(tipX-ux*5-px*3,tipY-uy*5-py*3);});
+    const a2=-Math.PI*.42-atkP*.25, u2x=Math.cos(a2), u2y=Math.sin(a2);
+    line(.85,1.55,()=>{ctx.moveTo(leftGripX,leftGripY);ctx.lineTo(leftGripX+u2x*20,leftGripY+u2y*20);});
+    return;
+  }
+  if(job==='paladin'){
+    const len=31, tipX=gripX+ux*len, tipY=gripY+uy*len;
+    line(1,2,()=>{ctx.moveTo(gripX-ux*8,gripY-uy*8);ctx.lineTo(tipX,tipY);});
+    line(.9,1.35,()=>{ctx.moveTo(tipX-px*8,tipY-py*8);ctx.lineTo(tipX+px*8,tipY+py*8);ctx.moveTo(tipX-ux*8,tipY-uy*8);ctx.lineTo(tipX+ux*8,tipY+uy*8);});
+    return;
+  }
+  if(job==='alchemist'){
+    const len=26, tipX=gripX+ux*len, tipY=gripY+uy*len;
+    line(1,1.7,()=>{ctx.moveTo(gripX-ux*7,gripY-uy*7);ctx.lineTo(tipX,tipY);});
+    line(.9,1.25,()=>{ctx.moveTo(tipX-5,tipY-3);ctx.lineTo(tipX+5,tipY-3);ctx.lineTo(tipX+7,tipY+8);ctx.lineTo(tipX-7,tipY+8);ctx.closePath();});
+    return;
+  }
+  // 기본 검투사: 직검
+  const handleLen=8, bladeLen=34, guardLen=12;
+  const baseX=gripX+ux*3, baseY=gripY+uy*3, tipX=baseX+ux*bladeLen, tipY=baseY+uy*bladeLen, backX=gripX-ux*handleLen, backY=gripY-uy*handleLen;
+  const gx=px*guardLen/2, gy=py*guardLen/2, edgeW=2.1;
+  line(.85,1.5,()=>{ctx.moveTo(gripX,gripY);ctx.lineTo(backX,backY);});
+  orb(backX,backY,1.5,.7);
+  line(.95,1.35,()=>{ctx.moveTo(gripX-gx,gripY-gy);ctx.lineTo(gripX+gx,gripY+gy);});
+  line(1,1.85,()=>{ctx.moveTo(baseX+px*edgeW,baseY+py*edgeW);ctx.lineTo(tipX,tipY);ctx.lineTo(baseX-px*edgeW,baseY-py*edgeW);});
+  line(.7,.95,()=>{ctx.moveTo(baseX,baseY);ctx.lineTo(tipX,tipY);});
+}
+function drawPlayer(){const x=player.x,y=player.y;ctx.save();ctx.translate(x,y);
+  // 키를 줄인 정면 고정 졸라맨. 목 길이를 더 줄이고, 손/발 없이 얇은 선으로만 표시한다.
+  const hurt=player.hurt>0?1:.9;
+  if(player.shield>0){lineStyle(.55,1.45);ctx.beginPath();ctx.arc(0,0,30+Math.sin(performance.now()/80)*2.4,0,Math.PI*2);ctx.stroke();}
+  const t=performance.now()/1000;
+  const moving=(Math.abs(joystick.dx)+Math.abs(joystick.dy)>0.08)||!!player.movingAnim;
+  const step=moving?Math.sin(t*11):0;
+  const bob=moving?Math.abs(Math.sin(t*11))*1.05:0;
+  const armSwing=moving?step*2.5:0;
+  const legSwing=moving?step*4.4:0;
+  const atkTotal=.22;
+  const atkP=player.attackAnim>0?clamp((atkTotal-player.attackAnim)/atkTotal,0,1):0;
+  const swing=player.attackAnim>0?Math.sin(atkP*Math.PI):0;
+  const wind=player.attackAnim>0?Math.sin(atkP*Math.PI*2)*1.75:0;
+
+  ctx.translate(0,-bob);
+
+  // 머리: 더 낮게 내려 목이 짧아 보이도록 조정.
+  lineStyle(hurt,1.8);
+  ctx.beginPath();ctx.arc(0,-24,8,0,Math.PI*2);ctx.stroke();
+  lineStyle(.75,.85);ctx.beginPath();ctx.moveTo(-2.5,-26);ctx.lineTo(-2.6,-26.1);ctx.moveTo(2.5,-26);ctx.lineTo(2.6,-26.1);ctx.stroke();
+
+  // 몸통: 머리와 가까이 붙여 목 간격 축소.
+  lineStyle(hurt,1.8);
+  ctx.beginPath();ctx.moveTo(0,-16);ctx.lineTo(0,8);ctx.stroke();
+
+  // 오른팔: 손 모양 없이 팔 끝에 바로 검이 붙는다.
+  const shoulderX=0, shoulderY=-9;
+  const elbowX=10+armSwing*.18+swing*3.4;
+  const elbowY=-6-swing*6.4;
+  const gripX=17+wind+swing*6.2;
+  const gripY=-6-armSwing*.12+swing*7.5;
+  ctx.beginPath();ctx.moveTo(shoulderX,shoulderY);ctx.lineTo(elbowX,elbowY);ctx.lineTo(gripX,gripY);ctx.stroke();
+
+  // 반대팔: 손끝 표시 없이 짧은 균형 동작만 남김.
+  const leftGripX=-16-armSwing*.28;
+  const leftGripY=2+swing*2.1;
+  ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(-11-armSwing*.32,-4+swing*1.4);ctx.lineTo(leftGripX,leftGripY);ctx.stroke();
+
+  // 다리: 발/발바닥 없이 짧은 선만 사용.
+  ctx.beginPath();ctx.moveTo(0,8);ctx.lineTo(5.6+legSwing*.24,19);ctx.lineTo(7+legSwing*.75,29);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,8);ctx.lineTo(-5.6-legSwing*.24,19);ctx.lineTo(-7-legSwing*.75,29);ctx.stroke();
+
+  // 직업별 무기: 검/활/지팡이/저주낫/기계장비/방패검/쌍단검/성기사 메이스/연금 플라스크로 분기.
+  const face=Number.isFinite(player.dir)?player.dir:-Math.PI/2;
+  const attackArc=player.attackAnim>0?(-.72+atkP*1.24)*Math.PI:0;
+  const bladeAngle=face+attackArc;
+  drawClassWeapon(player.job||'blade', gripX, gripY, bladeAngle, atkP, leftGripX, leftGripY);
+  ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(0,255,114,.98)';
+  ctx.font='11px monospace';
+  ctx.textAlign='center';
+  ctx.fillText(`Lv.${player.level} ${sanitizeNickname(player.nickname||'플레이어')}`,0,-42);
+  ctx.restore();}
+function drawMonsterShape(m){const x=m.x,y=m.y;ctx.save();ctx.translate(x,y);const hitAlpha=m.hit>0?1:.78;lineStyle(hitAlpha,m.boss?2.6:1.9);const t=performance.now()/1000;const sway=Math.sin(t*3+(m.x+m.y)*0.01);const kind=m.shape%5;
+  if(m.boss){ctx.beginPath();ctx.arc(0,-18,11,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(0,18);ctx.moveTo(-12,-2);ctx.lineTo(12,-2);ctx.moveTo(-10,18);ctx.lineTo(10,18);ctx.stroke();ctx.beginPath();ctx.moveTo(-16,-26);ctx.lineTo(-6,-36);ctx.lineTo(0,-28);ctx.lineTo(6,-36);ctx.lineTo(16,-26);ctx.stroke();ctx.beginPath();ctx.arc(0,0,34,0,Math.PI*2);ctx.stroke();ctx.restore();return;}
+  if(kind===0){
+    ctx.beginPath();ctx.arc(0,-16,7,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(0,10);ctx.moveTo(-10,-1+sway*1.5);ctx.lineTo(10,-1-sway*1.5);ctx.moveTo(0,10);ctx.lineTo(-7,24);ctx.moveTo(0,10);ctx.lineTo(7,24);ctx.stroke();
+  }else if(kind===1){
+    ctx.beginPath();ctx.arc(0,-12,8,0,Math.PI*2);ctx.moveTo(-5,-19);ctx.lineTo(-10,-26);ctx.lineTo(-1,-22);ctx.moveTo(5,-19);ctx.lineTo(10,-26);ctx.lineTo(1,-22);ctx.stroke();ctx.beginPath();ctx.moveTo(-11,-6);ctx.lineTo(11,-6);ctx.lineTo(14,8);ctx.lineTo(0,16);ctx.lineTo(-14,8);ctx.closePath();ctx.stroke();ctx.beginPath();ctx.moveTo(-8,15);ctx.lineTo(-12,26);ctx.moveTo(8,15);ctx.lineTo(12,26);ctx.moveTo(13,4);ctx.lineTo(20,0);ctx.stroke();
+  }else if(kind===2){
+    ctx.strokeRect(-12,-22,24,18);ctx.strokeRect(-10,-4,20,18);ctx.beginPath();ctx.moveTo(-15,4);ctx.lineTo(-24,10);ctx.moveTo(15,4);ctx.lineTo(24,10);ctx.moveTo(-6,14);ctx.lineTo(-10,26);ctx.moveTo(6,14);ctx.lineTo(10,26);ctx.stroke();ctx.beginPath();ctx.arc(-5,-13,1.8,0,Math.PI*2);ctx.arc(5,-13,1.8,0,Math.PI*2);ctx.stroke();
+  }else if(kind===3){
+    ctx.beginPath();ctx.arc(0,-14,8,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(-5,-19);ctx.lineTo(-10,-30);ctx.lineTo(-2,-23);ctx.moveTo(5,-19);ctx.lineTo(10,-30);ctx.lineTo(2,-23);ctx.stroke();ctx.beginPath();ctx.moveTo(0,-6);ctx.lineTo(0,11);ctx.moveTo(-12,-3);ctx.lineTo(12,-3);ctx.moveTo(0,11);ctx.lineTo(-9,24);ctx.moveTo(0,11);ctx.lineTo(9,24);ctx.stroke();ctx.beginPath();ctx.moveTo(-12,0);ctx.lineTo(-20,8);ctx.moveTo(12,0);ctx.lineTo(20,8);ctx.moveTo(-6,24);ctx.lineTo(-12,30);ctx.moveTo(6,24);ctx.lineTo(12,30);ctx.stroke();
+  }else{
+    ctx.beginPath();ctx.arc(0,-10,9,Math.PI,0);ctx.lineTo(10,10);ctx.lineTo(5,18);ctx.lineTo(0,12);ctx.lineTo(-5,18);ctx.lineTo(-10,10);ctx.closePath();ctx.stroke();ctx.beginPath();ctx.moveTo(-3,-11);ctx.lineTo(-3,-10);ctx.moveTo(3,-11);ctx.lineTo(3,-10);ctx.stroke();ctx.beginPath();ctx.arc(0,4,16,0,Math.PI);ctx.stroke();
+  }
+  ctx.restore();}
+function drawMonsters(){for(const m of monsters){if(m.dead)continue;drawMonsterShape(m);const w=m.boss?70:42,yTop=m.y-(m.boss?58:42);ctx.shadowBlur=0;ctx.fillStyle='rgba(0,255,114,.9)';ctx.font=m.boss?'12px monospace':'10px monospace';ctx.textAlign='center';ctx.fillText(`Lv.${m.level} ${m.name}`,m.x,yTop-8);ctx.strokeStyle='rgba(0,255,114,.45)';ctx.strokeRect(m.x-w/2,yTop,w,4);ctx.fillStyle='rgba(0,255,114,.8)';ctx.fillRect(m.x-w/2,yTop,w*clamp(m.hp/m.maxHp,0,1),4);}}
+function drawProjectiles(){
+  for(const p of projectiles){
+    const a=p.angle||0, ux=Math.cos(a), uy=Math.sin(a), px=Math.cos(a+Math.PI/2), py=Math.sin(a+Math.PI/2);
+    if(p.kind==='arrow'){
+      lineStyle(.95,1.75);ctx.beginPath();ctx.moveTo(p.x-ux*14,p.y-uy*14);ctx.lineTo(p.x+ux*16,p.y+uy*16);ctx.stroke();
+      lineStyle(.95,1.15);ctx.beginPath();ctx.moveTo(p.x+ux*16,p.y+uy*16);ctx.lineTo(p.x+ux*8+px*4,p.y+uy*8+py*4);ctx.moveTo(p.x+ux*16,p.y+uy*16);ctx.lineTo(p.x+ux*8-px*4,p.y+uy*8-py*4);ctx.stroke();
+    }else if(p.kind==='magic'){
+      lineStyle(.95,1.7);ctx.beginPath();ctx.arc(p.x,p.y,6+Math.sin(performance.now()/80)*1.5,0,Math.PI*2);ctx.stroke();
+      lineStyle(.55,1);ctx.beginPath();ctx.moveTo(p.x-10,p.y);ctx.lineTo(p.x+10,p.y);ctx.moveTo(p.x,p.y-10);ctx.lineTo(p.x,p.y+10);ctx.stroke();
+    }else if(p.kind==='curse'){
+      lineStyle(.88,1.7);ctx.beginPath();for(let i=0;i<6;i++){const ang=a+i*Math.PI/3;ctx.lineTo(p.x+Math.cos(ang)*8,p.y+Math.sin(ang)*8);}ctx.closePath();ctx.stroke();
+      lineStyle(.55,1);ctx.beginPath();ctx.arc(p.x,p.y,12,a-.9,a+1.3);ctx.stroke();
+    }else if(p.kind==='missile'){
+      lineStyle(.95,1.9);ctx.beginPath();ctx.moveTo(p.x+ux*14,p.y+uy*14);ctx.lineTo(p.x-ux*8+px*5,p.y-uy*8+py*5);ctx.lineTo(p.x-ux*12,p.y-uy*12);ctx.lineTo(p.x-ux*8-px*5,p.y-uy*8-py*5);ctx.closePath();ctx.stroke();
+      lineStyle(.5,1.2);ctx.beginPath();ctx.moveTo(p.x-ux*13,p.y-uy*13);ctx.lineTo(p.x-ux*24+px*3,p.y-uy*24+py*3);ctx.moveTo(p.x-ux*13,p.y-uy*13);ctx.lineTo(p.x-ux*24-px*3,p.y-uy*24-py*3);ctx.stroke();
+    }else if(p.kind==='flask'){
+      lineStyle(.92,1.7);ctx.beginPath();ctx.moveTo(p.x+ux*10,p.y+uy*10);ctx.lineTo(p.x+px*7,p.y+py*7);ctx.lineTo(p.x-ux*9,p.y-uy*9);ctx.lineTo(p.x-px*7,p.y-py*7);ctx.closePath();ctx.stroke();
+      lineStyle(.55,1);ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.stroke();
+    }else if(p.kind==='spirit'||p.kind==='summon'){
+      lineStyle(.86,1.6);ctx.beginPath();ctx.arc(p.x,p.y,6,0,Math.PI*2);ctx.stroke();
+      lineStyle(.5,1);ctx.beginPath();ctx.arc(p.x,p.y,12,a,a+Math.PI*1.3);ctx.stroke();
+    }else{
+      lineStyle(.9,2);ctx.beginPath();ctx.arc(p.x,p.y,4,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(p.x-8,p.y);ctx.lineTo(p.x+8,p.y);ctx.stroke();
+    }
+  }
+}
+function drawSummons(){for(const s of summons){lineStyle(.8,2);if(s.kind==='turret'){ctx.strokeRect(s.x-14,s.y-14,28,28);ctx.beginPath();ctx.moveTo(s.x,s.y-22);ctx.lineTo(s.x,s.y+22);ctx.moveTo(s.x-22,s.y);ctx.lineTo(s.x+22,s.y);ctx.stroke();}else{ctx.beginPath();ctx.arc(s.x,s.y,14,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-8,s.y);ctx.lineTo(s.x+8,s.y);ctx.moveTo(s.x,s.y-8);ctx.lineTo(s.x,s.y+8);ctx.stroke();}}}
+function drawDrops(){const st=computeStats(),range=pickupRange(st);for(const d of drops){const pulling=Math.hypot(player.x-d.x,player.y-d.y)<range;lineStyle(pulling?.95:.8,pulling?2.4:2);ctx.strokeRect(d.x-8,d.y-8,16,16);ctx.beginPath();ctx.moveTo(d.x,d.y-13);ctx.lineTo(d.x+13,d.y);ctx.lineTo(d.x,d.y+13);ctx.lineTo(d.x-13,d.y);ctx.closePath();ctx.stroke();if(pulling){lineStyle(.28,1);ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(player.x,player.y);ctx.stroke();}}}
+function drawEffects(){for(const e of effects){if(e.type==='text'){ctx.save();ctx.globalAlpha=clamp(e.life/.7,0,1);ctx.fillStyle=e.heal?'rgba(150,255,200,.95)':'rgba(0,255,114,.95)';ctx.shadowColor='rgba(0,255,114,.9)';ctx.shadowBlur=8;ctx.font=`${e.big?17:12}px monospace`;ctx.textAlign='center';ctx.fillText(e.t,e.x,e.y);ctx.restore();}else if(e.type==='spark'){lineStyle(.8,2);for(let i=0;i<6;i++){const a=i*Math.PI/3+e.life*8;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(a)*e.r,e.y+Math.sin(a)*e.r);ctx.stroke();}}else if(e.type==='ring'||e.type==='hex'){lineStyle(.6,2);ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1-e.life*.45),0,Math.PI*2);ctx.stroke();}else if(e.type==='linepop'){lineStyle(.75,2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();}else if(e.type==='bomb'){lineStyle(.8,2);ctx.beginPath();ctx.arc(e.x,e.y,Math.max(8,e.r),0,Math.PI*2);ctx.stroke();}}
+}
+function drawMiniMap(){
+  const mw=Math.max(56,mini.clientWidth||80), mh=Math.max(56,mini.clientHeight||mw), pad=4;
+  const iw=mw-pad*2, ih=mh-pad*2;
+  mctx.clearRect(0,0,mw,mh);mctx.fillStyle='rgba(0,0,0,.8)';mctx.fillRect(0,0,mw,mh);mctx.strokeStyle='rgba(0,255,114,.6)';mctx.strokeRect(pad,pad,iw,ih);
+  const sx=iw/fieldSize,sy=ih/fieldSize;function dot(x,y,r=2){mctx.beginPath();mctx.arc(pad+x*sx,pad+y*sy,r,0,Math.PI*2);mctx.stroke();}
+  mctx.strokeStyle='rgba(0,255,114,.95)';dot(player.x,player.y,3.2);mctx.strokeStyle='rgba(0,255,114,.45)';for(const m of monsters)if(!m.dead)dot(m.x,m.y,m.boss?2.8:1.6);mctx.strokeStyle='rgba(0,255,114,.75)';for(const n of npcs)dot(n.x,n.y,n.kind==='portal'?3.2:2.2);}
+
+function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!gamePaused)update(dt);draw();requestAnimationFrame(loop);}requestAnimationFrame(loop);
+
+function dodge(){
+  if(player.dodgeTimer>0||!player.classChosen)return;
+  const st=computeStats();
+  player.dodgeTimer=Math.max(.55,1.35-(st.dodge||0)*.8);
+  if(Math.hypot(joystick.dx,joystick.dy)>.05) player.dir=Math.atan2(joystick.dy,joystick.dx);
+  player.dashTime=.16; player.hurt=0;
+  effects.push({type:'ring',x:player.x,y:player.y,life:.24,r:28});
+}
+function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
+function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">저장, 불러오기, 오토모드, 직업 변경을 관리합니다.</div><div class="grid"><button onclick="Game.saveGame()">저장</button><button onclick="Game.loadGame()">불러오기</button><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.startClassSelect()">직업 선택 20종</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">오토 설정에서는 스킬 슬롯과 자동 물약 퍼센트를 따로 지정합니다.</div>`);}
+function quickToggleAuto(){player.autoMode=!player.autoMode;toast(player.autoMode?'오토모드 ON':'오토모드 OFF');updateHud();}
+function toggleAuto(){quickToggleAuto();showAutoPanel();}
+function showAutoPanel(){
+  normalizePlayer();
+  const job=jobById(player.job||'blade');
+  const style=rangedAttackProfile(player.job,computeStats())?'원거리 추적/거리 유지':'근접 접근/회피 돌진';
+  const slots=player.skillSlots.slice(0,4).map((r,i)=>{const ok=r>0&&r<=skillStar();const name=ok?skillByRank(player.job,r).name:'비움';return `스킬${i+1}: ${ok?`${r}성 ${name}`:'비움'}`;}).join('<br>');
+  const pot=CONSUMABLES[player.potionSlot]||CONSUMABLES.potion;
+  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${job.name}</b> · ${job.type}<br>자동 전투 방식: ${style}</div><div class="card"><h3>현재 슬롯</h3>${slots}<br>물약 슬롯: ${pot.name} · HP ${Math.round(player.autoPotionPct*100)}% 이하 자동 사용</div><div class="grid"><button onclick="Game.toggleAuto()" class="${player.autoMode?'autoOn':''}">오토 ${player.autoMode?'ON':'OFF'}</button><button onclick="Game.showSkillSlotSettings()">스킬 설정</button><button onclick="Game.showPotionSettings()">물약 설정</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">오토 직업 선택과 스킬 구매 버튼은 제거했습니다. 직업 변경은 설정 메뉴에서, 스킬 구매는 마을/상점에서 처리합니다.</div>`);
+}
+
+function showSkillSlotSettings(){
+  normalizePlayer();
+  const learned=skillStar();
+  const job=jobById(player.job||'blade');
+  const makeAssign=(slot)=>{
+    if(learned<=0)return `<div class="card"><h3>스킬${slot}</h3>습득한 스킬이 없습니다.<br><button onclick="Game.showSkillShop()">스킬 상점 이동</button></div>`;
+    const cur=skillRankForSlot(slot);
+    const buttons=[];
+    buttons.push(`<button onclick="Game.setSkillSlot(${slot},0)" ${cur===0?'class="selected"':''}>비움</button>`);
+    for(let r=1;r<=learned;r++){
+      const s=skillByRank(player.job,r);
+      buttons.push(`<button onclick="Game.setSkillSlot(${slot},${r})" ${cur===r?'class="selected"':''}>${r}성 ${s.name}</button>`);
+    }
+    return `<div class="card"><h3>스킬${slot} 슬롯</h3>현재: ${cur?`${cur}성 ${skillByRank(player.job,cur).name}`:'비움'}<div class="grid">${buttons.join('')}</div></div>`;
+  };
+  openPopup(`<div class="title">스킬 슬롯 설정</div><div class="sub">${job.name} · 보유 스킬 ${learned}/10<br>각 슬롯에 사용할 스킬을 지정합니다. 오토모드는 이 슬롯 순서대로 자동 사용합니다.</div>${makeAssign(1)}${makeAssign(2)}${makeAssign(3)}${makeAssign(4)}<div class="footerBtns"><button onclick="Game.showAutoPanel()">오토 설정</button><button onclick="Game.closePopup()">닫기</button></div>`);
+}
+function setSkillSlot(slot,rank){normalizePlayer();slot=clamp(Number(slot)||1,1,4);rank=clamp(Number(rank)||0,0,10);const learned=skillStar();if(rank>learned){toast('아직 배우지 않은 스킬');return;}player.skillSlots[slot-1]=rank;toast(`스킬${slot} 슬롯 변경`);showSkillSlotSettings();updateHud();}
+function showPotionSettings(){
+  normalizePlayer();
+  const itemRows=Object.entries(CONSUMABLES).map(([k,c])=>`<button class="card ${player.potionSlot===k?'selected':''}" onclick="Game.setPotionSlot('${k}')"><h3>${c.name}</h3>${c.desc}<br><span class="small">보유 ${player.consumables[k]||0}개</span></button>`).join('');
+  const pct=Math.round(player.autoPotionPct*100);
+  openPopup(`<div class="title">물약 설정</div><div class="sub">물약 슬롯과 오토모드 자동 사용 체력 퍼센트를 지정합니다. 수동 물약 버튼도 현재 슬롯을 우선 사용합니다.</div><div class="card"><h3>현재 설정</h3>슬롯: ${CONSUMABLES[player.potionSlot].name}<br>자동 사용: HP <b id="autoPctVal">${pct}%</b> 이하</div><h3>물약 슬롯</h3><div class="grid">${itemRows}</div><h3>자동 사용 퍼센트</h3><div class="card"><div class="neonRangeWrap"><div id="rangeBubble" class="rangeBubble" style="left:${pct}%">${pct}%</div><input class="neonRange" type="range" min="0" max="100" step="1" value="${pct}" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" oninput="Game.updatePotionRangeLabel(this.value)" onchange="Game.setAutoPotionPct(this.value)"><div class="neonRangeText"><span>0%</span><span>자동 사용 기준</span><span>100%</span></div></div></div><div class="footerBtns"><button onclick="Game.showAutoPanel()">오토 설정</button><button onclick="Game.closePopup()">닫기</button></div>`);
+}
+function setPotionSlot(key){normalizePlayer();if(!CONSUMABLES[key])return;player.potionSlot=key;toast(`${CONSUMABLES[key].name} 슬롯 지정`);showPotionSettings();updateHud();}
+
+function updatePotionRangeLabel(v){
+  const n=Number(v);
+  const val=clamp(Number.isFinite(n)?n:42,0,100);
+  const label=$('autoPctVal');
+  const bubble=$('rangeBubble');
+  if(label)label.textContent=val+'%';
+  if(bubble){
+    bubble.textContent=val+'%';
+    bubble.style.left=val+'%';
+  }
+}
+function setAutoPotionPct(v){normalizePlayer();const n=Number(v);player.autoPotionPct=clamp((Number.isFinite(n)?n:42)/100,0,1);toast(`자동 물약 HP ${Math.round(player.autoPotionPct*100)}%`);showPotionSettings();updateHud();}
+function enterTownFromSettings(){closePopup();enterField('town');toast('마을로 귀환');}
+function nearestNpc(){let b=null,bd=85;for(const n of npcs){if(n.kind==='portal')continue;const d=Math.hypot(player.x-n.x,player.y-n.y);if(d<bd){bd=d;b=n;}}return b;}
+function talkToNpc(n){if(!n)return; if(n.kind==='quest')showQuest();else if(n.kind==='shop')showShop();else if(n.kind==='guild')showGuild();}
+function updateTalkPrompt(){
+  const btn=$('talkPrompt');
+  if(currentField!=='town'||popupLayer.style.display==='flex'){talkTarget=null;btn.style.display='none';return;}
+  const n=nearestNpc(); talkTarget=n;
+  if(!n){btn.style.display='none';return;}
+  btn.textContent=`${n.name} 말걸기`; btn.style.display='block';
+  const bw=btn.offsetWidth||92, bh=btn.offsetHeight||30;
+  const sx=clamp(n.x-camera.x,bw/2+8,W-bw/2-8), sy=clamp(n.y-camera.y-48,Math.max(64,bh+8),H-120);
+  btn.style.left=`${sx}px`; btn.style.top=`${sy}px`;
+}
+function updatePortalTrigger(){
+  if(currentField!=='town')return;
+  const portal=npcs.find(n=>n.kind==='portal'); if(!portal)return;
+  const d=Math.hypot(player.x-portal.x,player.y-portal.y);
+  if(d>120){portalArmed=true;return;}
+  if(d<72 && portalArmed && popupLayer.style.display!=='flex'){
+    portalArmed=false; showFieldSelect(); toast('포털 이동');
+  }
+}
+
+function bind(){
+  const joy=$('joy'), stick=$('stick');
+  const setJoy=(clientX,clientY)=>{const r=joy.getBoundingClientRect();const cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=clientX-cx,dy=clientY-cy;const len=Math.hypot(dx,dy),max=r.width/2-22;if(len>max){dx=dx/len*max;dy=dy/len*max;}joystick.dx=dx/max;joystick.dy=dy/max;stick.style.transform=`translate(${dx}px,${dy}px)`;};
+  joy.addEventListener('pointerdown',e=>{e.preventDefault();joystick.active=true;joystick.id=e.pointerId;joy.setPointerCapture(e.pointerId);setJoy(e.clientX,e.clientY);},{passive:false});
+  joy.addEventListener('pointermove',e=>{if(joystick.active&&e.pointerId===joystick.id){e.preventDefault();setJoy(e.clientX,e.clientY);}},{passive:false});
+  const end=e=>{if(e.pointerId===joystick.id){joystick.active=false;joystick.id=null;joystick.dx=joystick.dy=0;stick.style.transform='translate(0,0)';}};joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
+  const hold=(el,down,up)=>{el.addEventListener('pointerdown',e=>{e.preventDefault();down();});el.addEventListener('pointerup',e=>{e.preventDefault();up();});el.addEventListener('pointercancel',up);el.addEventListener('pointerleave',up);};
+  hold($('attackBtn'),()=>{attackHeld=true;normalAttack();},()=>attackHeld=false);
+  for(let i=1;i<=4;i++){const btn=$(`skillBtn${i}`);if(btn)hold(btn,()=>{skillHeld[i-1]=true;useSkill(i);},()=>skillHeld[i-1]=false);}
+  const dodgeBtn=$('dodgeBtn');
+  dodgeBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();dodge();},{passive:false});
+  dodgeBtn.onclick=e=>{e.preventDefault();};
+  $('potionBtn').onclick=usePotion; $('talkPrompt').onclick=()=>talkToNpc(talkTarget); $('statBtn').onclick=showStats; $('bagBtn').onclick=renderBag; $('codexBtn').onclick=renderCodex; $('settingBtn').onclick=showSettings;
+  $('autoBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();quickToggleAuto();},{passive:false});
+  document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false}); document.addEventListener('contextmenu',e=>e.preventDefault()); document.addEventListener('selectstart',e=>e.preventDefault());
+}
+bind();
+
+function startQuickGame(id='blade'){
+  player=basePlayer();
+  player.nickname=sanitizeNickname(player.nickname||'플레이어');
+  player.job=id;
+  player.classChosen=true;
+  syncHp();
+  mode='town';
+  enterField('town');
+  giveStarterItems();
+  closePopup();
+  msg(`${jobById(id).name} 시작`);
+}
+window.Game={pickJob,openPopup,closePopup,showTown,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,showStats,showSettings,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startQuickGame,startClassSelect,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+
+// 시작 시 직업 선택 팝업 표시. 저장 데이터가 있으면 진행 상태는 유지하고, 없으면 마을에서 직업을 먼저 고르게 한다.
+if(storageGet(saveKey)){
+  if(!loadGame()){
+    player=basePlayer(); normalizePlayer(); enterField('town');
+  }
+}else{
+  player=basePlayer(); normalizePlayer(); enterField('town');
+}
+startClassSelect();
+updateHud();
+})();
+</script>
+</body>
+</html>
