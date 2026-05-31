@@ -514,6 +514,58 @@
     margin-top:0!important;
   }
 
+  /* 시작/업데이트 화면 */
+  .bootScreen{text-align:center;padding:18px 8px;min-height:360px;display:flex;flex-direction:column;justify-content:center;gap:16px;}
+  .gameTitle{font-size:28px;font-weight:900;letter-spacing:2px;color:var(--g);text-shadow:0 0 12px rgba(0,255,114,.75),0 0 28px rgba(0,255,114,.35);}
+  .blinkStart{font-size:13px;color:var(--g);animation:blinkGlow 1.15s ease-in-out infinite;text-shadow:0 0 10px rgba(0,255,114,.8);}
+  @keyframes blinkGlow{0%,100%{opacity:.45;filter:brightness(.8)}50%{opacity:1;filter:brightness(1.55)}}
+  .bootPanel{border:1px solid rgba(0,255,114,.48);border-radius:16px;padding:16px;background:rgba(0,255,114,.04);box-shadow:inset 0 0 14px rgba(0,255,114,.06),0 0 16px rgba(0,255,114,.12);}
+  .patchNoteBox{text-align:left;line-height:1.55;font-size:12px;border:1px solid rgba(0,255,114,.35);border-radius:12px;padding:12px;margin-top:10px;background:rgba(0,0,0,.55);}
+
+  /* 업데이트 진행 게이지 */
+  .updateProgressBox{
+    width:100%;
+    max-width:360px;
+    margin:0 auto;
+    text-align:left;
+  }
+  .updateProgressTop{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:11px;
+    color:var(--g);
+    margin-bottom:6px;
+    opacity:.9;
+  }
+  .updateTrack{
+    position:relative;
+    width:100%;
+    height:9px;
+    border:1px solid rgba(0,255,114,.58);
+    border-radius:999px;
+    background:transparent;
+    overflow:hidden;
+    box-shadow:0 0 10px rgba(0,255,114,.18);
+  }
+  .updateFill{
+    position:absolute;
+    left:0;
+    top:0;
+    height:100%;
+    width:0%;
+    border-radius:999px;
+    background:linear-gradient(90deg,rgba(0,255,114,.65),rgba(130,255,185,.95));
+    box-shadow:0 0 12px rgba(0,255,114,.65);
+    transition:width .12s linear;
+  }
+  .updateStatus{
+    margin-top:8px;
+    font-size:11px;
+    color:rgba(0,255,114,.86);
+    min-height:16px;
+  }
+
 </style>
 </head>
 <body>
@@ -764,11 +816,11 @@ function skillCost(jobId=player.job){const s=skillStar(jobId); return s>=10?0:(s
 function skillScale(rank=skillStar()){
   rank=clamp(rank,0,10);
   return {
-    power:1+rank*.24,
-    radius:1+rank*.075,
-    duration:1+rank*.10,
-    countBonus:Math.floor((rank+1)/2),
-    cooldown:Math.max(.54,1-rank*.035)
+    power:.72+rank*.09,
+    radius:.92+rank*.045,
+    duration:.92+rank*.055,
+    countBonus:Math.floor((rank+1)/3),
+    cooldown:Math.max(.66,1-rank*.022)
   };
 }
 function skillStageText(jobId=player.job){const s=skillStar(jobId); return s>=10?'10성 스킬 보유':s>0?`${s}성 ${skillByRank(jobId,s).name}`:'미습득';}
@@ -790,26 +842,72 @@ FIELDS.push(
   {id:'lab',name:'실험 구역',bg:10,level:88,size:3450,theme:'실험',boss:'녹색 실험체'},
   {id:'citadel',name:'최종 성채',bg:11,level:110,size:3600,theme:'성채',boss:'네온 성주'}
 );
-const SHAPES = ['삼각괴','사각병','날개충','가시뱀','쌍도끼','중심핵','십자귀','거미선','방패령','나선체'];
 
+const SHAPES = ['인간형','동물형','기계형','악마형','유령형','비행형','장갑형','마법형','돌격형','보스형'];
+const FIELD_MONSTER_NAMES={
+  plain:['버려진 초병','무너진 석궁수','폐탑 방랑자','회색 들개','균열 딱정벌레','녹슨 장창병','먼지 포식자','석판 파수꾼','갈라진 늑대','잊힌 노역자','잔해 도굴꾼','마른 수문장','부서진 경비정','흙빛 망령','녹슨 발톱수','벽돌 먹보','폐허 노래꾼','깨진 투구병','마모된 창지기','황무지 야수','금간 기사상','잿빛 추적견','바람맞은 순찰자','무너진 문지기'],
+  maze:['길잃은 감시자','회전 복도병','분기점 사냥꾼','거울눈 파수꾼','청록 미로쥐','문양 삼키미','닫힌 문지기','계단 없는 기사','방향잃은 창병','숨은 방 청소부','벽면 기어꾼','잠긴 상자귀','구불 복도령','돌문 괴수','열쇠 훔치미','맴도는 지도사','방향석 거미','홀수칸 감시병','닫힘고리 마수','길목 벌레왕','비틀린 방랑병','고리눈 미궁수','침묵의 문양병','후진로 파괴자'],
+  cavern:['수정턱 광부','메아리 박쥐','푸른 석순수','지하수 망령','광맥 갉이','동굴 장갑충','흔들림 발톱수','심층 드릴병','발광 도마뱀','빈 광차지기','울림뼈 전사','석회 껍질벌레','어둠 이끼꾼','수정등 사냥꾼','깊은틈 파수꾼','낙석 부름이','광석 먹보','굴착 손아귀','반향 창지기','밤눈 거대쥐','수정심장병','젖은 횃불귀','동굴잠수 괴어','무너짐 예언자'],
+  factory:['압연기 감시병','나사턱 로봇','증기관 추적자','용접팔 작업체','폐전지 드론','컨베이어 사냥개','강철 집게수','기름통 보초','회로톱 관리자','쇳가루 흡입기','피스톤 보행병','전선꼬리 생체기계','경고등 파수꾼','열처리 망치병','냉각수 유령기계','스위치 도둑','보일러 턱수','분쇄기 조수','압력밸브 괴수','금속먼지 기사','기어심장 파수병','철판 접이꾼','연료관 파괴자','자동문 경비체'],
+  abyss:['무저갱 속삭임','공허갈기 짐승','검은 촉수병','심연눈 수도자','바닥없는 사냥꾼','침묵의 입술귀','어둠비늘 포식자','망각의 발소리','저편 손아귀','밤물결 방랑자','혼절 부름이','깊은숨 추적자','검은피 망령','그늘뼈 수문장','불꺼진 사제','허공 씹는 자','무명 심문관','잔월 악귀','눈먼 도살자','심해종 무법자','공포등 파수꾼','먹구름 발톱','잠식된 기도자','끝없는 목격자'],
+  forest:['빛실 사슴','유리잎 정찰자','나뭇결 수호수','섬광 다람쥐','초록숨 망령','가지뿔 파수꾼','꽃가루 도적벌','수액껍질 괴목','밤이슬 궁수','숲길 숨바꼭질꾼','잎맥 늑대','반딧불 주술사','뿌리발 경비수','덩굴손 전사','새벽숲 딱정벌레','마른가지 사제','가지틈 도약수','푸른버섯 보초','물방울 나무령','숲노래 포식자','나비가면 추적자','늦가을 창지기','고목눈 감시자','풀잎칼 방랑자'],
+  rail:['신호기 도둑','검표 망령','철길 늑대','침목깨비','터널 귀청수','화물칸 약탈자','전차바퀴 병사','선로집게 괴수','차단기 파수꾼','연착된 승객귀','기관실 난동꾼','레일못 사냥꾼','정거장 그림자','스파크 선로수','수하물 포식자','고장난 방송령','급행 추적병','분기기 경비체','객차틈 괴어','녹슨 표지판귀','검은 승강장병','탄가루 도둑쥐','탈선 예언자','종착역 수문장'],
+  tower:['하층 계단병','종탑 까마귀','유리난간 기사','승강기 파수꾼','높은방 감시자','바람창 창병','첨탑 망령','시계문 도둑','상층 발톱수','난간매 사냥꾼','층계소리 귀','천장걸이 괴수','종소리 사제','긴그림자 수비병','창문틈 암살자','수직벽 보행자','구름다리 야수','옥상 방랑자','쇠종 가면병','꼭대기 문지기','기울어진 석상','회전계단 추적자','공중감옥 죄수','마천루 보초'],
+  harbor:['검은부두 선원','녹조 갈매귀','닻사슬 망령','창고쥐 두목','등대그림자 병사','젖은 로프 괴수','물안개 약탈자','갑판칼잡이','부표눈 감시자','파도밑 사냥꾼','밀수상자 귀신','해초수염 포식자','난파선 도굴꾼','조개갑 장갑병','검은등 낚시꾼','방파제 늑대','비린내 사제','항로잃은 노잡이','갯벌 발톱수','심야 하역병','바닷물 창지기','물새가면 추적자','등불 없는 항해자','침몰한 경비장'],
+  lab:['유리관 실험체','메스팔 조수','시약먹은 쥐','분열 배양수','방호복 도망자','시험번호 칠번','냉동실 망령','전극머리 괴수','주사기 도둑','초록액 포식자','관찰창 눈알','멸균실 파수꾼','표본병 사냥꾼','실패작 보행체','백색소음 귀','배양조 촉수','데이터 먹보','의무기록 유령','격리문 두드림','세포핵 추적자','붕대감은 실험병','복제 실패자','산성컵 괴물','수술등 감시자'],
+  citadel:['외성 순찰기사','왕실 창지기','붉은망토 수비병','성문 도끼병','깃발없는 기수','왕좌방 그림자','성벽투구 괴수','고문실 망령','은갑 방패수','대리석 사제','철왕관 추적자','성채 지하수','왕명 집행자','무도회 유령','검은계단 기사','황금창 보초','봉인문 수호병','전쟁북 괴수','옥좌 칼잡이','마지막 서기관','성화꺼진 수도자','요새눈 감시병','무너진 근위대','비밀문 암살자']
+};
+function monsterNameFor(f,i){
+  f=f||{};
+  const list=Array.isArray(FIELD_MONSTER_NAMES[f.id])?FIELD_MONSTER_NAMES[f.id]:[];
+  const n=list.length?list[((Number(i)||0)%list.length+list.length)%list.length]:'';
+  return n||`${f.theme||f.name||'필드'} 몬스터 ${((Number(i)||0)+1)}`;
+}
+function uniqueMonsterNameForField(f,idx,boss=false){
+  f=f||{};
+  if(boss)return f.boss||`${f.name||'필드'} 보스`;
+  const live=new Set((Array.isArray(monsters)?monsters:[]).filter(m=>m&&!m.dead).map(m=>m.name));
+  const list=Array.isArray(FIELD_MONSTER_NAMES[f.id])?FIELD_MONSTER_NAMES[f.id]:[];
+  if(list.length){
+    for(let step=0;step<list.length;step++){
+      const n=list[((Number(idx)||0)+step)%list.length];
+      if(n&&!live.has(n))return n;
+    }
+  }
+  monsterNameSerial=(Number(monsterNameSerial)||0)+1;
+  let n=`${f.name||'필드'} 개체 ${monsterNameSerial}`;
+  while(live.has(n)){monsterNameSerial=(monsterNameSerial+1)%9999;n=`${f.name||'필드'} 개체 ${monsterNameSerial}`;}
+  return n;
+}
 function makeMonsterBook(){
   const book={};
   for(const f of FIELDS.filter(x=>x.id!=='town')){
     book[f.id]=[];
-    for(let i=0;i<10;i++) book[f.id].push({name:`${f.theme} ${SHAPES[i]}`, shape:i, boss:false, seen:0,kills:0});
-    book[f.id].push({name:f.boss, shape:10, boss:true, seen:0,kills:0});
+    for(let i=0;i<10;i++) book[f.id].push({name:monsterNameFor(f,i), shape:i, boss:false, seen:0,kills:0});
+    book[f.id].push({name:f.boss||`${f.name} 보스`, shape:10, boss:true, seen:0,kills:0});
   }
   return book;
+}
+function repairPortalRuntimeState(){
+  if(!Array.isArray(monsters))monsters=[];
+  if(!Array.isArray(drops))drops=[];
+  if(!Array.isArray(projectiles))projectiles=[];
+  if(!Array.isArray(effects))effects=[];
+  if(!Array.isArray(summons))summons=[];
+  if(!Array.isArray(npcs))npcs=[];
+  if(!player||typeof player!=='object')player=basePlayer();
+  if(!player.codex||typeof player.codex!=='object')player.codex=makeMonsterBook();
+  for(const f of FIELDS.filter(x=>x.id!=='town'))ensureCodexForField(f);
 }
 
 const basePlayer = () => ({
   x:900,y:900,vx:0,vy:0,dir:-Math.PI/2,hp:100,maxHp:100,level:1,exp:0,nextExp:32,gold:160,potions:5,nickname:'플레이어',
-  job:null, classChosen:false, atkTimer:0, skillTimer:0, skillTimers:[0,0,0,0], skillTimerMax:[0,0,0,0], potionTimer:0, dodgeTimer:0, dashTime:0, attackAnim:0, hurt:0, shield:0, autoMode:false, activeBuffs:[], activeDebuffs:[], consumables:{potion:5,potionL:0,elixir:0,shield:0,haste:0,bomb:0}, potionSlot:'potion', autoPotionPct:.42, skillSlots:[1,2,3,4],
+  job:null, classChosen:false, atkTimer:0, atkTimerMax:0, skillTimer:0, skillTimers:[0,0,0,0], skillTimerMax:[0,0,0,0], potionTimer:0, dodgeTimer:0, dashTime:0, attackAnim:0, hurt:0, shield:0, autoMode:false, activeBuffs:[], activeDebuffs:[], consumables:{potion:5,potionL:0,elixir:0,shield:0,haste:0,bomb:0}, potionSlot:'potion', autoPotionPct:.42, skillSlots:[1,2,3,4],
   growths:[], inventory:[], equip:{weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},
   quest:0, questKills:0, guildRank:'신입', guildTokens:0, skillStars:{}, codex:makeMonsterBook(), discoveredItems:{}, totalKills:0
 });
 let player = basePlayer();
-let mode='class', currentField='town', fieldSize=1800, camera={x:0,y:0}, monsters=[], drops=[], projectiles=[], effects=[], summons=[], npcs=[];
+let mode='class', currentField='town', fieldSize=1800, camera={x:0,y:0}, monsters=[], drops=[], projectiles=[], effects=[], summons=[], npcs=[], monsterNameSerial=0;
 let talkTarget=null, portalArmed=true;
 let joystick={active:false,id:null,cx:0,cy:0,dx:0,dy:0};
 let attackHeld=false, skillHeld=[false,false,false,false];
@@ -819,7 +917,7 @@ let memorySave='';
 function storageGet(k){try{return window.localStorage?localStorage.getItem(k):memorySave;}catch(e){return memorySave||null;}}
 function storageSet(k,v){memorySave=String(v);try{if(window.localStorage)localStorage.setItem(k,v);return true;}catch(e){return false;}}
 function storageRemove(k){memorySave='';try{if(window.localStorage)localStorage.removeItem(k);}catch(e){}}
-function normalizePlayer(){const b=basePlayer();player=Object.assign(b,player||{});player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,10));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign(fresh[fid][i],player.codex[fid][i]||{});}player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
+function normalizePlayer(){const b=basePlayer();player=Object.assign(b,player||{});player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.atkTimerMax=Number(player.atkTimerMax)||0;player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,10));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign({},player.codex[fid][i]||{},fresh[fid][i],{seen:(player.codex[fid][i]&&player.codex[fid][i].seen)||0,kills:(player.codex[fid][i]&&player.codex[fid][i].kills)||0});}player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
 function addBuff(name,duration=2,mods={}){const old=player.activeBuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);Object.assign(old,mods);return;}player.activeBuffs.push(Object.assign({name,time:duration},mods));}
 function addDebuff(name,duration=2){const old=player.activeDebuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);return;}player.activeDebuffs.push({name,time:duration});}
 function updateStatusTimers(dt){for(const b of player.activeBuffs||[]){b.time-=dt;if(b.hpRegen)player.hp=clamp(player.hp+b.hpRegen*dt,0,player.maxHp);}for(const d of player.activeDebuffs||[])d.time-=dt;player.activeBuffs=(player.activeBuffs||[]).filter(b=>b.time>0);player.activeDebuffs=(player.activeDebuffs||[]).filter(d=>d.time>0);}
@@ -885,19 +983,66 @@ function applyStat(s,k,v){
 }
 function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(player.hp,0,player.maxHp);return st;}
 
-function startClassSelect(){
-  mode='class';
-  zoneTag.textContent='직업 선택';
-  const current=player.job||'blade';
+function startClassSelect(){showJobSelectPage();}
+let updateBootTimer=null;
+function showUpdatePage(){
+  mode='boot'; popupMode='update'; zoneTag.textContent='업데이트';
+  if(updateBootTimer){clearInterval(updateBootTimer);updateBootTimer=null;}
+  openPopup(`<div class="bootScreen" onclick="if((document.getElementById('updatePct')||{}).textContent==='100%') Game.showTitlePage()"><div class="gameTitle">업데이트중입니다</div><div class="bootPanel"><b>패치 데이터를 적용하고 있습니다.</b><br><span class="small">최신 변경 사항을 불러온 뒤 타이틀 화면으로 이동합니다.</span></div><div class="updateProgressBox"><div class="updateProgressTop"><span>UPDATE</span><b id="updatePct">0%</b></div><div class="updateTrack"><div class="updateFill" id="updateFill"></div></div><div class="updateStatus" id="updateStatus">게임 데이터 확인 중...</div></div><div class="small">완료 후 자동으로 넘어갑니다.</div></div>`);
+  let p=0,phase=0;
+  const msgs=['게임 데이터 확인 중...','패치노트 정리 중...','전투 밸런스 적용 중...','UI 갱신 중...','완료'];
+  updateBootTimer=setInterval(()=>{
+    p=Math.min(100,p+irnd(2,6));
+    const fill=$('updateFill'),pct=$('updatePct'),status=$('updateStatus');
+    if(fill)fill.style.width=p+'%';
+    if(pct)pct.textContent=p+'%';
+    const nextPhase=Math.min(msgs.length-1,Math.floor(p/25));
+    if(status && nextPhase!==phase){phase=nextPhase;status.textContent=msgs[phase];}
+    if(p>=100){
+      clearInterval(updateBootTimer); updateBootTimer=null;
+      if(status)status.textContent='완료';
+      setTimeout(showTitlePage,420);
+    }
+  },95);
+}
+function showTitlePage(){
+  mode='title'; popupMode='title'; zoneTag.textContent='타이틀';
+  openPopup(`<button class="bootScreen" style="width:100%;background:transparent;border:0;color:var(--g);" onclick="Game.showNicknamePage()"><div class="gameTitle">GREEN LINE RPG</div><div class="bootPanel">초록 선으로 그려진 네온 월드</div><div class="blinkStart">반짝이는 문구를 터치하면 게임 시작</div></button>`);
+}
+function showNicknamePage(){
+  mode='nickname'; popupMode='nickname'; zoneTag.textContent='닉네임';
   const nick=sanitizeNickname(player.nickname||'플레이어');
+  openPopup(`<div class="title">닉네임 설정</div><div class="sub">캐릭터 머리 위에 레벨과 함께 표시됩니다.</div><div class="card"><h3>닉네임</h3><input id="nickInput" maxlength="12" value="${escapeHtml(nick)}" style="width:100%;height:42px;border:1px solid rgba(0,255,114,.55);background:#000;color:#00ff72;border-radius:10px;padding:0 10px;font:14px monospace;outline:none;" placeholder="닉네임 입력"><div class="small" style="margin-top:6px;">최대 12자</div></div><div class="footerBtns"><button onclick="Game.confirmNickname()">다음</button></div>`);
+}
+function confirmNickname(){
+  const nickEl=$('nickInput');
+  player.nickname=sanitizeNickname(nickEl?nickEl.value:player.nickname);
+  showJobSelectPage();
+}
+function showJobSelectPage(){
+  mode='class'; popupMode='class'; zoneTag.textContent='직업 선택';
+  const current=player.job||'blade';
   const cards=JOBS.map(j=>{
     const b=j.base||{};
     const skillName=(skillByRank(j.id,1)||{}).name || j.skill || '기본 스킬';
     return `<button class="card ${current===j.id?'selected':''}" onclick="Game.pickJob('${j.id}')"><h3>${current===j.id?'[현재] ':''}${j.name}</h3><b>${j.type}</b><br>${j.desc}<br><span class="small">공격 ${b.atk||0} · HP ${b.hp||0} · 이속 ${b.speed||0} · 공속 ${(b.aspd||1).toFixed(2)}<br>1성 스킬: ${skillName}</span></button>`;
   }).join('');
-  const canClose=player.classChosen?`<button onclick="Game.closePopup()">닫기</button>`:'';
-  openPopup(`<div class="title">직업 선택 (20종)</div><div class="sub">시작 직업과 닉네임을 선택하세요. 직업에 따라 무기, 일반공격, 이동속도, 공격속도, 오토 전투 방식이 달라집니다.</div><div class="card"><h3>닉네임</h3><input id="nickInput" maxlength="12" value="${escapeHtml(nick)}" style="width:100%;height:40px;border:1px solid rgba(0,255,114,.55);background:#000;color:#00ff72;border-radius:10px;padding:0 10px;font:14px monospace;outline:none;" placeholder="닉네임 입력"><div class="small" style="margin-top:6px;">최대 12자 · 캐릭터 머리 위에 레벨과 함께 표시됩니다.</div></div><div class="grid">${cards}</div><div class="footerBtns">${canClose}</div>`);
+  openPopup(`<div class="title">직업 선택 (20종)</div><div class="sub">직업에 따라 무기, 일반공격, 이동속도, 공격속도, 오토 전투 방식이 달라집니다.</div><div class="grid">${cards}</div>`);
 }
+const PATCH_NOTES=[
+  {ver:'현재 패치',text:'- 오토모드/스킬 사용 시 발생하던 skAtk 초기화 오류 수정\n- 스킬 사용 안전 처리 추가\n- 오토 전투 중 오류 발생 시 게임이 멈추지 않고 오토만 복구'},
+  {ver:'이전 패치 1',text:'- 포털 이동 시 필드/도감/몬스터 생성 데이터 복구 로직 추가\n- 포털 이동 실패 시 1차 복구 후 재시도'},
+  {ver:'이전 패치 2',text:'- 몬스터 이름 중복 방지 재적용\n- 같은 필드 안에서 살아있는 몬스터 이름 중복 방지'},
+  {ver:'이전 패치 3',text:'- 업데이트중입니다 화면에 진행 게이지 추가\n- 게이지가 0%에서 100%까지 차오른 뒤 타이틀 화면으로 이동'}
+];
+function patchNoteHtml(){
+  return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
+}
+function showPatchNotes(){
+  popupMode='patch';
+  openPopup(`<div class="title">패치노트</div><div class="sub">최근 패치 기준으로 이전 3회까지 기록합니다.</div><div class="patchNoteBox">${patchNoteHtml()}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+}
+
 function pickJob(id){
   const job=jobById(id);
   const nickEl=$('nickInput');
@@ -920,6 +1065,7 @@ function pickJob(id){
   toast(`${job.name} 직업으로 변경`);
   msg(`${job.name} 선택. 일반공격/무기/오토 방식 변경`);
   updateHud();
+  setTimeout(showPatchNotes,80);
 }
 function giveStarterItems(){
   const job=jobById(player.job||'blade');
@@ -927,10 +1073,32 @@ function giveStarterItems(){
   player.inventory.push(makeItem(1,'일반','armor')); player.inventory.push(makeItem(1,'일반','boots'));
 }
 
+
+function ensureCodexForField(f){
+  if(!f||!f.id||f.id==='town')return;
+  if(!player.codex||typeof player.codex!=='object')player.codex=makeMonsterBook();
+  if(!Array.isArray(player.codex[f.id]))player.codex[f.id]=[];
+  for(let i=0;i<10;i++){
+    const prev=(player.codex[f.id]&&player.codex[f.id][i]&&typeof player.codex[f.id][i]==='object')?player.codex[f.id][i]:{};
+    player.codex[f.id][i]=Object.assign({seen:0,kills:0},prev,{name:monsterNameFor(f,i),shape:i,boss:false});
+  }
+  const prevBoss=(player.codex[f.id]&&player.codex[f.id][10]&&typeof player.codex[f.id][10]==='object')?player.codex[f.id][10]:{};
+  player.codex[f.id][10]=Object.assign({seen:0,kills:0},prevBoss,{name:f.boss||`${f.name} 보스`,shape:10,boss:true});
+}
+function chooseMonsterShape(shape=null,boss=false){
+  if(boss)return 10;
+  if(shape!==null&&shape!==undefined){const n=Number(shape);return clamp(Number.isFinite(n)?n:0,0,9);}
+  const used=new Set(monsters.filter(m=>!m.dead&&!m.boss).map(m=>m.shape));
+  const free=[];
+  for(let i=0;i<10;i++)if(!used.has(i))free.push(i);
+  return free.length?free[irnd(0,free.length-1)]:irnd(0,9);
+}
 function enterField(id){
-  currentField=id; const f=FIELDS.find(x=>x.id===id)||FIELDS[0]; fieldSize=f.size; zoneTag.textContent=f.name;
+  repairPortalRuntimeState();
+  const f=FIELDS.find(x=>x.id===id)||FIELDS.find(x=>x.id==='town')||FIELDS[0];
+  currentField=f.id; fieldSize=Number(f.size)||1800; if(zoneTag)zoneTag.textContent=f.name||'필드';
   player.x=fieldSize/2; player.y=fieldSize/2; monsters=[]; drops=[]; projectiles=[]; effects=[]; summons=[]; npcs=[];
-  if(id==='town') setupTown(); else setupField(f);
+  if(f.id==='town') setupTown(); else {ensureCodexForField(f); setupField(f);}
 }
 function setupTown(){
   mode='town'; fieldSize=1800; player.x=900; player.y=1080;
@@ -938,16 +1106,28 @@ function setupTown(){
   portalArmed=true;
 }
 function setupField(f){
-  mode='field'; const count=10;
-  for(let i=0;i<count;i++){spawnMonster(false,i%10);}
-  spawnMonster(true,10);
-  msg(`${f.name}: 몬스터 10종 + 보스 1종 출현`);
+  mode='field'; ensureCodexForField(f); const count=10;
+  for(let i=0;i<count;i++)safeSpawnMonster(false,i%10,f);
+  safeSpawnMonster(true,10,f);
+  if(monsters.filter(m=>m&&!m.dead).length===0)safeSpawnMonster(false,0,f);
+  msg(`${f.name}: 몬스터 ${monsters.filter(m=>!m.dead&&!m.boss).length}종 + 보스 출현`);
+}
+function safeSpawnMonster(boss=false,shape=null,f=null){
+  try{spawnMonster(boss,shape);}
+  catch(e){
+    console.error('spawnMonster failed',e);
+    f=f||FIELDS.find(x=>x.id===currentField)||FIELDS[1];
+    const level=(Number(f.level)||1)+(boss?4:0), hp=(boss?180:48)+level*(boss?20:7), idx=boss?10:clamp(Number(shape)||0,0,9);
+    monsters.push({id:cryptoId(),x:rnd(160,Math.max(200,fieldSize-160)),y:rnd(180,Math.max(220,fieldSize-180)),shape:idx,boss,level,name:boss?(f.boss||`${f.name} 보스`):uniqueMonsterNameForField(f,idx,false),hp,maxHp:hp,atk:(boss?14:6)+level*1.2,def:level*.4,speed:boss?56:75,hit:0,dead:false,slow:0,poison:0,weak:0,shoot:0});
+  }
 }
 function spawnMonster(boss=false,shape=null){
   const f=FIELDS.find(x=>x.id===currentField); if(!f||f.id==='town')return;
-  const level=f.level+irnd(0,3)+(boss?4:0); const hp=(boss?180:42)+level*(boss?22:8);
-  const idx=shape===null?irnd(0,9):shape; const book=player.codex[f.id]; const entry=book[boss?10:idx]; if(entry) entry.seen++;
-  monsters.push({id:cryptoId(),x:rnd(160,fieldSize-160),y:rnd(180,fieldSize-180),shape:idx,boss,level,name:entry?entry.name:'몬스터',hp,maxHp:hp,atk:(boss?14:6)+level*1.35,def:level*.45,speed:(boss?56:75)+Math.random()*20,hit:0,dead:false,slow:0,poison:0,weak:0,shoot:0});
+  ensureCodexForField(f);
+  const level=(Number(f.level)||1)+irnd(0,3)+(boss?4:0); const hp=(boss?180:42)+level*(boss?22:8);
+  const idx=chooseMonsterShape(shape,boss); const book=Array.isArray(player.codex[f.id])?player.codex[f.id]:[]; const entry=book[boss?10:idx]; if(entry) entry.seen=(Number(entry.seen)||0)+1;
+  const spawnName=uniqueMonsterNameForField(f,idx,boss);
+  monsters.push({id:cryptoId(),x:rnd(160,Math.max(200,fieldSize-160)),y:rnd(180,Math.max(220,fieldSize-180)),shape:idx,boss,level,name:spawnName,hp,maxHp:hp,atk:(boss?14:6)+level*1.35,def:level*.45,speed:(boss?56:75)+Math.random()*20,hit:0,dead:false,slow:0,poison:0,weak:0,shoot:0});
 }
 function cryptoId(){return Math.random().toString(36).slice(2)+Date.now().toString(36);}
 
@@ -1135,7 +1315,7 @@ function projectileHit(p,t){
 }
 function normalAttack(){
   const st=computeStats(); if(player.atkTimer>0)return;
-  player.atkTimer=Math.max(.16,.62/st.aspd); player.attackAnim=.22;
+  player.atkTimer=Math.max(.16,.62/st.aspd); player.atkTimerMax=player.atkTimer; player.attackAnim=.22;
   const profile=rangedAttackProfile(player.job, st);
   if(profile){
     const target=nearestMonster(profile.range);
@@ -1189,13 +1369,15 @@ function useSkill(slot=1,fromAuto=false){
   const rank=skillRankForSlot(slot);
   if(rank<=0){toast(`스킬${slot} 미습득`);return;}
   const sc=skillScale(rank), j=player.job, aj=(jobById(j).skillBase||j), info=skillByRank(j,rank);
-  const cdBase=Math.max(2.1,6.4-rank*.28);
-  const pow=(1+rank*.26)*st.skillPower;
-  const radius=Math.round((70+rank*13)*sc.radius);
-  const range=190+rank*24;
+  const cdBase=Math.max(2.4,7.1-rank*.20);
+  const skillBalance=.55+rank*.025;
+  const skAtk=Math.max(1,st.atk*skillBalance);
+  const pow=(.72+rank*.07)*st.skillPower*sc.power;
+  const radius=Math.round((60+rank*9)*sc.radius);
+  const range=170+rank*18;
 
   if(fromAuto && !autoSkillCanCast(aj,rank,st,radius,range))return;
-  const cd=Math.max(1.05,cdBase*(1-st.cooldown)*sc.cooldown);
+  const cd=Math.max(1.35,cdBase*(1-st.cooldown)*sc.cooldown);
   player.skillTimers[idx]=cd;
   player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];
   player.skillTimerMax[idx]=cd;
@@ -1204,57 +1386,66 @@ function useSkill(slot=1,fromAuto=false){
   if(aj==='blade'){
     const t=nearestMonster(range);
     if(rank<=2){
-      if(t){const a=Math.atan2(t.y-player.y,t.x-player.x);player.x=clamp(player.x+Math.cos(a)*(70+rank*18),40,fieldSize-40);player.y=clamp(player.y+Math.sin(a)*(70+rank*18),40,fieldSize-40);doDamage(t,st.atk*(1.7+rank*.42),'blade');damageArea(player.x,player.y,54+rank*10,st.atk*(.55+rank*.12),'bladewave');}
-    }else if(rank<=4){damageArea(player.x,player.y,radius,st.atk*(1.15+rank*.26)*pow,'cross');effects.push({type:'ring',x:player.x,y:player.y,life:.45,r:radius});
-    }else if(rank<=8){damageNearestMany(2+rank,range+80,st.atk*(1.05+rank*.22)*pow,'combo');damageArea(player.x,player.y,radius+25,st.atk*(.7+rank*.11)*pow,'swordstorm');effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:radius+25});
-    }else{damageArea(player.x,player.y,230+rank*12,st.atk*(2.25+rank*.36)*pow,'heavensword');effects.push({type:'ring',x:player.x,y:player.y,life:.9,r:230+rank*12});}
+      if(t){const a=Math.atan2(t.y-player.y,t.x-player.x);player.x=clamp(player.x+Math.cos(a)*(70+rank*18),40,fieldSize-40);player.y=clamp(player.y+Math.sin(a)*(70+rank*18),40,fieldSize-40);doDamage(t,skAtk*(1.7+rank*.42),'blade');damageArea(player.x,player.y,50+rank*8,skAtk*(.42+rank*.075),'bladewave');}
+    }else if(rank<=4){damageArea(player.x,player.y,radius,skAtk*(1.15+rank*.26)*pow,'cross');effects.push({type:'ring',x:player.x,y:player.y,life:.45,r:radius});
+    }else if(rank<=8){damageNearestMany(2+rank,range+80,skAtk*(1.05+rank*.22)*pow,'combo');damageArea(player.x,player.y,radius+25,skAtk*(.7+rank*.11)*pow,'swordstorm');effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:radius+25});
+    }else{damageArea(player.x,player.y,230+rank*12,skAtk*(2.25+rank*.36)*pow,'heavensword');effects.push({type:'ring',x:player.x,y:player.y,life:.9,r:230+rank*12});}
   } else if(aj==='ranger'){
-    if(rank<=3){fireSkillProjectiles('arrow',rank+1,range+120,st.atk*(1.05+rank*.23),650+rank*20,rank>=3?18:0);
-    }else if(rank<=6){const t=nearestMonster(range+180); if(t){fireSkillProjectiles('arrow',rank+2,range+180,st.atk*(.95+rank*.18),690,24+rank*5);damageArea(t.x,t.y,65+rank*10,st.atk*(.95+rank*.15),'arrowrain');effects.push({type:'ring',x:t.x,y:t.y,life:.5,r:65+rank*10});}
-    }else{fireSkillProjectiles('arrow',rank+5,range+260,st.atk*(1.05+rank*.22),760,36+rank*6);const t=nearestMonster(range+260);if(t){damageArea(t.x,t.y,115+rank*13,st.atk*(1.3+rank*.21),'skyarrow');effects.push({type:'ring',x:t.x,y:t.y,life:.8,r:115+rank*13});}}
+    if(rank<=3){fireSkillProjectiles('arrow',rank+1,range+120,skAtk*(1.05+rank*.23),650+rank*20,rank>=3?18:0);
+    }else if(rank<=6){const t=nearestMonster(range+180); if(t){fireSkillProjectiles('arrow',rank+2,range+180,skAtk*(.95+rank*.18),690,24+rank*5);damageArea(t.x,t.y,65+rank*10,skAtk*(.95+rank*.15),'arrowrain');effects.push({type:'ring',x:t.x,y:t.y,life:.5,r:65+rank*10});}
+    }else{fireSkillProjectiles('arrow',rank+5,range+260,skAtk*(1.05+rank*.22),760,36+rank*6);const t=nearestMonster(range+260);if(t){damageArea(t.x,t.y,115+rank*13,skAtk*(1.3+rank*.21),'skyarrow');effects.push({type:'ring',x:t.x,y:t.y,life:.8,r:115+rank*13});}}
   } else if(aj==='summoner'){
     const count=Math.min(9,rank+1);
     const life=(5+rank*1.4)*sc.duration;
-    for(let i=0;i<count;i++)summons.push({x:player.x+rnd(-55,55),y:player.y+rnd(-55,55),life,atk:st.atk*(.42+rank*.095)*st.summonPower,cd:rnd(0,.45),kind:rank>=6&&i%3===0?'turret':'spirit'});
-    if(rank>=4)fireSkillProjectiles('spirit',Math.ceil(rank/2),range+80,st.atk*(.85+rank*.15)*st.summonPower,460,20+rank*4);
-    if(rank>=7)damageArea(player.x,player.y,95+rank*16,st.atk*(.95+rank*.18)*st.summonPower,'contract',false);
+    for(let i=0;i<count;i++)summons.push({x:player.x+rnd(-55,55),y:player.y+rnd(-55,55),life,atk:skAtk*(.42+rank*.095)*st.summonPower,cd:rnd(0,.45),kind:rank>=6&&i%3===0?'turret':'spirit'});
+    if(rank>=4)fireSkillProjectiles('spirit',Math.ceil(rank/2),range+80,skAtk*(.85+rank*.15)*st.summonPower,460,20+rank*4);
+    if(rank>=7)damageArea(player.x,player.y,95+rank*16,skAtk*(.95+rank*.18)*st.summonPower,'contract',false);
     effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:80+rank*13});
   } else if(aj==='mage'){
-    if(rank<=2){fireSkillProjectiles('magic',rank+1,range+100,st.atk*(1.25+rank*.25)*pow,480,34+rank*8);
-    }else if(rank<=5){damageArea(player.x,player.y,radius+40,st.atk*(1.25+rank*.22)*pow,rank===4?'ice':'magicnova');effects.push({type:'ring',x:player.x,y:player.y,life:.7,r:radius+40});
-    }else if(rank<=8){const t=nearestMonster(range+180);if(t){damageArea(t.x,t.y,95+rank*14,st.atk*(1.65+rank*.28)*pow,'meteor');effects.push({type:'bomb',x:t.x,y:t.y,life:.42,r:20,damage:st.atk*(.85+rank*.15)*pow,range:90+rank*10});}}
-    else{damageArea(player.x,player.y,260+rank*15,st.atk*(2.2+rank*.36)*pow,'grandmagic');effects.push({type:'ring',x:player.x,y:player.y,life:1,r:260+rank*15});}
+    if(rank<=2){fireSkillProjectiles('magic',rank+1,range+100,skAtk*(1.25+rank*.25)*pow,480,34+rank*8);
+    }else if(rank<=5){damageArea(player.x,player.y,radius+40,skAtk*(1.25+rank*.22)*pow,rank===4?'ice':'magicnova');effects.push({type:'ring',x:player.x,y:player.y,life:.7,r:radius+40});
+    }else if(rank<=8){const t=nearestMonster(range+180);if(t){damageArea(t.x,t.y,95+rank*14,skAtk*(1.65+rank*.28)*pow,'meteor');effects.push({type:'bomb',x:t.x,y:t.y,life:.42,r:20,damage:skAtk*(.85+rank*.15)*pow,range:90+rank*10});}}
+    else{damageArea(player.x,player.y,260+rank*15,skAtk*(2.2+rank*.36)*pow,'grandmagic');effects.push({type:'ring',x:player.x,y:player.y,life:1,r:260+rank*15});}
   } else if(aj==='hexer'){
     const r=radius+55;
-    for(const m of monsters){if(!m.dead&&dist(player,m)<r){m.poison=Math.max(m.poison||0,2.2+rank*.55);m.slow=Math.max(m.slow||0,1.3+rank*.35);m.weak=Math.max(m.weak||0,1.5+rank*.42);addDebuff('저주',2.0);doDamage(m,st.atk*(.7+rank*.14)*pow,'curse',false);}}
+    for(const m of monsters){if(!m.dead&&dist(player,m)<r){m.poison=Math.max(m.poison||0,2.2+rank*.55);m.slow=Math.max(m.slow||0,1.3+rank*.35);m.weak=Math.max(m.weak||0,1.5+rank*.42);addDebuff('저주',2.0);doDamage(m,skAtk*(.7+rank*.14)*pow,'curse',false);}}
     if(rank>=7){const heal=Math.round(player.maxHp*(.04+rank*.012));player.hp=clamp(player.hp+heal,0,player.maxHp);effects.push({type:'text',x:player.x,y:player.y-34,t:`+${heal} 흡수`,life:.8,vy:-22,heal:true});}
     effects.push({type:'hex',x:player.x,y:player.y,life:.8,r});
   } else if(aj==='mechanic'){
     const turrets=Math.min(5,Math.ceil(rank/2));
-    for(let i=0;i<turrets;i++)summons.push({x:player.x+rnd(-65,65),y:player.y+rnd(-65,65),life:(6+rank*1.1)*sc.duration,atk:st.atk*(.55+rank*.11)*st.summonPower,cd:rnd(0,.3),kind:'turret'});
-    fireSkillProjectiles(rank>=4?'missile':'summon',Math.max(1,rank-1),range+120,st.atk*(1+rank*.18),540+rank*18,rank>=4?45+rank*5:12);
-    if(rank>=8)damageArea(player.x,player.y,130+rank*13,st.atk*(1.1+rank*.16)*st.summonPower,'overload',false);
+    for(let i=0;i<turrets;i++)summons.push({x:player.x+rnd(-65,65),y:player.y+rnd(-65,65),life:(6+rank*1.1)*sc.duration,atk:skAtk*(.55+rank*.11)*st.summonPower,cd:rnd(0,.3),kind:'turret'});
+    fireSkillProjectiles(rank>=4?'missile':'summon',Math.max(1,rank-1),range+120,skAtk*(1+rank*.18),540+rank*18,rank>=4?45+rank*5:12);
+    if(rank>=8)damageArea(player.x,player.y,130+rank*13,skAtk*(1.1+rank*.16)*st.summonPower,'overload',false);
     effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:70+rank*10});
   } else if(aj==='mirror'){
     player.shield=Math.max(player.shield,2.2+rank*.5); addBuff('거울장막',2.2+rank*.5,{def:rank*.25});
     const r=80+rank*16;
-    damageArea(player.x,player.y,r,st.atk*(.85+rank*.18)*(1+st.reflect*1.4),'mirror',false);
+    damageArea(player.x,player.y,r,skAtk*(.85+rank*.18)*(1+st.reflect*1.4),'mirror',false);
     if(rank>=5)player.hp=clamp(player.hp+Math.round(player.maxHp*(.03+rank*.006)),0,player.maxHp);
     effects.push({type:'ring',x:player.x,y:player.y,life:.9,r});
   } else if(aj==='assassin'){
     const count=rank<=3?1:rank<=7?Math.min(5,rank-1):Math.min(9,rank);
     const list=monsters.filter(m=>!m.dead&&dist(player,m)<range+160).sort((a,b)=>dist(player,a)-dist(player,b)).slice(0,count);
-    for(const m of list){player.x=clamp(m.x-28,40,fieldSize-40);player.y=clamp(m.y-28,40,fieldSize-40);doDamage(m,st.atk*(1.85+rank*.34)*(1+st.critDmg*.35),'assassin',rank<6);effects.push({type:'spark',x:m.x,y:m.y,life:.42,r:26+rank*3});}
+    for(const m of list){player.x=clamp(m.x-28,40,fieldSize-40);player.y=clamp(m.y-28,40,fieldSize-40);doDamage(m,skAtk*(1.85+rank*.34)*(1+st.critDmg*.35),'assassin',rank<6);effects.push({type:'spark',x:m.x,y:m.y,life:.42,r:26+rank*3});}
     if(rank>=7){player.dodgeTimer=Math.min(player.dodgeTimer,.15);player.dashTime=.08;}
   } else if(aj==='paladin'){
     const heal=Math.round(player.maxHp*(.08+rank*.025));player.hp=clamp(player.hp+heal,0,player.maxHp);player.shield=Math.max(player.shield,1.3+rank*.25); addBuff('성역',1.3+rank*.25,{def:rank*.18});
-    const r=90+rank*17; damageArea(player.x,player.y,r,st.atk*(.9+rank*.18)*pow,'holy');
+    const r=90+rank*17; damageArea(player.x,player.y,r,skAtk*(.9+rank*.18)*pow,'holy');
     effects.push({type:'text',x:player.x,y:player.y-36,t:`+${heal} 성역`,life:1,vy:-22,heal:true});effects.push({type:'ring',x:player.x,y:player.y,life:.85,r});
   } else if(aj==='alchemist'){
     const bombs=rank<=2?1:rank<=5?2:rank<=8?3:5;
-    for(let i=0;i<bombs;i++){const tx=player.x+Math.cos(player.dir)*(80+rank*8)+rnd(-55,55), ty=player.y+Math.sin(player.dir)*(80+rank*8)+rnd(-55,55);effects.push({type:'bomb',x:tx,y:ty,life:.9+rnd(0,.3),r:0,damage:st.atk*(1.15+rank*.26)*pow,range:70+rank*10});}
+    for(let i=0;i<bombs;i++){const tx=player.x+Math.cos(player.dir)*(80+rank*8)+rnd(-55,55), ty=player.y+Math.sin(player.dir)*(80+rank*8)+rnd(-55,55);effects.push({type:'bomb',x:tx,y:ty,life:.9+rnd(0,.3),r:0,damage:skAtk*(1.15+rank*.26)*pow,range:70+rank*10});}
     if(rank>=5){const r=105+rank*12;for(const m of monsters)if(!m.dead&&dist(player,m)<r)m.poison=Math.max(m.poison||0,2+rank*.35);effects.push({type:'hex',x:player.x,y:player.y,life:.65,r});}
     if(rank>=7){const heal=Math.round(player.maxHp*(.05+rank*.008));player.hp=clamp(player.hp+heal,0,player.maxHp);effects.push({type:'text',x:player.x,y:player.y-30,t:`+${heal} 시약`,life:.8,vy:-22,heal:true});}
+  }
+}
+
+function safeUseSkill(slot=1,fromAuto=false){
+  try{return useSkill(slot,fromAuto);}catch(e){
+    console.error(e);
+    if(fromAuto){player.autoMode=false;toast('오토 스킬 오류 복구');}
+    else toast('스킬 오류 복구');
+    return false;
   }
 }
 function nearestMonster(range=9999){let best=null,bd=range;for(const m of monsters){if(m.dead)continue;const d=dist(player,m);if(d<bd){bd=d;best=m;}}return best;}
@@ -1423,7 +1614,28 @@ function guildReward(){if(player.guildTokens<3){toast('토큰 부족');return;}p
 function showFieldSelect(){
   openPopup(`<div class="title">포털 이동</div><div class="sub">각 필드는 몬스터 10종류와 보스 1종류로 구성됩니다.</div><div class="grid">${FIELDS.filter(f=>f.id!=='town').map(f=>`<button class="card" onclick="Game.goField('${f.id}')"><h3>${f.name}</h3>권장 Lv.${f.level}+<br>일반 몬스터 10종 / 보스 1종</button>`).join('')}</div><div class="footerBtns"><button onclick="Game.showTown()">뒤로</button></div>`);
 }
-function goField(id){closePopup();enterField(id);}
+function goField(id){
+  const target=(FIELDS.find(f=>f.id===id&&f.id!=='town')||FIELDS.find(f=>f.id==='plain')||FIELDS[1]||FIELDS[0]).id;
+  closePopup();
+  try{
+    repairPortalRuntimeState();
+    enterField(target);
+    updateHud();
+    toast(`${(FIELDS.find(f=>f.id===target)||{}).name||'필드'} 이동`);
+  }catch(e){
+    console.error('portal move first failed',e);
+    try{
+      player.codex=makeMonsterBook();
+      monsters=[];drops=[];projectiles=[];effects=[];summons=[];npcs=[];
+      enterField(target);
+      updateHud();
+      toast('포털 이동 복구 완료');
+    }catch(e2){
+      console.error('portal move fallback failed',e2);
+      enterField('town');updateHud();toast('포털 이동 실패: 마을 복구');
+    }
+  }
+}
 
 function renderBag(){
   popupMode='bag'; const eq=Object.entries(player.equip).map(([slot,it])=>`<div class="card"><h3>${SLOT_LABEL[slot]}</h3>${it?`${it.rarity} ${it.name}<br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))}</span>`:'비어있음'}</div>`).join('');
@@ -1431,24 +1643,37 @@ function renderBag(){
   openPopup(`<div class="title">장비 / 가방</div><div class="sub">직업에 맞는 장비 점수를 기준으로 자동장착할 수 있습니다.</div><h3>착용 장비</h3><div class="grid">${eq}</div><div class="footerBtns"><button onclick="Game.autoEquipBest()">자동장착</button><button onclick="Game.sellAllUnequipped()">미장착 전체판매</button></div><h3>보유 아이템</h3><div class="grid">${inv}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
 }
 function renderCodex(){
-  const content=FIELDS.filter(f=>f.id!=='town').map(f=>`<div class="card"><h3>${f.name}</h3>${player.codex[f.id].map(e=>`${e.boss?'[보스] ':'· '}${e.name} 발견 ${e.seen} / 처치 ${e.kills}`).join('<br>')}</div>`).join('');
+  repairPortalRuntimeState();
+  const content=FIELDS.filter(f=>f.id!=='town').map(f=>{ensureCodexForField(f);const rows=(Array.isArray(player.codex[f.id])?player.codex[f.id]:[]).map(e=>`${e.boss?'[보스] ':'· '}${e.name} 발견 ${Number(e.seen)||0} / 처치 ${Number(e.kills)||0}`).join('<br>');return `<div class="card"><h3>${f.name}</h3>${rows}</div>`;}).join('');
   openPopup(`<div class="title">몬스터 도감</div><div class="sub">필드마다 일반 몬스터 10종류와 보스 1종류가 기록됩니다.</div>${content}<div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
 }
 
 function saveGame(){const ok=storageSet(saveKey,JSON.stringify({player,currentField,mode}));toast(ok?'저장 완료':'임시 저장 완료');}
-function loadGame(){try{const raw=storageGet(saveKey);if(!raw)return false;const s=JSON.parse(raw);player=Object.assign(basePlayer(),s.player||{});normalizePlayer();syncHp();enterField(s.currentField||'town');closePopup();toast('불러오기 완료');return true;}catch(e){console.error(e);return false;}}
+function loadGame(){try{const raw=storageGet(saveKey);if(!raw)return false;const s=JSON.parse(raw);player=Object.assign(basePlayer(),s.player||{});normalizePlayer();syncHp();const fid=(FIELDS.find(f=>f.id===s.currentField)?s.currentField:'town');enterField(fid);closePopup();toast('불러오기 완료');return true;}catch(e){console.error(e);storageRemove(saveKey);player=basePlayer();normalizePlayer();enterField('town');return false;}}
 
 function update(dt){
   if(!player.classChosen)return; const oldX=player.x, oldY=player.y; const st=syncHp(); player.atkTimer=Math.max(0,player.atkTimer-dt);player.skillTimers=player.skillTimers||[player.skillTimer||0,0,0];for(let i=0;i<4;i++)player.skillTimers[i]=Math.max(0,(player.skillTimers[i]||0)-dt);player.skillTimer=0;player.potionTimer=Math.max(0,player.potionTimer-dt);player.dodgeTimer=Math.max(0,player.dodgeTimer-dt);player.dashTime=Math.max(0,player.dashTime-dt);player.attackAnim=Math.max(0,player.attackAnim-dt);player.hurt=Math.max(0,player.hurt-dt);player.shield=Math.max(0,player.shield-dt);
   if(st.hpRegen>0) player.hp=clamp(player.hp+st.hpRegen*dt,0,player.maxHp);updateStatusTimers(dt);
   if(player.autoMode) updateAuto(dt);
-  if(attackHeld) normalAttack(); for(let i=0;i<4;i++)if(skillHeld[i])useSkill(i+1);
+  if(attackHeld) normalAttack(); for(let i=0;i<4;i++)if(skillHeld[i])safeUseSkill(i+1);
   const mag=Math.hypot(joystick.dx,joystick.dy); if(mag>.05){player.dir=Math.atan2(joystick.dy,joystick.dx);player.x=clamp(player.x+joystick.dx*st.speed*dt,28,fieldSize-28);player.y=clamp(player.y+joystick.dy*st.speed*dt,28,fieldSize-28);}
   if(player.dashTime>0){const dashSpeed=420;player.x=clamp(player.x+Math.cos(player.dir)*dashSpeed*dt,28,fieldSize-28);player.y=clamp(player.y+Math.sin(player.dir)*dashSpeed*dt,28,fieldSize-28);}
   player.movingAnim=Math.hypot(player.x-oldX,player.y-oldY)>0.05;
   updateMonsters(dt,st); updateProjectiles(dt); updateSummons(dt); updateEffects(dt); updateDrops(dt); updateCamera(); updateHud(); updateTalkPrompt(); updatePortalTrigger();
 }
-function updateAuto(dt){if(currentField==='town'||popupLayer.style.display==='flex')return;normalizePlayer();const st=computeStats();if(player.hp/player.maxHp<player.autoPotionPct&&player.potionTimer<=0)usePotion(player.potionSlot,true);const t=nearestMonster(900);if(!t)return;const d=dist(player,t),safe=rangedAttackProfile(player.job,st)?Math.min(260,(st.range||150)+120):58;if(d>safe){player.dir=Math.atan2(t.y-player.y,t.x-player.x);player.x=clamp(player.x+Math.cos(player.dir)*st.speed*dt,28,fieldSize-28);player.y=clamp(player.y+Math.sin(player.dir)*st.speed*dt,28,fieldSize-28);}else player.dir=Math.atan2(t.y-player.y,t.x-player.x);normalAttack();for(let i=1;i<=4;i++)if(skillRankForSlot(i)>0&&(player.skillTimers[i-1]||0)<=0)useSkill(i,true);}
+function updateAuto(dt){
+  try{
+    if(currentField==='town'||popupLayer.style.display==='flex'||!player.classChosen)return;
+    normalizePlayer();
+    const st=computeStats();
+    if(player.maxHp>0 && player.hp/player.maxHp<player.autoPotionPct&&player.potionTimer<=0)usePotion(player.potionSlot,true);
+    const t=nearestMonster(900);if(!t)return;
+    const d=dist(player,t),profile=rangedAttackProfile(player.job,st),safe=profile?Math.min(260,(st.range||150)+120):58;
+    if(d>safe){player.dir=Math.atan2(t.y-player.y,t.x-player.x);player.x=clamp(player.x+Math.cos(player.dir)*st.speed*dt,28,fieldSize-28);player.y=clamp(player.y+Math.sin(player.dir)*st.speed*dt,28,fieldSize-28);}else player.dir=Math.atan2(t.y-player.y,t.x-player.x);
+    normalAttack();
+    for(let i=1;i<=4;i++)if(skillRankForSlot(i)>0&&(player.skillTimers[i-1]||0)<=0)safeUseSkill(i,true);
+  }catch(e){console.error(e);player.autoMode=false;toast('오토 전투 오류 복구');}
+}
 function updateMonsters(dt,st){
   for(const m of monsters){if(m.dead)continue; if(m.hit>0)m.hit-=dt;if(m.slow>0)m.slow-=dt;if(m.weak>0)m.weak-=dt;if(m.poison>0){m.poison-=dt;if(Math.random()<dt*1.5)doDamage(m,st.atk*.22*st.skillPower,'poison',false);}
     let d=dist(m,player); if(d<520){const a=Math.atan2(player.y-m.y,player.x-m.x);const sp=m.speed*(m.slow>0?.45:1);m.x+=Math.cos(a)*sp*dt;m.y+=Math.sin(a)*sp*dt;}
@@ -1527,7 +1752,9 @@ function updateHud(){
   normalizePlayer(); const st=computeStats();
   const hpPct=clamp(player.hp/player.maxHp*100,0,100), expPct=clamp(player.exp/player.nextExp*100,0,100);
   $('statPanel').innerHTML=`<div class="statHeader"><b>${sanitizeNickname(player.nickname||'플레이어')} · ${jobById(player.job||'blade').name} Lv.${player.level}</b><span>${Math.round(player.gold)}G</span></div><div class="meter hpMeter"><div class="meterLabel"><span>체력</span><span>${Math.round(player.hp)}/${player.maxHp}</span></div><div class="bar"><div class="fill" style="width:${hpPct}%"></div></div></div><div class="meter expMeter"><div class="meterLabel"><span>경험치</span><span>${player.exp}/${player.nextExp}</span></div><div class="bar"><div class="fill" style="width:${expPct}%"></div></div></div><div class="statusLine"><span>${statusSummary()}</span><span>처치 ${player.totalKills}</span></div>`;
-  $('atkCool').textContent=player.atkTimer>0?player.atkTimer.toFixed(1):'READY';
+  const atkBtn=$('attackBtn'),atkCool=$('atkCool'),atkMax=player.atkTimerMax||player.atkTimer||1;
+  if(atkCool)atkCool.textContent=player.atkTimer>0?'쿨타임':'READY';
+  if(atkBtn)atkBtn.style.setProperty('--cdp',player.atkTimer>0?`${clamp(player.atkTimer/atkMax*100,0,100)}%`:'0%');
   for(let i=1;i<=4;i++){
     const rank=skillRankForSlot(i),el=$(`skCool${i}`),nameEl=$(`skName${i}`),btn=$(`skillBtn${i}`);
     const timer=(player.skillTimers&&player.skillTimers[i-1])||0,max=(player.skillTimerMax&&player.skillTimerMax[i-1])||timer||1;
@@ -1743,16 +1970,24 @@ function dodge(){
   effects.push({type:'ring',x:player.x,y:player.y,life:.24,r:28});
 }
 function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
-function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">저장, 불러오기, 오토모드, 직업 변경을 관리합니다.</div><div class="grid"><button onclick="Game.saveGame()">저장</button><button onclick="Game.loadGame()">불러오기</button><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.startClassSelect()">직업 선택 20종</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">오토 설정에서는 스킬 슬롯과 자동 물약 퍼센트를 따로 지정합니다.</div>`);}
-function quickToggleAuto(){player.autoMode=!player.autoMode;toast(player.autoMode?'오토모드 ON':'오토모드 OFF');updateHud();}
-function toggleAuto(){quickToggleAuto();showAutoPanel();}
+function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">저장, 불러오기, 오토모드, 패치노트를 관리합니다.</div><div class="grid"><button onclick="Game.saveGame()">저장</button><button onclick="Game.loadGame()">불러오기</button><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">오토 설정에서는 스킬 슬롯과 자동 물약 퍼센트를 따로 지정합니다.</div>`);}
+function quickToggleAuto(){
+  try{
+    normalizePlayer();
+    if(!player.classChosen){toast('직업 선택 후 오토 사용');return;}
+    player.autoMode=!player.autoMode;
+    toast(player.autoMode?'오토모드 ON':'오토모드 OFF');
+    updateHud();
+  }catch(e){console.error(e);player.autoMode=false;toast('오토 오류 복구');try{updateHud();}catch(_){} }
+}
+function toggleAuto(){quickToggleAuto();try{showAutoPanel();}catch(e){console.error(e);toast('오토 설정 오류 복구');}}
 function showAutoPanel(){
   normalizePlayer();
   const job=jobById(player.job||'blade');
   const style=rangedAttackProfile(player.job,computeStats())?'원거리 추적/거리 유지':'근접 접근/회피 돌진';
   const slots=player.skillSlots.slice(0,4).map((r,i)=>{const ok=r>0&&r<=skillStar();const name=ok?skillByRank(player.job,r).name:'비움';return `스킬${i+1}: ${ok?`${r}성 ${name}`:'비움'}`;}).join('<br>');
   const pot=CONSUMABLES[player.potionSlot]||CONSUMABLES.potion;
-  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${job.name}</b> · ${job.type}<br>자동 전투 방식: ${style}</div><div class="card"><h3>현재 슬롯</h3>${slots}<br>물약 슬롯: ${pot.name} · HP ${Math.round(player.autoPotionPct*100)}% 이하 자동 사용</div><div class="grid"><button onclick="Game.toggleAuto()" class="${player.autoMode?'autoOn':''}">오토 ${player.autoMode?'ON':'OFF'}</button><button onclick="Game.showSkillSlotSettings()">스킬 설정</button><button onclick="Game.showPotionSettings()">물약 설정</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">오토 직업 선택과 스킬 구매 버튼은 제거했습니다. 직업 변경은 설정 메뉴에서, 스킬 구매는 마을/상점에서 처리합니다.</div>`);
+  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${job.name}</b> · ${job.type}<br>자동 전투 방식: ${style}</div><div class="card"><h3>현재 슬롯</h3>${slots}<br>물약 슬롯: ${pot.name} · HP ${Math.round(player.autoPotionPct*100)}% 이하 자동 사용</div><div class="grid"><button onclick="Game.toggleAuto()" class="${player.autoMode?'autoOn':''}">오토 ${player.autoMode?'ON':'OFF'}</button><button onclick="Game.showSkillSlotSettings()">스킬 설정</button><button onclick="Game.showPotionSettings()">물약 설정</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">오토 중 오류가 나면 자동으로 오토를 끄고 게임은 계속 진행됩니다.</div>`);
 }
 
 function showSkillSlotSettings(){
@@ -1766,13 +2001,14 @@ function showSkillSlotSettings(){
     buttons.push(`<button onclick="Game.setSkillSlot(${slot},0)" ${cur===0?'class="selected"':''}>비움</button>`);
     for(let r=1;r<=learned;r++){
       const s=skillByRank(player.job,r);
-      buttons.push(`<button onclick="Game.setSkillSlot(${slot},${r})" ${cur===r?'class="selected"':''}>${r}성 ${s.name}</button>`);
+      const used=player.skillSlots.some((v,i)=>i!==slot-1&&Number(v)===r);
+      buttons.push(`<button onclick="Game.setSkillSlot(${slot},${r})" ${cur===r?'class="selected"':''} ${used?'disabled':''}>${r}성 ${s.name}${used?' · 장착중':''}</button>`);
     }
     return `<div class="card"><h3>스킬${slot} 슬롯</h3>현재: ${cur?`${cur}성 ${skillByRank(player.job,cur).name}`:'비움'}<div class="grid">${buttons.join('')}</div></div>`;
   };
   openPopup(`<div class="title">스킬 슬롯 설정</div><div class="sub">${job.name} · 보유 스킬 ${learned}/10<br>각 슬롯에 사용할 스킬을 지정합니다. 오토모드는 이 슬롯 순서대로 자동 사용합니다.</div>${makeAssign(1)}${makeAssign(2)}${makeAssign(3)}${makeAssign(4)}<div class="footerBtns"><button onclick="Game.showAutoPanel()">오토 설정</button><button onclick="Game.closePopup()">닫기</button></div>`);
 }
-function setSkillSlot(slot,rank){normalizePlayer();slot=clamp(Number(slot)||1,1,4);rank=clamp(Number(rank)||0,0,10);const learned=skillStar();if(rank>learned){toast('아직 배우지 않은 스킬');return;}player.skillSlots[slot-1]=rank;toast(`스킬${slot} 슬롯 변경`);showSkillSlotSettings();updateHud();}
+function setSkillSlot(slot,rank){normalizePlayer();slot=clamp(Number(slot)||1,1,4);rank=clamp(Number(rank)||0,0,10);const learned=skillStar();if(rank>learned){toast('아직 배우지 않은 스킬');return;}if(rank>0){const used=player.skillSlots.findIndex((v,i)=>i!==slot-1&&Number(v)===rank);if(used>=0){toast(`${rank}성 스킬은 이미 스킬${used+1}에 장착됨`);return;}}player.skillSlots[slot-1]=rank;toast(`스킬${slot} 슬롯 변경`);showSkillSlotSettings();updateHud();}
 function showPotionSettings(){
   normalizePlayer();
   const itemRows=Object.entries(CONSUMABLES).map(([k,c])=>`<button class="card ${player.potionSlot===k?'selected':''}" onclick="Game.setPotionSlot('${k}')"><h3>${c.name}</h3>${c.desc}<br><span class="small">보유 ${player.consumables[k]||0}개</span></button>`).join('');
@@ -1824,7 +2060,7 @@ function bind(){
   const end=e=>{if(e.pointerId===joystick.id){joystick.active=false;joystick.id=null;joystick.dx=joystick.dy=0;stick.style.transform='translate(0,0)';}};joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
   const hold=(el,down,up)=>{el.addEventListener('pointerdown',e=>{e.preventDefault();down();});el.addEventListener('pointerup',e=>{e.preventDefault();up();});el.addEventListener('pointercancel',up);el.addEventListener('pointerleave',up);};
   hold($('attackBtn'),()=>{attackHeld=true;normalAttack();},()=>attackHeld=false);
-  for(let i=1;i<=4;i++){const btn=$(`skillBtn${i}`);if(btn)hold(btn,()=>{skillHeld[i-1]=true;useSkill(i);},()=>skillHeld[i-1]=false);}
+  for(let i=1;i<=4;i++){const btn=$(`skillBtn${i}`);if(btn)hold(btn,()=>{skillHeld[i-1]=true;safeUseSkill(i);},()=>skillHeld[i-1]=false);}
   const dodgeBtn=$('dodgeBtn');
   dodgeBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();dodge();},{passive:false});
   dodgeBtn.onclick=e=>{e.preventDefault();};
@@ -1845,10 +2081,11 @@ function startQuickGame(id='blade'){
   giveStarterItems();
   closePopup();
   msg(`${jobById(id).name} 시작`);
+  setTimeout(showPatchNotes,80);
 }
-window.Game={pickJob,openPopup,closePopup,showTown,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,showStats,showSettings,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startQuickGame,startClassSelect,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={pickJob,openPopup,closePopup,showTown,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,showStats,showSettings,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 
-// 시작 시 직업 선택 팝업 표시. 저장 데이터가 있으면 진행 상태는 유지하고, 없으면 마을에서 직업을 먼저 고르게 한다.
+// 시작 흐름: 업데이트중 → 타이틀 → 닉네임 → 직업선택 → 게임화면 → 패치노트
 if(storageGet(saveKey)){
   if(!loadGame()){
     player=basePlayer(); normalizePlayer(); enterField('town');
@@ -1856,7 +2093,7 @@ if(storageGet(saveKey)){
 }else{
   player=basePlayer(); normalizePlayer(); enterField('town');
 }
-startClassSelect();
+showUpdatePage();
 updateHud();
 })();
 </script>
