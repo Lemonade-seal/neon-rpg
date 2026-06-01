@@ -763,29 +763,31 @@
   .neonInput{width:100%;font:inherit;padding:10px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:10px;user-select:text;-webkit-user-select:text;caret-color:var(--g);}
 
 
-  /* patch 045: quest panel under currency + live user label */
+  /* patch 046: quest plain text under currency + live user label */
   #statPanel{pointer-events:auto!important;cursor:pointer;}
   .questPanel{
     width:100%;
-    min-height:22px!important;
+    min-height:14px!important;
     height:auto!important;
-    padding:0 8px!important;
+    padding:0 4px!important;
     display:flex!important;
     align-items:center!important;
-    border:1px solid var(--gd)!important;
-    border-radius:9px!important;
-    background:rgba(0,0,0,.72)!important;
-    box-shadow:0 0 12px var(--gb), inset 0 0 10px rgba(0,255,114,.06)!important;
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    box-shadow:none!important;
     font-size:10px!important;
-    line-height:1!important;
+    line-height:1.15!important;
     pointer-events:none!important;
+    color:rgba(0,255,114,.88)!important;
+    text-shadow:0 0 6px rgba(0,255,114,.35);
   }
   .questPanel .questRow{
     width:100%;
     display:flex;
     align-items:center;
-    justify-content:space-between;
-    gap:8px;
+    justify-content:flex-start;
+    gap:6px;
     white-space:nowrap;
     overflow:hidden;
   }
@@ -811,7 +813,7 @@
     <div class="statStack">
       <div class="panel stats" id="statPanel"></div>
       <div class="panel currencyPanel" id="currencyPanel"></div>
-      <div class="panel questPanel" id="questPanel"></div>
+      <div class="questPanel" id="questPanel"></div>
     </div>
     <div class="topBtns">
       <canvas id="mini"></canvas>
@@ -2519,12 +2521,42 @@ function autoEquipBest(){
   syncHp(); toast(changed?`자동장착 ${changed}부위 교체`:'교체할 장비 없음'); renderBag();
 }
 
+
+/* patch 046: level gap balance */
+function levelGapBalance(monster){
+  const ml=Math.max(1,Math.floor(Number(monster&&monster.level)||1));
+  const pl=Math.max(1,Math.floor(Number(player&&player.level)||1));
+  const diff=pl-ml; // positive: player is higher
+  let deal=1, take=1, exp=1, gold=1, drop=1;
+  if(diff<0){
+    const under=Math.abs(diff);
+    deal=clamp(1-under*.035,.45,1);
+    take=clamp(1+under*.07,1,2.55);
+    exp=clamp(1+under*.035,1,1.55);
+    gold=clamp(1+under*.025,1,1.40);
+    drop=clamp(1+under*.02,1,1.25);
+  }else if(diff>0){
+    deal=clamp(1-diff*.004,.82,1);
+    take=clamp(1-diff*.04,.30,1);
+    exp=clamp(1-diff*.08,.08,1);
+    gold=clamp(1-diff*.065,.12,1);
+    drop=clamp(1-diff*.06,.10,1);
+  }
+  return {diff,deal,take,exp,gold,drop,playerLevel:pl,monsterLevel:ml};
+}
+function levelGapLabel(monster){
+  const b=levelGapBalance(monster);
+  if(b.diff<=-6)return '위험';
+  if(b.diff>=10)return '저레벨';
+  return '';
+}
+
 function doDamage(target,base,kind='hit',canCrit=true){
   if(!target || target.dead)return 0;
-  const st=computeStats(); let dmg=Math.max(1,base-(target.def||0)*0.45);
+  const st=computeStats(); const lb=levelGapBalance(target); let dmg=Math.max(1,base-(target.def||0)*0.45);
   let crit=false; if(canCrit && Math.random()<st.crit){crit=true;dmg*=1.5+st.critDmg;}
   if(target.weak)dmg*=1.25;
-  dmg=Math.round(dmg*rnd(.88,1.12));
+  dmg=Math.round(dmg*lb.deal*rnd(.88,1.12));
   target.hp-=dmg; target.hit=.18;
   effects.push({type:'text',x:target.x,y:target.y-22,t:crit?`CRIT ${dmg}`:`${dmg}`,life:.75,vy:-28,big:crit});
   effects.push({type:'spark',x:target.x,y:target.y,life:.25,r:8+Math.random()*8});
@@ -2539,9 +2571,13 @@ function doDamage(target,base,kind='hit',canCrit=true){
 function killMonster(m){
   if(m.dead)return; m.dead=true; player.totalKills++; player.questKills++;
   const f=FIELDS.find(x=>x.id===currentField); const book=player.codex[f.id]; const entry=book[m.boss?10:m.shape]; if(entry){entry.kills++;entry.neonRewards=entry.neonRewards&&typeof entry.neonRewards==='object'?entry.neonRewards:{};if(codexClaimable(entry).length)effects.push({type:'text',x:m.x,y:m.y-54,t:'도감 보상 가능',life:.9,vy:-18});}
-  const st=computeStats(); const exp=Math.round((m.boss?45:13)+m.level*4)*(1+st.expBonus); const gold=Math.round((m.boss?70:10)+m.level*3)*(1+st.goldBonus);
-  player.exp+=Math.round(exp); player.gold+=Math.round(gold); msg(`${m.name} 처치 · +${Math.round(exp)}XP +${Math.round(gold)}G`,'combat'); effects.push({type:'ring',x:m.x,y:m.y,life:.55,r:m.boss?40:24});
-  if(Math.random()<(m.boss?.95:.28)){ const item=makeItem(Math.max(1,m.level+irnd(-1,2)),null,null,player.job); drops.push({x:m.x+irnd(-20,20),y:m.y+irnd(-20,20),item,life:18}); effects.push({type:'text',x:m.x,y:m.y-38,t:`${item.rarity} 장비`,life:1.1,vy:-22});}
+  const st=computeStats(); const lb=levelGapBalance(m);
+  const exp=Math.round(((m.boss?45:13)+m.level*4)*(1+st.expBonus)*lb.exp);
+  const gold=Math.round(((m.boss?70:10)+m.level*3)*(1+st.goldBonus)*lb.gold);
+  player.exp+=Math.round(exp); player.gold+=Math.round(gold);
+  const penaltyTag=lb.diff>=6?' · 저레벨 보상감소':(lb.diff<=-6?' · 고위험 보정':'');
+  msg(`${m.name} 처치 · +${Math.round(exp)}XP +${Math.round(gold)}G${penaltyTag}`,'combat'); effects.push({type:'ring',x:m.x,y:m.y,life:.55,r:m.boss?40:24});
+  if(Math.random()<((m.boss?.95:.28)*lb.drop)){ const item=makeItem(Math.max(1,m.level+irnd(-1,2)),null,null,player.job); drops.push({x:m.x+irnd(-20,20),y:m.y+irnd(-20,20),item,life:18}); effects.push({type:'text',x:m.x,y:m.y-38,t:`${item.rarity} 장비`,life:1.1,vy:-22});}
   while(player.exp>=player.nextExp){player.exp-=player.nextExp;player.level++;player.nextExp=Math.round(player.nextExp*1.32+18);pendingLevelUps++;player.hp=player.maxHp;}
   if(pendingLevelUps>0 && !popupLayer.style.display.includes('flex')) openGrowth();
   if(mode==='field' && monsters.filter(x=>!x.dead).length<7 && !m.boss) spawnMonster(false);
@@ -2796,7 +2832,8 @@ function usePotion(key=null,silent=false){
 function playerHit(dmg,source){
   const st=computeStats();
   if(player.dashTime>0 || Math.random()<st.dodge){effects.push({type:'text',x:player.x,y:player.y-28,t:'회피',life:.65,vy:-22});return;}
-  let final=Math.max(1,Math.round(dmg-st.def*.65));
+  const lb=source?levelGapBalance(source):{take:1};
+  let final=Math.max(1,Math.round((dmg-st.def*.65)*lb.take));
   if(player.shield>0 || buffMod('shield')>0) final=Math.max(1,Math.round(final*.45));
   player.hp-=final; player.hurt=.25;
   effects.push({type:'text',x:player.x,y:player.y-26,t:`-${final}`,life:.6,vy:-20});
