@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_054_emergency_no_online_stable -->
+<!-- build: index6_055_realtime_users_safe -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1314,7 +1314,7 @@ const SUPABASE_CONFIG={
   url:'https://tsfrskjgowlfxxbreptz.supabase.co',
   anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzZnJza2pnb3dsZnh4YnJlcHR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMTEwMjQsImV4cCI6MjA5MTg4NzAyNH0.F_vDZf8-Liv56ALQTTKpyB20nuGnlHtWqU4brfbS2gg',
   table:'game_user_state',
-  redirectTo:'https://lemonade-seal.github.io/neon-rpg/index6.html?v=054'
+  redirectTo:'https://lemonade-seal.github.io/neon-rpg/index6.html?v=055'
 };
 let memorySave='';
 function storageGet(k){try{return window.localStorage?localStorage.getItem(k):memorySave;}catch(e){return memorySave||null;}}
@@ -1471,25 +1471,29 @@ window.addEventListener('pagehide',()=>{try{requestCloudSave('pagehide',true);}c
 
 const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
-const onlineState={enabled:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,peers:{},partyId:null,invites:{},chat:[]};
+const onlineState={enabled:false,connecting:false,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,peers:{},partyId:null,invites:{},chat:[]};
 storageSet('green_line_online_pid',onlineState.playerId);
 function myOnlineId(){return onlineState.playerId;}
 function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<8500)n++;}return n;}
-function onlineStatusText(){return '실시간 유저 임시 점검 중';}
+function onlineStatusText(){return onlineState.blocked?'실시간 유저 오류 차단':(onlineState.enabled?`온라인 · ${onlinePeerCount()}명`:`오프라인 · ${onlineState.status||'대기'}`);}
 function buildOnlinePayload(){
   normalizePlayer();
   return {id:myOnlineId(),userId:(cloudState.user&&cloudState.user.id)||'',name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,partyId:onlineState.partyId||'',ts:Date.now()};
 }
 async function initPartyPresence(){
-  onlineState.enabled=false;onlineState.status='실시간 유저 임시 점검 중';return false;
+  if(onlineState.blocked)return false;
   const client=await ensureSupabaseClient(false);
-  if(!client||!cloudState.user)return false;
+  if(!client||!cloudState.user){onlineState.status='로그인 필요';return false;}
   if(onlineState.channel&&onlineState.enabled)return true;
   if(onlineState.connecting)return false;
   onlineState.connecting=true;
   onlineState.client=client;
   try{
-    const channel=client.channel('neon-rpg-world-v2',{config:{presence:{key:myOnlineId()}}});
+    if(onlineState.channel&&!onlineState.enabled){
+      try{onlineState.channel.unsubscribe();}catch(_){}
+      onlineState.channel=null;
+    }
+    const channel=client.channel('neon-rpg-world-v3',{config:{presence:{key:myOnlineId()}}});
     onlineState.channel=channel;
     channel
       .on('presence',{event:'sync'},syncOnlinePresence)
@@ -1503,39 +1507,75 @@ async function initPartyPresence(){
         onlineState.connecting=false;
         if(status==='SUBSCRIBED'){
           onlineState.enabled=true;
+          onlineState.blocked=false;
           await trackOnlinePresence(true);
           msg('실시간 유저 표시 접속', 'system');
         }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
           onlineState.enabled=false;
           onlineState.status=status;
-          try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}
+          try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
           onlineState.channel=null;
         }
       });
     return true;
-  }catch(e){console.error(e);onlineState.connecting=false;onlineState.enabled=false;onlineState.status='오류';return false;}
+  }catch(e){
+    console.error(e);
+    onlineState.enabled=false;
+    onlineState.connecting=false;
+    onlineState.status='접속 실패';
+    try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
+    onlineState.channel=null;
+    return false;
+  }
+}
+function sanitizePeerPayload(p,seenAt=performance.now()){
+  if(!p||p.id===myOnlineId())return null;
+  const x=Number(p.x),y=Number(p.y);
+  if(!Number.isFinite(x)||!Number.isFinite(y))return null;
+  return {
+    id:String(p.id||''),
+    userId:String(p.userId||''),
+    name:sanitizeNickname(p.name||'플레이어'),
+    job:String(p.job||'adventurer'),
+    jobName:String(p.jobName||jobById(p.job||'adventurer').name),
+    level:Math.max(1,Math.floor(Number(p.level)||1)),
+    field:String(p.field||'town'),
+    x,y,
+    dir:Number(p.dir)||0,
+    hp:Math.max(0,Number(p.hp)||0),
+    maxHp:Math.max(1,Number(p.maxHp)||1),
+    moving:!!p.moving,
+    partyId:String(p.partyId||''),
+    ts:Number(p.ts)||Date.now(),
+    seenAt
+  };
 }
 function syncOnlinePresence(){
-  const ch=onlineState.channel;if(!ch)return;
-  const state=ch.presenceState();const now=performance.now();const next={};const me=myOnlineId();
-  Object.keys(state||{}).forEach(key=>{
-    const arr=state[key]||[];
-    for(const p of arr){
-      if(!p||p.id===me)continue;
-      next[p.id]=Object.assign({},p,{seenAt:now});
-    }
-  });
-  onlineState.peers=next;
+  try{
+    const ch=onlineState.channel;if(!ch)return;
+    const state=ch.presenceState();const now=performance.now();const next={};
+    Object.keys(state||{}).forEach(key=>{
+      const arr=state[key]||[];
+      for(const raw of arr){
+        const p=sanitizePeerPayload(raw,now);
+        if(p&&p.id)next[p.id]=p;
+      }
+    });
+    onlineState.peers=next;
+  }catch(e){
+    console.error(e);
+    onlineState.status='동기화 오류';
+  }
 }
-function handleOnlineState(p){
-  if(!p||p.id===myOnlineId())return;
-  const x=Number(p.x),y=Number(p.y);
-  if(!Number.isFinite(x)||!Number.isFinite(y))return;
-  onlineState.peers[p.id]=Object.assign({},onlineState.peers[p.id]||{},p,{seenAt:performance.now()});
+function handleOnlineState(raw){
+  const p=sanitizePeerPayload(raw,performance.now());
+  if(!p||!p.id)return;
+  onlineState.peers[p.id]=p;
 }
 async function trackOnlinePresence(force=false){
-  if(!onlineState.channel||!onlineState.enabled)return false;
-  const t=performance.now();if(!force&&t-(onlineState.lastSend||0)<550)return false;
+  if(onlineState.blocked||!onlineState.channel||!onlineState.enabled)return false;
+  const t=performance.now();
+  if(!force&&t-(onlineState.lastSend||0)<650)return false;
   onlineState.lastSend=t;
   const payload=buildOnlinePayload();
   try{
@@ -1551,8 +1591,37 @@ async function trackOnlinePresence(force=false){
     return false;
   }
 }
-function pruneOnlinePeers(){const now=performance.now();for(const id in onlineState.peers){if(now-(onlineState.peers[id].seenAt||0)>12000)delete onlineState.peers[id];}}
-function updateOnline(dt){return;}
+function pruneOnlinePeers(){
+  const now=performance.now();
+  for(const id in onlineState.peers){
+    const p=onlineState.peers[id];
+    if(!p||now-(p.seenAt||0)>12000)delete onlineState.peers[id];
+  }
+}
+function updateOnline(dt){
+  if(onlineState.blocked)return;
+  try{
+    if(cloudState.user&&!onlineState.connecting&&(!onlineState.channel||!onlineState.enabled)){
+      const t=performance.now();
+      if(!onlineState.lastConnectTry||t-onlineState.lastConnectTry>3500){
+        onlineState.lastConnectTry=t;
+        initPartyPresence();
+      }
+    }
+    trackOnlinePresence(false);
+    pruneOnlinePeers();
+  }catch(e){
+    console.error(e);
+    onlineState.blocked=true;
+    onlineState.drawBlocked=true;
+    onlineState.enabled=false;
+    onlineState.status='온라인 기능 오류 차단';
+    onlineState.peers={};
+    try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
+    onlineState.channel=null;
+    msg('실시간 유저 오류를 차단했습니다.', 'system');
+  }
+}
 async function sendPartyBroadcast(event,payload){
   if(!onlineState.channel)await initPartyPresence();
   if(!onlineState.channel)return false;
@@ -1563,9 +1632,21 @@ function handlePartyInvite(p){if(!p||p.to!==myOnlineId())return;onlineState.invi
 function handlePartyAccept(p){if(!p)return;if(p.to===myOnlineId()||p.partyId===onlineState.partyId){msg(`${p.fromName||'유저'}님이 파티에 참가`, 'system');trackOnlinePresence(true);}}
 function handlePartyLeave(p){if(!p)return;if(p.partyId&&p.partyId===onlineState.partyId)msg(`${p.fromName||'유저'}님이 파티를 나감`, 'system');}
 function handlePartyChat(p){if(!p||!p.text)return;if(p.partyId&&onlineState.partyId&&p.partyId!==onlineState.partyId)return;const line={name:p.fromName||'유저',text:String(p.text).slice(0,80),t:p.t||Date.now()};onlineState.chat.push(line);while(onlineState.chat.length>30)onlineState.chat.shift();msg(`[파티] ${line.name}: ${line.text}`,'chat');}
-function activePeers(range=99999,fieldOnly=false){return [];}
+function activePeers(range=99999,fieldOnly=false){
+  const now=performance.now();
+  return Object.values(onlineState.peers||{})
+    .filter(p=>p&&now-(p.seenAt||0)<8500&&(!fieldOnly||p.field===currentField)&&dist(player.x,player.y,Number(p.x),Number(p.y))<=range)
+    .sort((a,b)=>dist(player.x,player.y,Number(a.x),Number(a.y))-dist(player.x,player.y,Number(b.x),Number(b.y)));
+}
 function nearOnlinePeer(range=128){return activePeers(range,true)[0]||null;}
-async function requestPartyToPeer(id){toast('실시간 파티 기능 임시 점검 중');return;}
+async function requestPartyToPeer(id){
+  const p=onlineState.peers[id];
+  if(!p){toast('대상 없음');return;}
+  const partyId=ensureParty();
+  const ok=await sendPartyBroadcast('party_invite',{to:id,partyId});
+  if(ok){toast('파티 신청 전송');msg(`${p.name||'유저'}님에게 파티 신청`, 'system');}
+  else toast('파티 신청 실패');
+}
 function acceptPartyInvite(from){const inv=onlineState.invites[from];if(!inv){toast('신청 정보 없음');return;}onlineState.partyId=inv.partyId;delete onlineState.invites[from];sendPartyBroadcast('party_accept',{to:from,partyId:onlineState.partyId});msg('파티 참가 완료','system');toast('파티 참가');trackOnlinePresence(true);showParty();}
 function declinePartyInvite(from){delete onlineState.invites[from];toast('파티 신청 거절');showParty();}
 function createParty(){ensureParty();trackOnlinePresence(true);toast('파티 생성');showParty();}
@@ -1574,24 +1655,82 @@ function partyMembers(){const self=buildOnlinePayload();const arr=[self];for(con
 function sendPartyChat(){const input=$('partyChatInput');const text=String(input?.value||'').trim().slice(0,80);if(!text){toast('내용 없음');return;}if(!onlineState.partyId){toast('파티 생성 또는 참가 필요');return;}if(input)input.value='';const line={name:sanitizeNickname(player.nickname||'플레이어'),text,t:Date.now()};onlineState.chat.push(line);while(onlineState.chat.length>30)onlineState.chat.shift();msg(`[파티] ${line.name}: ${text}`,'chat');sendPartyBroadcast('party_chat',{partyId:onlineState.partyId,text});showParty();}
 function drawRemotePlayerSprite(p){
   if(!p||p.field!==currentField)return;
-  const x=Number(p.x),y=Number(p.y);if(!Number.isFinite(x)||!Number.isFinite(y))return;
-  const age=performance.now()-(p.seenAt||0);if(age>8500)return;
+  const x=Number(p.x),y=Number(p.y);
+  if(!Number.isFinite(x)||!Number.isFinite(y))return;
+  const age=performance.now()-(Number(p.seenAt)||0);
+  if(age>8500)return;
   const near=dist(player.x,player.y,x,y)<145;
-  ctx.save();ctx.translate(x,y);ctx.globalAlpha=clamp(1-age/9000,.28,.88);
-  const t=performance.now()/1000,step=p.moving?Math.sin(t*11+(x+y)*.01):0,bob=p.moving?Math.abs(step)*.8:0;
+  const maxHp=Math.max(1,Number(p.maxHp)||1);
+  const curHp=clamp(Number.isFinite(Number(p.hp))?Number(p.hp):maxHp,0,maxHp);
+  const hpPct=clamp(curHp/maxHp,0,1);
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.globalAlpha=clamp(1-age/10000,.62,.96);
+  const t=performance.now()/1000;
+  const step=p.moving?Math.sin(t*11+(x+y)*.01):0;
+  const bob=p.moving?Math.abs(step)*.8:0;
   ctx.translate(0,-bob);
-  lineStyle(.68,1.55);ctx.beginPath();ctx.arc(0,-24,8,0,Math.PI*2);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,-16);ctx.lineTo(0,8);ctx.moveTo(0,-9);ctx.lineTo(15,-2);ctx.moveTo(0,-9);ctx.lineTo(-15,-2);ctx.moveTo(0,8);ctx.lineTo(6+step*2,28);ctx.moveTo(0,8);ctx.lineTo(-6-step*2,28);ctx.stroke();
-  lineStyle(p.partyId&&onlineState.partyId&&p.partyId===onlineState.partyId?.78:.55,1);ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.stroke();
-  ctx.shadowBlur=0;ctx.fillStyle='rgba(0,255,114,.9)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText(sanitizeNickname(p.name||'플레이어'),0,-48);
-  const hpPct=clamp((Number(p.hp)||0)/(Number(p.maxHp)||1),0,1);ctx.strokeStyle='rgba(0,255,114,.55)';ctx.strokeRect(-24,-42,48,4);ctx.fillStyle='rgba(0,255,114,.78)';ctx.fillRect(-24,-42,48*hpPct,4);
-  if(near){ctx.font='11px monospace';ctx.fillStyle='rgba(0,255,114,.96)';ctx.fillText('정보  |  파티',0,-63);}
+
+  lineStyle(.72,1.55);
+  ctx.beginPath();
+  ctx.arc(0,-24,8,0,Math.PI*2);
+  ctx.moveTo(0,-16);ctx.lineTo(0,8);
+  ctx.moveTo(0,-9);ctx.lineTo(15,-2);
+  ctx.moveTo(0,-9);ctx.lineTo(-15,-2);
+  ctx.moveTo(0,8);ctx.lineTo(6+step*2,28);
+  ctx.moveTo(0,8);ctx.lineTo(-6-step*2,28);
+  ctx.stroke();
+
+  lineStyle((p.partyId&&onlineState.partyId&&p.partyId===onlineState.partyId)?0.78:0.52,1);
+  ctx.beginPath();
+  ctx.arc(0,0,24,0,Math.PI*2);
+  ctx.stroke();
+
+  ctx.shadowBlur=0;
+  ctx.textAlign='center';
+  ctx.font='10px monospace';
+  ctx.fillStyle='rgba(0,255,114,.96)';
+  ctx.fillText(sanitizeNickname(p.name||'플레이어'),0,-58);
+
+  const hpW=58,hpH=8,hpY=-49;
+  ctx.save();
+  ctx.shadowColor='rgba(0,255,114,.7)';
+  ctx.shadowBlur=8;
+  ctx.fillStyle='rgba(0,0,0,.92)';
+  ctx.fillRect(-hpW/2,hpY,hpW,hpH);
+  ctx.strokeStyle='rgba(0,255,114,.95)';
+  ctx.lineWidth=1;
+  ctx.strokeRect(-hpW/2+.5,hpY+.5,hpW-1,hpH-1);
+  ctx.fillStyle='rgba(0,255,114,.96)';
+  ctx.fillRect(-hpW/2+2,hpY+2,(hpW-4)*hpPct,hpH-4);
+  ctx.restore();
+
+  if(near){
+    ctx.font='11px monospace';
+    ctx.fillStyle='rgba(0,255,114,.98)';
+    ctx.fillText('정보  |  파티',0,-72);
+  }
   ctx.restore();
 }
-function drawOnlinePlayers(){return;}
+function drawOnlinePlayers(){
+  if(onlineState.drawBlocked)return;
+  try{
+    for(const id in onlineState.peers){
+      const p=onlineState.peers[id];
+      if(!p||id===myOnlineId())continue;
+      drawRemotePlayerSprite(p);
+    }
+  }catch(e){
+    console.error(e);
+    onlineState.drawBlocked=true;
+    onlineState.peers={};
+    onlineState.status='유저 표시 오류 차단';
+    msg('실시간 유저 표시 오류를 차단했습니다.', 'system');
+  }
+}
 function showPeerInfo(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">캐릭터 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>Lv.${p.level||1} · ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>HP ${p.hp||0}/${p.maxHp||0}<br>위치: ${escapeHtml(p.field||'')}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.closePopup()">닫기</button></div>`);}
 function showPeerAction(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">${escapeHtml(p.name||'플레이어')}</div><div class="grid"><button class="card" onclick="Game.showPeerInfo('${escapeHtml(id)}')"><h3>정보</h3>캐릭터 정보 보기</button><button class="card" onclick="Game.requestPartyToPeer('${escapeHtml(id)}')"><h3>파티</h3>파티 신청 보내기</button></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
-function leaveOnline(showToast=true){try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}onlineState.enabled=false;onlineState.connecting=false;onlineState.status='OFFLINE';onlineState.channel=null;onlineState.peers={};onlineState.partyId=null;onlineState.invites={};if(showToast)toast('온라인 연결 해제');}
+function leaveOnline(showToast=true){try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}onlineState.enabled=false;onlineState.connecting=false;onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.status='OFFLINE';onlineState.channel=null;onlineState.peers={};onlineState.partyId=null;onlineState.invites={};if(showToast)toast('온라인 연결 해제');}
 function connectOnlineFromPanel(){initPartyPresence().then(ok=>{toast(ok?'온라인 접속 확인':'온라인 접속 실패');showParty();});}
 function connectOnline(url,key,room){return connectOnlineFromPanel();}
 function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
