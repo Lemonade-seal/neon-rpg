@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
+<!-- build: supabase configured for neon-rpg index6.html -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -740,7 +741,7 @@
   }
 
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 <div id="wrap">
@@ -1234,8 +1235,8 @@ let attackHeld=false, skillHeld=[false,false,false,false];
 let pendingLevelUps=0, growthOptions=[], growthSelectNeed=1, growthSelected=[], rouletteUsed=false, rouletteSpinning=false, popupMode='', codexOpenFields={};
 const saveKey='green_line_full_world_v1';
 const SUPABASE_CONFIG={
-  url:'YOUR_SUPABASE_PROJECT_URL',
-  anonKey:'YOUR_SUPABASE_ANON_KEY',
+  url:'https://tsfrskjgowlfxxbreptz.supabase.co',
+  anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzZnJza2pnb3dsZnh4YnJlcHR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMTEwMjQsImV4cCI6MjA5MTg4NzAyNH0.F_vDZf8-Liv56ALQTTKpyB20nuGnlHtWqU4brfbS2gg',
   table:'game_user_state',
   redirectTo:'https://lemonade-seal.github.io/neon-rpg/index6.html'
 };
@@ -1245,13 +1246,52 @@ function storageSet(k,v){memorySave=String(v);try{if(window.localStorage)localSt
 function storageRemove(k){memorySave='';try{if(window.localStorage)localStorage.removeItem(k);}catch(e){}}
 let supabaseClient=null;
 const cloudState={ready:false,loading:false,lastSave:0,lastAuto:0,lastSnapshot:'',saveTimer:null,saving:false,pending:false,user:null,session:null,status:'로그인 필요'};
+const SUPABASE_SDK_SOURCES=[
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+  'https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.min.js',
+  'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+];
+let supabaseSdkLoadPromise=null;
+function supabaseSdkReady(){return !!(window.supabase&&window.supabase.createClient);}
+function loadSupabaseSdk(){
+  if(supabaseSdkReady())return Promise.resolve(true);
+  if(supabaseSdkLoadPromise)return supabaseSdkLoadPromise;
+  supabaseSdkLoadPromise=new Promise(resolve=>{
+    let i=0;
+    const next=()=>{
+      if(supabaseSdkReady())return resolve(true);
+      if(i>=SUPABASE_SDK_SOURCES.length)return resolve(false);
+      const src=SUPABASE_SDK_SOURCES[i++];
+      const s=document.createElement('script');
+      s.src=src;
+      s.async=true;
+      s.onload=()=>setTimeout(()=>supabaseSdkReady()?resolve(true):next(),0);
+      s.onerror=next;
+      document.head.appendChild(s);
+    };
+    next();
+  });
+  return supabaseSdkLoadPromise;
+}
 function supabaseConfigured(){return !!(SUPABASE_CONFIG.url&&SUPABASE_CONFIG.anonKey&&SUPABASE_CONFIG.url!=='YOUR_SUPABASE_PROJECT_URL'&&SUPABASE_CONFIG.anonKey!=='YOUR_SUPABASE_ANON_KEY');}
-function initSupabaseClient(){
+function initSupabaseClient(showError=false){
   if(!supabaseConfigured())return null;
   if(supabaseClient)return supabaseClient;
-  if(!window.supabase||!window.supabase.createClient){toast('Supabase SDK 로딩 실패');return null;}
+  if(!supabaseSdkReady()){if(showError)toast('Supabase SDK 로딩 실패');return null;}
   try{supabaseClient=window.supabase.createClient(SUPABASE_CONFIG.url,SUPABASE_CONFIG.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});return supabaseClient;}
-  catch(e){console.error(e);toast('Supabase 초기화 실패');return null;}
+  catch(e){console.error(e);if(showError)toast('Supabase 초기화 실패');return null;}
+}
+async function ensureSupabaseClient(showError=true){
+  if(!supabaseConfigured())return null;
+  let client=initSupabaseClient(false);
+  if(client)return client;
+  const ok=await loadSupabaseSdk();
+  client=initSupabaseClient(false);
+  if(!ok||!client){
+    if(showError)toast('Supabase SDK 로딩 실패');
+    return null;
+  }
+  return client;
 }
 function cloudUserLabel(){const u=cloudState.user;return u?((u.user_metadata&&(u.user_metadata.name||u.user_metadata.nickname||u.user_metadata.full_name))||u.email||u.id||'로그인됨'):'로그인 필요';}
 function kakaoAuthLabel(){return cloudState.user?`카카오/Supabase 로그인됨 · ${cloudState.status||'서버 연결'}`:'카카오/Supabase 로그인 필요';}
@@ -1269,7 +1309,7 @@ function applyCloudPayload(payload,row){
   mode='town';enterField(fid);closePopup();updateHud();
 }
 async function loadCloudStateAndEnter(){
-  const client=initSupabaseClient();if(!client)return false;
+  const client=await ensureSupabaseClient();if(!client)return false;
   cloudState.loading=true;cloudState.status='서버 데이터 확인 중';
   try{
     const {data:{session},error:sessionError}=await client.auth.getSession();
@@ -1296,7 +1336,7 @@ function showCloudLoadingPage(text='서버 데이터 확인 중...'){
   openPopup(`<div class="bootScreen"><div class="gameTitle">서버 접속</div><div class="bootPanel">${escapeHtml(text)}<br><span class="small">계정 기준으로 유저 정보를 자동으로 불러옵니다.</span></div></div>`);
 }
 async function startKakaoLogin(){
-  const client=initSupabaseClient();
+  const client=await ensureSupabaseClient();
   if(!client){showKakaoLoginPage();return;}
   try{
     const {error}=await client.auth.signInWithOAuth({provider:'kakao',options:{redirectTo:SUPABASE_CONFIG.redirectTo}});
@@ -1309,12 +1349,16 @@ async function showKakaoLoginPage(){
     openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>Supabase Kakao 로그인을 설정해야 게임에 접속할 수 있습니다.</div><div class="card"><h3>Supabase 설정 필요</h3>파일 안의 <b>SUPABASE_CONFIG.url</b>, <b>SUPABASE_CONFIG.anonKey</b>를 실제 값으로 교체하고, Supabase Auth Kakao Provider와 <b>${escapeHtml(SUPABASE_CONFIG.table)}</b> 테이블/RLS 정책을 설정하십시오.</div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
     return;
   }
-  const client=initSupabaseClient();
+  const client=await ensureSupabaseClient(false);
+  if(!client){
+    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">Supabase SDK를 불러오지 못했습니다.<br>네트워크 또는 CDN 차단 상태를 확인하십시오.</div><div class="card"><h3>다시 시도</h3>SDK 주소를 3개 CDN으로 순차 시도하도록 보수했습니다.<br><span class="small">계속 실패하면 새로고침 후 다시 확인하십시오.</span></div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
+    return;
+  }
   openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="grid"><button style="background:#fee500;color:#000;border-color:#fee500;box-shadow:none;" onclick="Game.startKakaoLogin()">카카오톡으로 로그인</button></div><div class="townNote">게임 내 저장/불러오기 없이 계정 기준 서버 자동 저장 방식으로 동작합니다.</div></div>`);
   try{const {data}=await client.auth.getSession();if(data&&data.session){showCloudLoadingPage();await loadCloudStateAndEnter();}}catch(e){console.error(e);}
 }
 async function kakaoLogout(){
-  const client=initSupabaseClient();try{if(client)await client.auth.signOut();}catch(e){console.error(e);}cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='로그아웃';toast('로그아웃');showKakaoLoginPage();
+  const client=await ensureSupabaseClient(false);try{if(client)await client.auth.signOut();}catch(e){console.error(e);}cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='로그아웃';toast('로그아웃');showKakaoLoginPage();
 }
 function devKakaoLogin(){toast('개발용 로그인은 제거되었습니다');showKakaoLoginPage();}
 function requestCloudSave(reason='auto',immediate=false){
@@ -1327,7 +1371,7 @@ function requestCloudSave(reason='auto',immediate=false){
   return true;
 }
 async function saveServerState(reason='auto'){
-  const client=initSupabaseClient();if(!client||!cloudState.ready||!cloudState.user)return false;
+  const client=await ensureSupabaseClient(false);if(!client||!cloudState.ready||!cloudState.user)return false;
   const payload=serializeCloudState(reason);
   let snap='';try{snap=JSON.stringify(payload);}catch(e){snap=String(Date.now());}
   if(reason==='auto'&&snap===cloudState.lastSnapshot)return true;
