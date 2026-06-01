@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: party logs account delete neon login patch -->
+<!-- build: party live users quest hud patch -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -762,6 +762,45 @@
   .partyChatBox{max-height:120px;overflow:auto;border:1px solid rgba(0,255,114,.32);border-radius:10px;padding:8px;background:rgba(0,255,114,.025);font-size:11px;line-height:1.35;margin-top:8px;}
   .neonInput{width:100%;font:inherit;padding:10px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:10px;user-select:text;-webkit-user-select:text;caret-color:var(--g);}
 
+
+  /* patch 045: quest panel under currency + live user label */
+  #statPanel{pointer-events:auto!important;cursor:pointer;}
+  .questPanel{
+    width:100%;
+    min-height:22px!important;
+    height:auto!important;
+    padding:0 8px!important;
+    display:flex!important;
+    align-items:center!important;
+    border:1px solid var(--gd)!important;
+    border-radius:9px!important;
+    background:rgba(0,0,0,.72)!important;
+    box-shadow:0 0 12px var(--gb), inset 0 0 10px rgba(0,255,114,.06)!important;
+    font-size:10px!important;
+    line-height:1!important;
+    pointer-events:none!important;
+  }
+  .questPanel .questRow{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    white-space:nowrap;
+    overflow:hidden;
+  }
+  .questPanel .questRow span{
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .questPanel b{font-weight:900;text-shadow:0 0 7px rgba(0,255,114,.55);}
+  .remoteHpBar{
+    display:none;
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -772,6 +811,7 @@
     <div class="statStack">
       <div class="panel stats" id="statPanel"></div>
       <div class="panel currencyPanel" id="currencyPanel"></div>
+      <div class="panel questPanel" id="questPanel"></div>
     </div>
     <div class="topBtns">
       <canvas id="mini"></canvas>
@@ -1430,6 +1470,8 @@ async function initPartyPresence(){
   const client=await ensureSupabaseClient(false);
   if(!client||!cloudState.user)return false;
   if(onlineState.channel&&onlineState.enabled)return true;
+  if(onlineState.connecting)return false;
+  onlineState.connecting=true;
   onlineState.client=client;
   try{
     const channel=client.channel('neon-rpg-party-v1',{config:{presence:{key:myOnlineId()}}});
@@ -1442,14 +1484,15 @@ async function initPartyPresence(){
       .on('broadcast',{event:'party_chat'},({payload})=>handlePartyChat(payload))
       .subscribe(async status=>{
         onlineState.status=status;
+        onlineState.connecting=false;
         if(status==='SUBSCRIBED'){
           onlineState.enabled=true;
           await trackOnlinePresence(true);
-          msg('파티 채널 접속', 'system');
+          msg('실시간 유저 표시 접속', 'system');
         }
       });
     return true;
-  }catch(e){console.error(e);onlineState.enabled=false;onlineState.status='오류';return false;}
+  }catch(e){console.error(e);onlineState.connecting=false;onlineState.enabled=false;onlineState.status='오류';return false;}
 }
 function syncOnlinePresence(){
   const ch=onlineState.channel;if(!ch)return;
@@ -1470,7 +1513,17 @@ async function trackOnlinePresence(force=false){
   try{await onlineState.channel.track(buildOnlinePayload());return true;}catch(e){console.error(e);return false;}
 }
 function pruneOnlinePeers(){const now=performance.now();for(const id in onlineState.peers){if(now-(onlineState.peers[id].seenAt||0)>12000)delete onlineState.peers[id];}}
-function updateOnline(dt){trackOnlinePresence(false);pruneOnlinePeers();}
+function updateOnline(dt){
+  if(cloudState.user&&!onlineState.channel&&!onlineState.connecting){
+    const t=performance.now();
+    if(!onlineState.lastConnectTry||t-onlineState.lastConnectTry>3500){
+      onlineState.lastConnectTry=t;
+      initPartyPresence();
+    }
+  }
+  trackOnlinePresence(false);
+  pruneOnlinePeers();
+}
 async function sendPartyBroadcast(event,payload){
   if(!onlineState.channel)await initPartyPresence();
   if(!onlineState.channel)return false;
@@ -1501,15 +1554,15 @@ function drawRemotePlayerSprite(p){
   lineStyle(.68,1.55);ctx.beginPath();ctx.arc(0,-24,8,0,Math.PI*2);ctx.stroke();
   ctx.beginPath();ctx.moveTo(0,-16);ctx.lineTo(0,8);ctx.moveTo(0,-9);ctx.lineTo(15,-2);ctx.moveTo(0,-9);ctx.lineTo(-15,-2);ctx.moveTo(0,8);ctx.lineTo(6+step*2,28);ctx.moveTo(0,8);ctx.lineTo(-6-step*2,28);ctx.stroke();
   lineStyle(p.partyId&&onlineState.partyId&&p.partyId===onlineState.partyId?.78:.55,1);ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.stroke();
-  ctx.shadowBlur=0;ctx.fillStyle='rgba(0,255,114,.86)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText(`Lv.${p.level||1} ${sanitizeNickname(p.name||'플레이어')}`,0,-42);
-  const hpPct=clamp((Number(p.hp)||0)/(Number(p.maxHp)||1),0,1);ctx.strokeStyle='rgba(0,255,114,.45)';ctx.strokeRect(-22,-36,44,4);ctx.fillStyle='rgba(0,255,114,.65)';ctx.fillRect(-22,-36,44*hpPct,4);
-  if(near){ctx.font='11px monospace';ctx.fillStyle='rgba(0,255,114,.96)';ctx.fillText('정보  |  파티',0,-57);}
+  ctx.shadowBlur=0;ctx.fillStyle='rgba(0,255,114,.9)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText(sanitizeNickname(p.name||'플레이어'),0,-48);
+  const hpPct=clamp((Number(p.hp)||0)/(Number(p.maxHp)||1),0,1);ctx.strokeStyle='rgba(0,255,114,.55)';ctx.strokeRect(-24,-42,48,4);ctx.fillStyle='rgba(0,255,114,.78)';ctx.fillRect(-24,-42,48*hpPct,4);
+  if(near){ctx.font='11px monospace';ctx.fillStyle='rgba(0,255,114,.96)';ctx.fillText('정보  |  파티',0,-63);}
   ctx.restore();
 }
 function drawOnlinePlayers(){for(const id in onlineState.peers)drawRemotePlayerSprite(onlineState.peers[id]);}
 function showPeerInfo(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">캐릭터 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>Lv.${p.level||1} · ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>HP ${p.hp||0}/${p.maxHp||0}<br>위치: ${escapeHtml(p.field||'')}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.closePopup()">닫기</button></div>`);}
 function showPeerAction(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">${escapeHtml(p.name||'플레이어')}</div><div class="grid"><button class="card" onclick="Game.showPeerInfo('${escapeHtml(id)}')"><h3>정보</h3>캐릭터 정보 보기</button><button class="card" onclick="Game.requestPartyToPeer('${escapeHtml(id)}')"><h3>파티</h3>파티 신청 보내기</button></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
-function leaveOnline(showToast=true){try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}onlineState.enabled=false;onlineState.status='OFFLINE';onlineState.channel=null;onlineState.peers={};onlineState.partyId=null;onlineState.invites={};if(showToast)toast('온라인 연결 해제');}
+function leaveOnline(showToast=true){try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}onlineState.enabled=false;onlineState.connecting=false;onlineState.status='OFFLINE';onlineState.channel=null;onlineState.peers={};onlineState.partyId=null;onlineState.invites={};if(showToast)toast('온라인 연결 해제');}
 function connectOnlineFromPanel(){initPartyPresence().then(ok=>{toast(ok?'온라인 접속 확인':'온라인 접속 실패');showParty();});}
 function connectOnline(url,key,room){return connectOnlineFromPanel();}
 function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
@@ -3328,13 +3381,32 @@ function questHudStatus(){
   }
   return statusSummary();
 }
+function questPanelStatus(){
+  const aq=player.adventurerQuest||{};
+  if((player.job||'adventurer')==='adventurer'){
+    if(aq.accepted&&!aq.completed){
+      const hits=clamp(Math.floor(Number(aq.dummyHits)||0),0,50);
+      if(aq.done||hits>=50)return '장로에게 보고';
+      return `허수아비 ${hits}/50`;
+    }
+    if(!aq.accepted&&!aq.completed)return '장로에게 퀘스트 수락';
+    if(aq.completed&&!player.firstJobChosen)return '직업소개소에서 직업 선택';
+  }
+  const idx=Math.max(0,Math.floor(Number(player.quest)||0));
+  const q=(typeof QUESTS!=='undefined'&&QUESTS[idx])?QUESTS[idx]:null;
+  if(!q)return '진행 퀘스트 없음';
+  const progress=idx===1?bossKillsTotal():Math.floor(Number(player.questKills)||0);
+  return `${q.title} ${Math.min(progress,q.need)}/${q.need}`;
+}
 function updateHud(){
   normalizePlayer(); const st=computeStats();
   const hpPct=clamp(player.hp/player.maxHp*100,0,100), expPct=clamp(player.exp/player.nextExp*100,0,100);
   const hudJob=jobById(player.job||'warrior');
-  $('statPanel').innerHTML=`<div class="compactHud"><div class="statHeader"><b>${sanitizeNickname(player.nickname||'플레이어')} · ${hudJob.name} Lv.${player.level}</b></div><div class="compactMeter hpMeter"><span class="meterKey">HP</span><div class="bar"><div class="fill" style="width:${hpPct}%"></div></div><span class="meterValue">${Math.round(player.hp)}/${player.maxHp}</span></div><div class="compactMeter expMeter"><span class="meterKey">XP</span><div class="bar"><div class="fill" style="width:${expPct}%"></div></div><span class="meterValue">${player.exp}/${player.nextExp}</span></div><div class="statusLine"><span class="questHudText">${questHudStatus()}</span><span>처치 ${player.totalKills}</span></div></div>`;
+  $('statPanel').innerHTML=`<div class="compactHud"><div class="statHeader"><b>${sanitizeNickname(player.nickname||'플레이어')} · ${hudJob.name} Lv.${player.level}</b></div><div class="compactMeter hpMeter"><span class="meterKey">HP</span><div class="bar"><div class="fill" style="width:${hpPct}%"></div></div><span class="meterValue">${Math.round(player.hp)}/${player.maxHp}</span></div><div class="compactMeter expMeter"><span class="meterKey">XP</span><div class="bar"><div class="fill" style="width:${expPct}%"></div></div><span class="meterValue">${player.exp}/${player.nextExp}</span></div><div class="statusLine"><span>${statusSummary()}</span><span>처치 ${player.totalKills}</span></div></div>`;
   const currencyPanel=$('currencyPanel');
   if(currencyPanel)currencyPanel.innerHTML=`<div class="currencyRow"><span><b>G</b> ${Math.round(player.gold)}</span><span><b>N</b> ${Math.floor(Number(player.neonStone)||0)}</span></div>`;
+  const questPanel=$('questPanel');
+  if(questPanel)questPanel.innerHTML=`<div class="questRow"><span><b>Q</b> ${escapeHtml(questPanelStatus())}</span></div>`;
   const atkBtn=$('attackBtn'),atkCool=$('atkCool'),atkMax=player.atkTimerMax||player.atkTimer||1;
   if(atkCool)atkCool.textContent=player.atkTimer>0?'쿨타임':'READY';
   if(atkBtn)atkBtn.style.setProperty('--cdp',player.atkTimer>0?`${clamp(player.atkTimer/atkMax*100,0,100)}%`:'0%');
