@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_055_realtime_users_safe -->
+<!-- build: index6_057_skip_update_online_list -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1314,7 +1314,7 @@ const SUPABASE_CONFIG={
   url:'https://tsfrskjgowlfxxbreptz.supabase.co',
   anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzZnJza2pnb3dsZnh4YnJlcHR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMTEwMjQsImV4cCI6MjA5MTg4NzAyNH0.F_vDZf8-Liv56ALQTTKpyB20nuGnlHtWqU4brfbS2gg',
   table:'game_user_state',
-  redirectTo:'https://lemonade-seal.github.io/neon-rpg/index6.html?v=055'
+  redirectTo:(location.origin+(location.pathname.endsWith('/')?location.pathname+'index6.html':location.pathname.replace(/\/[^\/]*$/,'/index6.html'))+'?v=057')
 };
 let memorySave='';
 function storageGet(k){try{return window.localStorage?localStorage.getItem(k):memorySave;}catch(e){return memorySave||null;}}
@@ -1475,12 +1475,13 @@ const onlineState={enabled:false,connecting:false,blocked:false,drawBlocked:fals
 storageSet('green_line_online_pid',onlineState.playerId);
 function myOnlineId(){return onlineState.playerId;}
 function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<8500)n++;}return n;}
-function onlineStatusText(){return onlineState.blocked?'실시간 유저 오류 차단':(onlineState.enabled?`온라인 · ${onlinePeerCount()}명`:`오프라인 · ${onlineState.status||'대기'}`);}
+function onlineStatusText(){return onlineState.blocked?'온라인 재접속 필요':(onlineState.enabled?`온라인 · ${onlinePeerCount()}명`:`오프라인 · ${onlineState.status||'대기'}`);}
 function buildOnlinePayload(){
   normalizePlayer();
   return {id:myOnlineId(),userId:(cloudState.user&&cloudState.user.id)||'',name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,partyId:onlineState.partyId||'',ts:Date.now()};
 }
-async function initPartyPresence(){
+async function initPartyPresence(force=false){
+  if(force){onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.status='재접속 중';}
   if(onlineState.blocked)return false;
   const client=await ensureSupabaseClient(false);
   if(!client||!cloudState.user){onlineState.status='로그인 필요';return false;}
@@ -1642,14 +1643,21 @@ function nearOnlinePeer(range=128){return activePeers(range,true)[0]||null;}
 async function requestPartyToPeer(id){
   const p=onlineState.peers[id];
   if(!p){toast('대상 없음');return;}
+  if(!onlineState.enabled)await initPartyPresence(true);
   const partyId=ensureParty();
   const ok=await sendPartyBroadcast('party_invite',{to:id,partyId});
-  if(ok){toast('파티 신청 전송');msg(`${p.name||'유저'}님에게 파티 신청`, 'system');}
+  if(ok){toast('파티 신청 전송');msg(`${p.name||'유저'}님에게 파티 신청`, 'system');trackOnlinePresence(true);}
   else toast('파티 신청 실패');
 }
 function acceptPartyInvite(from){const inv=onlineState.invites[from];if(!inv){toast('신청 정보 없음');return;}onlineState.partyId=inv.partyId;delete onlineState.invites[from];sendPartyBroadcast('party_accept',{to:from,partyId:onlineState.partyId});msg('파티 참가 완료','system');toast('파티 참가');trackOnlinePresence(true);showParty();}
 function declinePartyInvite(from){delete onlineState.invites[from];toast('파티 신청 거절');showParty();}
-function createParty(){ensureParty();trackOnlinePresence(true);toast('파티 생성');showParty();}
+function createParty(){
+  ensureParty();
+  if(!onlineState.enabled){connectOnlineFromPanel();return;}
+  trackOnlinePresence(true);
+  toast('파티 생성');
+  showParty();
+}
 function leaveParty(){if(!onlineState.partyId){toast('파티 없음');return;}const old=onlineState.partyId;sendPartyBroadcast('party_leave',{partyId:old});onlineState.partyId=null;onlineState.invites={};trackOnlinePresence(true);msg('파티 탈퇴','system');showParty();}
 function partyMembers(){const self=buildOnlinePayload();const arr=[self];for(const p of Object.values(onlineState.peers)){if(p.partyId&&onlineState.partyId&&p.partyId===onlineState.partyId)arr.push(p);}return arr;}
 function sendPartyChat(){const input=$('partyChatInput');const text=String(input?.value||'').trim().slice(0,80);if(!text){toast('내용 없음');return;}if(!onlineState.partyId){toast('파티 생성 또는 참가 필요');return;}if(input)input.value='';const line={name:sanitizeNickname(player.nickname||'플레이어'),text,t:Date.now()};onlineState.chat.push(line);while(onlineState.chat.length>30)onlineState.chat.shift();msg(`[파티] ${line.name}: ${text}`,'chat');sendPartyBroadcast('party_chat',{partyId:onlineState.partyId,text});showParty();}
@@ -1731,7 +1739,17 @@ function drawOnlinePlayers(){
 function showPeerInfo(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">캐릭터 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>Lv.${p.level||1} · ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>HP ${p.hp||0}/${p.maxHp||0}<br>위치: ${escapeHtml(p.field||'')}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.closePopup()">닫기</button></div>`);}
 function showPeerAction(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">${escapeHtml(p.name||'플레이어')}</div><div class="grid"><button class="card" onclick="Game.showPeerInfo('${escapeHtml(id)}')"><h3>정보</h3>캐릭터 정보 보기</button><button class="card" onclick="Game.requestPartyToPeer('${escapeHtml(id)}')"><h3>파티</h3>파티 신청 보내기</button></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
 function leaveOnline(showToast=true){try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}onlineState.enabled=false;onlineState.connecting=false;onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.status='OFFLINE';onlineState.channel=null;onlineState.peers={};onlineState.partyId=null;onlineState.invites={};if(showToast)toast('온라인 연결 해제');}
-function connectOnlineFromPanel(){initPartyPresence().then(ok=>{toast(ok?'온라인 접속 확인':'온라인 접속 실패');showParty();});}
+function connectOnlineFromPanel(){
+  onlineState.blocked=false;
+  onlineState.drawBlocked=false;
+  onlineState.status='재접속 중';
+  try{if(onlineState.channel&&!onlineState.enabled){onlineState.channel.unsubscribe();onlineState.channel=null;}}catch(_){}
+  initPartyPresence(true).then(ok=>{
+    if(ok){trackOnlinePresence(true);toast('온라인 접속 확인');}
+    else toast('온라인 접속 실패');
+    showParty();
+  });
+}
 function connectOnline(url,key,room){return connectOnlineFromPanel();}
 function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
 function normalizePlayer(){player.weaponFace=Number.isFinite(player.weaponFace)?player.weaponFace:(Number.isFinite(player.dir)?player.dir:-Math.PI/2);const b=basePlayer();player=Object.assign(b,player||{});player.logSettings=Object.assign({system:true,combat:true,chat:true},player.logSettings||{});if(!player.job)player.job='adventurer';const jb=jobById(player.job||'adventurer');player.baseClass=player.baseClass||jb.baseClass||'adventurer';player.jobTier=player.job?jb.tier||0:0;player.classChosen=true;player.firstJobUnlocked=!!player.firstJobUnlocked;player.firstJobChosen=!!player.firstJobChosen;player.adventurerQuest=(player.adventurerQuest&&typeof player.adventurerQuest==='object')?Object.assign({accepted:false,done:false,dummyHits:0,completed:false},player.adventurerQuest):{accepted:false,done:false,dummyHits:0,completed:false};player.adventurerQuest.dummyHits=clamp(Math.floor(Number(player.adventurerQuest.dummyHits)||0),0,50);if(player.adventurerQuest.done||player.adventurerQuest.completed)player.firstJobUnlocked=true;if(player.job&&player.job!=='adventurer')player.firstJobChosen=true;player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');if(player.job&&!player.jobHistory.includes(player.job))player.jobHistory.push(player.job);player.unlockedHidden=(player.unlockedHidden&&typeof player.unlockedHidden==='object')?player.unlockedHidden:{};player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.atkTimerMax=Number(player.atkTimerMax)||0;player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,MAX_SKILL_STAR));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign({},player.codex[fid][i]||{},fresh[fid][i],{seen:(player.codex[fid][i]&&player.codex[fid][i].seen)||0,kills:(player.codex[fid][i]&&player.codex[fid][i].kills)||0});}player.neonStone=Math.max(0,Math.floor(Number(player.neonStone)||0));for(const fid in player.codex){if(Array.isArray(player.codex[fid])){for(const e of player.codex[fid]){if(e&&typeof e==='object'&&(!e.neonRewards||typeof e.neonRewards!=='object'))e.neonRewards={};}}}player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
@@ -1817,6 +1835,7 @@ function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(
 
 function startClassSelect(){showJobAgency();}
 let updateBootTimer=null;
+const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_057';
 function repairSkillSlotDuplicates(){
   normalizePlayer();
   const used=new Set();
@@ -1901,6 +1920,7 @@ function showUpdatePage(){
       if(status)status.textContent='완료';
       if(fill)fill.style.width='100%';
       if(pct)pct.textContent='100%';
+      try{storageSet(UPDATE_BOOT_SEEN_KEY,'1');}catch(e){}
       updateBootTimer=setTimeout(showKakaoLoginPage,420);
     }
   };
@@ -4549,17 +4569,30 @@ async function confirmDeleteAccount(){
     leaveOnline(false);storageRemove(saveKey);player=basePlayer();normalizePlayer();cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='탈퇴 완료';toast('계정 기록 삭제 완료');showKakaoLoginPage();
   }catch(e){console.error(e);toast('탈퇴 실패: RLS 삭제 정책 확인');openPopup(`<div class="title">계정 탈퇴 실패</div><div class="card">${escapeHtml(e.message||String(e))}<br><br>Supabase에 delete policy가 필요할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.showOnlinePanel()">계정</button></div>`);}
 }
+function onlineUserListRows(){
+  const peers=activePeers(99999,false);
+  const selfField=(FIELDS.find(f=>f.id===currentField)||{}).name||currentField;
+  const self=`<div class="partyMiniLine"><b>${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))}</b> · Lv.${player.level||1}<br><span class="small">나 · ${escapeHtml(selfField)}</span></div>`;
+  const peerRows=peers.map(p=>{
+    const f=(FIELDS.find(x=>x.id===p.field)||{}).name||p.field||'';
+    const same=p.field===currentField?'같은 필드':'다른 필드';
+    const d=p.field===currentField?` · ${Math.round(dist(player.x,player.y,Number(p.x),Number(p.y)))}m`:'';
+    return `<div class="partyMiniLine"><b>${escapeHtml(p.name||'플레이어')}</b> · Lv.${p.level||1}<br><span class="small">${escapeHtml(f)} · ${same}${d}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`;
+  }).join('');
+  return {count:1+peers.length,html:self+(peerRows||'<div class="partyMiniLine">다른 접속 유저 없음</div>')};
+}
 function showParty(){
   normalizePlayer();
-  initPartyPresence();
+  initPartyPresence(false);
   const invites=Object.values(onlineState.invites||{});
+  const allOnline=onlineUserListRows();
   const near=activePeers(220,true);
   const members=onlineState.partyId?partyMembers():[];
   const chat=onlineState.chat.slice(-8).map(c=>`<div>${escapeHtml(c.name)}: ${escapeHtml(c.text)}</div>`).join('')||'<div class="small">파티 채팅 없음</div>';
   const inviteHtml=invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>';
   const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b> · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${m.hp||0}/${m.maxHp||0}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
   const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>${escapeHtml(p.name||'플레이어')}</b> · Lv.${p.level||1} · ${Math.round(dist(player.x,player.y,p.x,p.y))}m<div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
-  openPopup(`<div class="title">파티</div><div class="sub">${onlineStatusText()}${onlineState.partyId?`<br>파티 ID: ${escapeHtml(onlineState.partyId.slice(-10))}`:''}</div><div class="footerBtns"><button onclick="Game.connectOnlineFromPanel()">접속 확인</button><button onclick="Game.createParty()">파티 생성</button><button onclick="Game.leaveParty()">탈퇴</button></div><h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>근처 유저</h3><div class="partyMiniList">${nearHtml}</div><h3>파티 채팅</h3><div class="partyChatBox">${chat}</div><input id="partyChatInput" class="neonInput" maxlength="80" placeholder="파티 채팅"><div class="footerBtns"><button onclick="Game.sendPartyChat()">전송</button><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">파티</div><div class="sub">상태: ${onlineStatusText()} · 실시간 접속 ${allOnline.count}명 · 근처 유저 ${near.length}명${onlineState.partyId?`<br>파티 ID: ${escapeHtml(onlineState.partyId.slice(-10))}`:''}</div><div class="footerBtns"><button onclick="Game.connectOnlineFromPanel()">온라인 재접속</button><button onclick="Game.createParty()">파티 생성</button><button onclick="Game.leaveParty()">탈퇴</button></div><h3>실시간 접속 인원</h3><div class="partyMiniList">${allOnline.html}</div><h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>근처 유저</h3><div class="partyMiniList">${nearHtml}</div><h3>파티 채팅</h3><div class="partyChatBox">${chat}</div><input id="partyChatInput" class="neonInput" maxlength="80" placeholder="파티 채팅"><div class="footerBtns"><button onclick="Game.sendPartyChat()">전송</button><button onclick="Game.closePopup()">닫기</button></div>`);
 }
 function showLogSettings(){
   normalizePlayer();
@@ -4731,11 +4764,12 @@ function startQuickGame(id='adventurer'){
 }
 window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showParty,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showLogSettings,toggleLogSetting,showDeleteAccount,confirmDeleteAccount,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 
-// 시작 흐름: 업데이트중 → Supabase Kakao 로그인 → 서버 자동 로드 → 게임 진입
+// 시작 흐름: 최초 접속은 업데이트 점검 → 새로고침은 업데이트 화면 생략 → Supabase Kakao 로그인 → 서버 자동 로드 → 게임 진입
 player=basePlayer();
 normalizePlayer();
 enterField('town');
-showUpdatePage();
+if(storageGet(UPDATE_BOOT_SEEN_KEY)==='1')showKakaoLoginPage();
+else showUpdatePage();
 updateHud();
 })();
 </script>
