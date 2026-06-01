@@ -2898,7 +2898,7 @@ function update(dt){
   if(player.dashTime>0){const px=player.x,py=player.y,dashSpeed=420;player.x=clamp(player.x+Math.cos(player.dir)*dashSpeed*dt,28,fieldSize-28);player.y=clamp(player.y+Math.sin(player.dir)*dashSpeed*dt,28,fieldSize-28);resolveDungeonEntity(player,px,py,22);}
   resolveDungeonEntity(player,oldX,oldY,22);
   player.movingAnim=Math.hypot(player.x-oldX,player.y-oldY)>0.05;
-  updateMonsters(dt,st); updateProjectiles(dt); updateSummons(dt); updateEffects(dt); updateDrops(dt); updateCamera(); updateHud(); updateTalkPrompt(); updatePortalTrigger(); updateOnline(dt); autoCloudSaveTick(dt);
+  updateMonsters(dt,st); updateProjectiles(dt); updateSummons(dt); updateEffects(dt); updateDrops(dt); updateCamera(); updateHud(); updateTalkPrompt(); updatePortalTrigger(); if(typeof updateOnline==='function')updateOnline(dt); autoCloudSaveTick(dt);
 }
 
 function autoThreatInfo(range=760){
