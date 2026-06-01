@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: supabase configured for neon-rpg index6.html -->
+<!-- build: party logs account delete neon login patch -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -740,6 +740,28 @@
     :root{--quick-gap:4px;}
   }
 
+
+
+  /* 파티/로그/로그인 UI 패치 */
+  .statStack,#statPanel{pointer-events:auto!important;}
+  #statPanel{cursor:pointer;}
+  .kakaoLoginCenter{display:flex;justify-content:center;align-items:center;margin:6px 0 2px;}
+  .kakaoNeonBtn{
+    width:min(280px,82%);
+    height:52px;
+    border-radius:16px;
+    background:#000!important;
+    color:var(--g)!important;
+    border:1px solid var(--g)!important;
+    box-shadow:0 0 18px rgba(0,255,114,.28), inset 0 0 18px rgba(0,255,114,.08)!important;
+    text-shadow:0 0 8px rgba(0,255,114,.8);
+    letter-spacing:.5px;
+  }
+  .partyMiniList{display:grid;gap:6px;margin-top:8px;}
+  .partyMiniLine{border:1px solid rgba(0,255,114,.32);border-radius:10px;padding:7px 8px;background:rgba(0,255,114,.035);font-size:11px;line-height:1.35;}
+  .partyChatBox{max-height:120px;overflow:auto;border:1px solid rgba(0,255,114,.32);border-radius:10px;padding:8px;background:rgba(0,255,114,.025);font-size:11px;line-height:1.35;margin-top:8px;}
+  .neonInput{width:100%;font:inherit;padding:10px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:10px;user-select:text;-webkit-user-select:text;caret-color:var(--g);}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -754,7 +776,7 @@
     <div class="topBtns">
       <canvas id="mini"></canvas>
       <div class="menuBtns">
-        <button id="statBtn">스텟</button><button id="bagBtn">가방</button>
+        <button id="statBtn">파티</button><button id="bagBtn">가방</button>
         <button id="codexBtn">도감</button><button id="settingBtn">설정</button>
       </div>
       <div id="zoneTag">마을</div>
@@ -1225,7 +1247,7 @@ const basePlayer = () => ({
   x:900,y:900,vx:0,vy:0,dir:-Math.PI/2,hp:100,maxHp:100,level:1,exp:0,nextExp:32,gold:160,potions:5,nickname:'플레이어',
   job:'adventurer', baseClass:'adventurer', jobTier:0, classChosen:true, firstJobUnlocked:false, firstJobChosen:false, adventurerQuest:{accepted:false,done:false,dummyHits:0,completed:false}, jobHistory:['adventurer'], unlockedHidden:{}, atkTimer:0, atkTimerMax:0, skillTimer:0, skillTimers:[0,0,0,0], skillTimerMax:[0,0,0,0], potionTimer:0, dodgeTimer:0, dashTime:0, attackAnim:0, hurt:0, shield:0, autoMode:false, activeBuffs:[], activeDebuffs:[], consumables:{potion:5,potionL:0,elixir:0,shield:0,haste:0,bomb:0}, potionSlot:'potion', autoPotionPct:.42, skillSlots:[1,2,3,4],
   growths:[], inventory:[], equip:{weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},
-  quest:0, questKills:0, guildRank:'신입', guildTokens:0, neonStone:0, skillStars:{}, codex:makeMonsterBook(), discoveredItems:{}, totalKills:0
+  quest:0, questKills:0, guildRank:'신입', guildTokens:0, neonStone:0, skillStars:{}, codex:makeMonsterBook(), discoveredItems:{}, totalKills:0, logSettings:{system:true,combat:true,chat:true}
 });
 let player = basePlayer();
 let mode='class', currentField='town', fieldSize=1800, camera={x:0,y:0}, monsters=[], drops=[], projectiles=[], effects=[], summons=[], npcs=[], monsterNameSerial=0, dungeonMap=null;
@@ -1315,7 +1337,7 @@ async function loadCloudStateAndEnter(){
     const {data:{session},error:sessionError}=await client.auth.getSession();
     if(sessionError)throw sessionError;
     if(!session){cloudState.user=null;cloudState.ready=false;cloudState.status='로그인 필요';showKakaoLoginPage();return false;}
-    cloudState.session=session;cloudState.user=session.user;cloudState.status='서버 데이터 불러오는 중';
+    cloudState.session=session;cloudState.user=session.user;cloudState.status='서버 데이터 불러오는 중';initPartyPresence();
     const {data,error}=await client.from(SUPABASE_CONFIG.table).select('*').eq('user_id',session.user.id).maybeSingle();
     if(error)throw error;
     cloudState.ready=true;cloudState.loading=false;
@@ -1354,11 +1376,11 @@ async function showKakaoLoginPage(){
     openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">Supabase SDK를 불러오지 못했습니다.<br>네트워크 또는 CDN 차단 상태를 확인하십시오.</div><div class="card"><h3>다시 시도</h3>SDK 주소를 3개 CDN으로 순차 시도하도록 보수했습니다.<br><span class="small">계속 실패하면 새로고침 후 다시 확인하십시오.</span></div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
     return;
   }
-  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="grid"><button style="background:#fee500;color:#000;border-color:#fee500;box-shadow:none;" onclick="Game.startKakaoLogin()">카카오톡으로 로그인</button></div><div class="townNote">게임 내 저장/불러오기 없이 계정 기준 서버 자동 저장 방식으로 동작합니다.</div></div>`);
+  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="kakaoLoginCenter"><button class="kakaoNeonBtn" onclick="Game.startKakaoLogin()">카카오톡 로그인</button></div><div class="townNote">게임 내 저장/불러오기 없이 계정 기준 서버 자동 저장 방식으로 동작합니다.</div></div>`);
   try{const {data}=await client.auth.getSession();if(data&&data.session){showCloudLoadingPage();await loadCloudStateAndEnter();}}catch(e){console.error(e);}
 }
 async function kakaoLogout(){
-  const client=await ensureSupabaseClient(false);try{if(client)await client.auth.signOut();}catch(e){console.error(e);}cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='로그아웃';toast('로그아웃');showKakaoLoginPage();
+  leaveOnline(false);const client=await ensureSupabaseClient(false);try{if(client)await client.auth.signOut();}catch(e){console.error(e);}cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='로그아웃';toast('로그아웃');showKakaoLoginPage();
 }
 function devKakaoLogin(){toast('개발용 로그인은 제거되었습니다');showKakaoLoginPage();}
 function requestCloudSave(reason='auto',immediate=false){
@@ -1395,13 +1417,103 @@ window.addEventListener('pagehide',()=>{try{requestCloudSave('pagehide',true);}c
 
 const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
-function loadOnlineConfig(){try{return Object.assign({url:'',key:'',room:'neon-town'},JSON.parse(storageGet(onlineSaveKey)||'{}'));}catch(e){return {url:'',key:'',room:'neon-town'};}}
-function saveOnlineConfig(c){storageSet(onlineSaveKey,JSON.stringify({url:c.url||'',key:c.key||'',room:c.room||'neon-town'}));}
-const onlineState={enabled:false,status:'OFFLINE',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'',lastSend:0,peers:{},config:loadOnlineConfig()};
+const onlineState={enabled:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,peers:{},partyId:null,invites:{},chat:[]};
 storageSet('green_line_online_pid',onlineState.playerId);
-function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<6500)n++;}return n;}
-function onlineStatusText(){return onlineState.enabled?`온라인 ${onlineState.room||''} · ${onlinePeerCount()}명`:'오프라인';}
-function normalizePlayer(){player.weaponFace=Number.isFinite(player.weaponFace)?player.weaponFace:(Number.isFinite(player.dir)?player.dir:-Math.PI/2);const b=basePlayer();player=Object.assign(b,player||{});if(!player.job)player.job='adventurer';const jb=jobById(player.job||'adventurer');player.baseClass=player.baseClass||jb.baseClass||'adventurer';player.jobTier=player.job?jb.tier||0:0;player.classChosen=true;player.firstJobUnlocked=!!player.firstJobUnlocked;player.firstJobChosen=!!player.firstJobChosen;player.adventurerQuest=(player.adventurerQuest&&typeof player.adventurerQuest==='object')?Object.assign({accepted:false,done:false,dummyHits:0,completed:false},player.adventurerQuest):{accepted:false,done:false,dummyHits:0,completed:false};player.adventurerQuest.dummyHits=clamp(Math.floor(Number(player.adventurerQuest.dummyHits)||0),0,50);if(player.adventurerQuest.done||player.adventurerQuest.completed)player.firstJobUnlocked=true;if(player.job&&player.job!=='adventurer')player.firstJobChosen=true;player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');if(player.job&&!player.jobHistory.includes(player.job))player.jobHistory.push(player.job);player.unlockedHidden=(player.unlockedHidden&&typeof player.unlockedHidden==='object')?player.unlockedHidden:{};player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.atkTimerMax=Number(player.atkTimerMax)||0;player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,MAX_SKILL_STAR));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign({},player.codex[fid][i]||{},fresh[fid][i],{seen:(player.codex[fid][i]&&player.codex[fid][i].seen)||0,kills:(player.codex[fid][i]&&player.codex[fid][i].kills)||0});}player.neonStone=Math.max(0,Math.floor(Number(player.neonStone)||0));for(const fid in player.codex){if(Array.isArray(player.codex[fid])){for(const e of player.codex[fid]){if(e&&typeof e==='object'&&(!e.neonRewards||typeof e.neonRewards!=='object'))e.neonRewards={};}}}player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
+function myOnlineId(){return (cloudState.user&&cloudState.user.id)||onlineState.playerId;}
+function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<8500)n++;}return n;}
+function onlineStatusText(){return onlineState.enabled?`온라인 · ${onlinePeerCount()}명`:'오프라인';}
+function buildOnlinePayload(){
+  normalizePlayer();
+  return {id:myOnlineId(),name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,partyId:onlineState.partyId||'',ts:Date.now()};
+}
+async function initPartyPresence(){
+  const client=await ensureSupabaseClient(false);
+  if(!client||!cloudState.user)return false;
+  if(onlineState.channel&&onlineState.enabled)return true;
+  onlineState.client=client;
+  try{
+    const channel=client.channel('neon-rpg-party-v1',{config:{presence:{key:myOnlineId()}}});
+    onlineState.channel=channel;
+    channel
+      .on('presence',{event:'sync'},syncOnlinePresence)
+      .on('broadcast',{event:'party_invite'},({payload})=>handlePartyInvite(payload))
+      .on('broadcast',{event:'party_accept'},({payload})=>handlePartyAccept(payload))
+      .on('broadcast',{event:'party_leave'},({payload})=>handlePartyLeave(payload))
+      .on('broadcast',{event:'party_chat'},({payload})=>handlePartyChat(payload))
+      .subscribe(async status=>{
+        onlineState.status=status;
+        if(status==='SUBSCRIBED'){
+          onlineState.enabled=true;
+          await trackOnlinePresence(true);
+          msg('파티 채널 접속', 'system');
+        }
+      });
+    return true;
+  }catch(e){console.error(e);onlineState.enabled=false;onlineState.status='오류';return false;}
+}
+function syncOnlinePresence(){
+  const ch=onlineState.channel;if(!ch)return;
+  const state=ch.presenceState();const now=performance.now();const next={};const me=myOnlineId();
+  Object.keys(state||{}).forEach(key=>{
+    const arr=state[key]||[];
+    for(const p of arr){
+      if(!p||p.id===me)continue;
+      next[p.id]=Object.assign({},p,{seenAt:now});
+    }
+  });
+  onlineState.peers=next;
+}
+async function trackOnlinePresence(force=false){
+  if(!onlineState.channel||!onlineState.enabled)return false;
+  const t=performance.now();if(!force&&t-(onlineState.lastSend||0)<700)return false;
+  onlineState.lastSend=t;
+  try{await onlineState.channel.track(buildOnlinePayload());return true;}catch(e){console.error(e);return false;}
+}
+function pruneOnlinePeers(){const now=performance.now();for(const id in onlineState.peers){if(now-(onlineState.peers[id].seenAt||0)>12000)delete onlineState.peers[id];}}
+function updateOnline(dt){trackOnlinePresence(false);pruneOnlinePeers();}
+async function sendPartyBroadcast(event,payload){
+  if(!onlineState.channel)await initPartyPresence();
+  if(!onlineState.channel)return false;
+  try{await onlineState.channel.send({type:'broadcast',event,payload:Object.assign({from:myOnlineId(),fromName:sanitizeNickname(player.nickname||'플레이어'),partyId:onlineState.partyId||'',t:Date.now()},payload||{})});return true;}catch(e){console.error(e);toast('파티 통신 실패');return false;}
+}
+function ensureParty(){if(!onlineState.partyId)onlineState.partyId='party_'+myOnlineId()+'_'+Date.now().toString(36);return onlineState.partyId;}
+function handlePartyInvite(p){if(!p||p.to!==myOnlineId())return;onlineState.invites[p.from]=p;msg(`${p.fromName||'유저'}님이 파티 신청`, 'system');toast('파티 신청 도착');}
+function handlePartyAccept(p){if(!p)return;if(p.to===myOnlineId()||p.partyId===onlineState.partyId){msg(`${p.fromName||'유저'}님이 파티에 참가`, 'system');trackOnlinePresence(true);}}
+function handlePartyLeave(p){if(!p)return;if(p.partyId&&p.partyId===onlineState.partyId)msg(`${p.fromName||'유저'}님이 파티를 나감`, 'system');}
+function handlePartyChat(p){if(!p||!p.text)return;if(p.partyId&&onlineState.partyId&&p.partyId!==onlineState.partyId)return;const line={name:p.fromName||'유저',text:String(p.text).slice(0,80),t:p.t||Date.now()};onlineState.chat.push(line);while(onlineState.chat.length>30)onlineState.chat.shift();msg(`[파티] ${line.name}: ${line.text}`,'chat');}
+function activePeers(range=99999,fieldOnly=false){const now=performance.now();return Object.values(onlineState.peers).filter(p=>p&&now-(p.seenAt||0)<8500&&(!fieldOnly||p.field===currentField)&&dist(player.x,player.y,Number(p.x),Number(p.y))<=range).sort((a,b)=>dist(player.x,player.y,a.x,a.y)-dist(player.x,player.y,b.x,b.y));}
+function nearOnlinePeer(range=128){return activePeers(range,true)[0]||null;}
+async function requestPartyToPeer(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}ensureParty();await initPartyPresence();await sendPartyBroadcast('party_invite',{to:id,partyId:onlineState.partyId});msg(`${p.name||'유저'}님에게 파티 신청`, 'system');toast('파티 신청 전송');trackOnlinePresence(true);}
+function acceptPartyInvite(from){const inv=onlineState.invites[from];if(!inv){toast('신청 정보 없음');return;}onlineState.partyId=inv.partyId;delete onlineState.invites[from];sendPartyBroadcast('party_accept',{to:from,partyId:onlineState.partyId});msg('파티 참가 완료','system');toast('파티 참가');trackOnlinePresence(true);showParty();}
+function declinePartyInvite(from){delete onlineState.invites[from];toast('파티 신청 거절');showParty();}
+function createParty(){ensureParty();trackOnlinePresence(true);toast('파티 생성');showParty();}
+function leaveParty(){if(!onlineState.partyId){toast('파티 없음');return;}const old=onlineState.partyId;sendPartyBroadcast('party_leave',{partyId:old});onlineState.partyId=null;onlineState.invites={};trackOnlinePresence(true);msg('파티 탈퇴','system');showParty();}
+function partyMembers(){const self=buildOnlinePayload();const arr=[self];for(const p of Object.values(onlineState.peers)){if(p.partyId&&onlineState.partyId&&p.partyId===onlineState.partyId)arr.push(p);}return arr;}
+function sendPartyChat(){const input=$('partyChatInput');const text=String(input?.value||'').trim().slice(0,80);if(!text){toast('내용 없음');return;}if(!onlineState.partyId){toast('파티 생성 또는 참가 필요');return;}if(input)input.value='';const line={name:sanitizeNickname(player.nickname||'플레이어'),text,t:Date.now()};onlineState.chat.push(line);while(onlineState.chat.length>30)onlineState.chat.shift();msg(`[파티] ${line.name}: ${text}`,'chat');sendPartyBroadcast('party_chat',{partyId:onlineState.partyId,text});showParty();}
+function drawRemotePlayerSprite(p){
+  if(!p||p.field!==currentField)return;
+  const x=Number(p.x),y=Number(p.y);if(!Number.isFinite(x)||!Number.isFinite(y))return;
+  const age=performance.now()-(p.seenAt||0);if(age>8500)return;
+  const near=dist(player.x,player.y,x,y)<145;
+  ctx.save();ctx.translate(x,y);ctx.globalAlpha=clamp(1-age/9000,.28,.88);
+  const t=performance.now()/1000,step=p.moving?Math.sin(t*11+(x+y)*.01):0,bob=p.moving?Math.abs(step)*.8:0;
+  ctx.translate(0,-bob);
+  lineStyle(.68,1.55);ctx.beginPath();ctx.arc(0,-24,8,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-16);ctx.lineTo(0,8);ctx.moveTo(0,-9);ctx.lineTo(15,-2);ctx.moveTo(0,-9);ctx.lineTo(-15,-2);ctx.moveTo(0,8);ctx.lineTo(6+step*2,28);ctx.moveTo(0,8);ctx.lineTo(-6-step*2,28);ctx.stroke();
+  lineStyle(p.partyId&&onlineState.partyId&&p.partyId===onlineState.partyId?.78:.55,1);ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.stroke();
+  ctx.shadowBlur=0;ctx.fillStyle='rgba(0,255,114,.86)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText(`Lv.${p.level||1} ${sanitizeNickname(p.name||'플레이어')}`,0,-42);
+  const hpPct=clamp((Number(p.hp)||0)/(Number(p.maxHp)||1),0,1);ctx.strokeStyle='rgba(0,255,114,.45)';ctx.strokeRect(-22,-36,44,4);ctx.fillStyle='rgba(0,255,114,.65)';ctx.fillRect(-22,-36,44*hpPct,4);
+  if(near){ctx.font='11px monospace';ctx.fillStyle='rgba(0,255,114,.96)';ctx.fillText('정보  |  파티',0,-57);}
+  ctx.restore();
+}
+function drawOnlinePlayers(){for(const id in onlineState.peers)drawRemotePlayerSprite(onlineState.peers[id]);}
+function showPeerInfo(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">캐릭터 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>Lv.${p.level||1} · ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>HP ${p.hp||0}/${p.maxHp||0}<br>위치: ${escapeHtml(p.field||'')}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.closePopup()">닫기</button></div>`);}
+function showPeerAction(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">${escapeHtml(p.name||'플레이어')}</div><div class="grid"><button class="card" onclick="Game.showPeerInfo('${escapeHtml(id)}')"><h3>정보</h3>캐릭터 정보 보기</button><button class="card" onclick="Game.requestPartyToPeer('${escapeHtml(id)}')"><h3>파티</h3>파티 신청 보내기</button></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
+function leaveOnline(showToast=true){try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}onlineState.enabled=false;onlineState.status='OFFLINE';onlineState.channel=null;onlineState.peers={};onlineState.partyId=null;onlineState.invites={};if(showToast)toast('온라인 연결 해제');}
+function connectOnlineFromPanel(){initPartyPresence().then(ok=>{toast(ok?'온라인 접속 확인':'온라인 접속 실패');showParty();});}
+function connectOnline(url,key,room){return connectOnlineFromPanel();}
+function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
+function normalizePlayer(){player.weaponFace=Number.isFinite(player.weaponFace)?player.weaponFace:(Number.isFinite(player.dir)?player.dir:-Math.PI/2);const b=basePlayer();player=Object.assign(b,player||{});player.logSettings=Object.assign({system:true,combat:true,chat:true},player.logSettings||{});if(!player.job)player.job='adventurer';const jb=jobById(player.job||'adventurer');player.baseClass=player.baseClass||jb.baseClass||'adventurer';player.jobTier=player.job?jb.tier||0:0;player.classChosen=true;player.firstJobUnlocked=!!player.firstJobUnlocked;player.firstJobChosen=!!player.firstJobChosen;player.adventurerQuest=(player.adventurerQuest&&typeof player.adventurerQuest==='object')?Object.assign({accepted:false,done:false,dummyHits:0,completed:false},player.adventurerQuest):{accepted:false,done:false,dummyHits:0,completed:false};player.adventurerQuest.dummyHits=clamp(Math.floor(Number(player.adventurerQuest.dummyHits)||0),0,50);if(player.adventurerQuest.done||player.adventurerQuest.completed)player.firstJobUnlocked=true;if(player.job&&player.job!=='adventurer')player.firstJobChosen=true;player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');if(player.job&&!player.jobHistory.includes(player.job))player.jobHistory.push(player.job);player.unlockedHidden=(player.unlockedHidden&&typeof player.unlockedHidden==='object')?player.unlockedHidden:{};player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.atkTimerMax=Number(player.atkTimerMax)||0;player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,MAX_SKILL_STAR));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign({},player.codex[fid][i]||{},fresh[fid][i],{seen:(player.codex[fid][i]&&player.codex[fid][i].seen)||0,kills:(player.codex[fid][i]&&player.codex[fid][i].kills)||0});}player.neonStone=Math.max(0,Math.floor(Number(player.neonStone)||0));for(const fid in player.codex){if(Array.isArray(player.codex[fid])){for(const e of player.codex[fid]){if(e&&typeof e==='object'&&(!e.neonRewards||typeof e.neonRewards!=='object'))e.neonRewards={};}}}player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
 function addBuff(name,duration=2,mods={}){const old=player.activeBuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);Object.assign(old,mods);return;}player.activeBuffs.push(Object.assign({name,time:duration},mods));}
 function addDebuff(name,duration=2){const old=player.activeDebuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);return;}player.activeDebuffs.push({name,time:duration});}
 function updateStatusTimers(dt){for(const b of player.activeBuffs||[]){b.time-=dt;if(b.hpRegen)player.hp=clamp(player.hp+b.hpRegen*dt,0,player.maxHp);}for(const d of player.activeDebuffs||[])d.time-=dt;player.activeBuffs=(player.activeBuffs||[]).filter(b=>b.time>0);player.activeDebuffs=(player.activeDebuffs||[]).filter(d=>d.time>0);}
@@ -1443,7 +1555,17 @@ function growthValueText(stat,value){
   if(stat==='hp'||stat==='range'||stat==='speed') return String(Math.round(value));
   return String(Math.round(value*10)/10);
 }
-function msg(t){logBox.innerHTML=`&gt; ${t}<br>`+logBox.innerHTML;}
+const gameLog=[];
+function logEnabled(type){const s=(player&&player.logSettings)||{};return s[type]!==false;}
+function updateLogBox(){
+  if(!logBox)return;
+  const rows=gameLog.filter(e=>logEnabled(e.type)).slice(-9).reverse().map(e=>`<div>&gt; ${escapeHtml(e.text)}</div>`).join('');
+  logBox.innerHTML=rows;
+}
+function msg(t,type='system'){
+  const entry={type:type||'system',text:String(t||''),t:Date.now()};
+  gameLog.push(entry);while(gameLog.length>90)gameLog.shift();updateLogBox();
+}
 function toast(t){toastBox.textContent=t;toastBox.style.display='block';clearTimeout(toastBox._t);toastBox._t=setTimeout(()=>toastBox.style.display='none',1400);}
 function popupAllowsCloseX(){return !['boot','title','nickname','class','update','kakaoLogin','growth','roulette','guide'].includes(String(popupMode||''));}
 function openPopup(html){const raw=String(html||'');popup.innerHTML=(popupAllowsCloseX()&&!raw.includes('popupCloseX'))?`<button class="popupCloseX" onclick="Game.closePopup()">X</button>${raw}`:raw;popupLayer.style.display='flex';gamePaused=true;}
@@ -2365,7 +2487,7 @@ function killMonster(m){
   if(m.dead)return; m.dead=true; player.totalKills++; player.questKills++;
   const f=FIELDS.find(x=>x.id===currentField); const book=player.codex[f.id]; const entry=book[m.boss?10:m.shape]; if(entry){entry.kills++;entry.neonRewards=entry.neonRewards&&typeof entry.neonRewards==='object'?entry.neonRewards:{};if(codexClaimable(entry).length)effects.push({type:'text',x:m.x,y:m.y-54,t:'도감 보상 가능',life:.9,vy:-18});}
   const st=computeStats(); const exp=Math.round((m.boss?45:13)+m.level*4)*(1+st.expBonus); const gold=Math.round((m.boss?70:10)+m.level*3)*(1+st.goldBonus);
-  player.exp+=Math.round(exp); player.gold+=Math.round(gold); effects.push({type:'ring',x:m.x,y:m.y,life:.55,r:m.boss?40:24});
+  player.exp+=Math.round(exp); player.gold+=Math.round(gold); msg(`${m.name} 처치 · +${Math.round(exp)}XP +${Math.round(gold)}G`,'combat'); effects.push({type:'ring',x:m.x,y:m.y,life:.55,r:m.boss?40:24});
   if(Math.random()<(m.boss?.95:.28)){ const item=makeItem(Math.max(1,m.level+irnd(-1,2)),null,null,player.job); drops.push({x:m.x+irnd(-20,20),y:m.y+irnd(-20,20),item,life:18}); effects.push({type:'text',x:m.x,y:m.y-38,t:`${item.rarity} 장비`,life:1.1,vy:-22});}
   while(player.exp>=player.nextExp){player.exp-=player.nextExp;player.level++;player.nextExp=Math.round(player.nextExp*1.32+18);pendingLevelUps++;player.hp=player.maxHp;}
   if(pendingLevelUps>0 && !popupLayer.style.display.includes('flex')) openGrowth();
@@ -3234,7 +3356,7 @@ function updateHud(){
   if(jobCool)jobCool.textContent=(jobById(player.job||'blade').name||'직업').slice(0,4);
 }
 
-function draw(){ctx.clearRect(0,0,W,H);drawBackground();ctx.save();ctx.translate(-camera.x,-camera.y);drawWorldBounds();drawFieldGround();if(currentField==='town')drawTown();drawDrops();drawMonsters();drawSummons();drawProjectiles();drawPlayer();drawEffects();ctx.restore();drawMiniMap();}
+function draw(){ctx.clearRect(0,0,W,H);drawBackground();ctx.save();ctx.translate(-camera.x,-camera.y);drawWorldBounds();drawFieldGround();if(currentField==='town')drawTown();drawDrops();drawMonsters();drawSummons();drawProjectiles();drawOnlinePlayers();drawPlayer();drawEffects();ctx.restore();drawMiniMap();}
 
 
 const BG_SPRITE_LAYOUT=[
@@ -4110,34 +4232,50 @@ function dodge(){
 
 function showOnlinePanel(){
   const last=cloudState.lastSave?new Date(cloudState.lastSave).toLocaleTimeString():'아직 없음';
-  openPopup(`<div class="title">계정</div><div class="sub">로그인 방식: Supabase Kakao OAuth<br>${cloudStatusText()}<br>마지막 서버 저장: ${escapeHtml(last)}</div><div class="grid"><button onclick="Game.showKakaoLoginPage()">로그인 화면</button><button onclick="Game.kakaoLogout()">로그아웃</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">유저 정보는 서버에 자동 저장됩니다. 게임 내 수동 저장/불러오기 버튼은 사용하지 않습니다.</div>`);
+  openPopup(`<div class="title">계정</div><div class="sub">로그인 방식: Supabase Kakao OAuth<br>${cloudStatusText()}<br>마지막 서버 저장: ${escapeHtml(last)}</div><div class="grid"><button onclick="Game.showKakaoLoginPage()">로그인 화면</button><button onclick="Game.kakaoLogout()">로그아웃</button><button onclick="Game.showDeleteAccount()">계정 탈퇴</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">계정 탈퇴는 게임 서버 기록을 삭제하고 로그아웃합니다. 같은 카카오 계정으로 다시 로그인하면 신규 기록이 생성됩니다.</div>`);
 }
-function connectOnlineFromPanel(){showOnlinePanel();}
-function connectOnline(url,key,room){toast('카카오 로그인 방식으로 변경됨');showOnlinePanel();}
-function leaveOnline(showToast=true){onlineState.enabled=false;onlineState.status='KAKAO';onlineState.channel=null;onlineState.client=null;onlineState.peers={};if(showToast)toast('온라인 방 기능 제거됨');}
-function buildOnlinePayload(){
+function showDeleteAccount(){
   normalizePlayer();
-  return {id:onlineState.playerId,name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,ts:Date.now()};
+  openPopup(`<div class="title">계정 탈퇴</div><div class="card"><h3>서버 기록 삭제</h3>탈퇴하면 <b>${escapeHtml(SUPABASE_CONFIG.table)}</b>의 내 게임 기록이 삭제됩니다.<br>확인하려면 현재 닉네임 <b>${escapeHtml(player.nickname||'플레이어')}</b>을 정확히 입력하십시오.</div><input id="deleteNameInput" class="neonInput" maxlength="10" placeholder="닉네임 입력"><div class="footerBtns"><button onclick="Game.confirmDeleteAccount()">확인</button><button onclick="Game.showOnlinePanel()">취소</button></div>`);
+  setTimeout(()=>$('deleteNameInput')?.focus(),80);
 }
-function sendOnlineState(force=false){}
-function sendOnlinePing(){toast(kakaoAuthLabel());}
-function drawRemotePlayerSprite(p){
-  if(!p||p.field!==currentField)return;
-  const x=Number(p.x),y=Number(p.y);if(!Number.isFinite(x)||!Number.isFinite(y))return;
-  const age=performance.now()-(p.seenAt||0);if(age>6500)return;
-  ctx.save();ctx.translate(x,y);ctx.globalAlpha=clamp(1-age/7000,.25,.85);
-  const t=performance.now()/1000,step=p.moving?Math.sin(t*11+(x+y)*.01):0,bob=p.moving?Math.abs(step)*.8:0;
-  ctx.translate(0,-bob);
-  lineStyle(.68,1.55);ctx.beginPath();ctx.arc(0,-24,8,0,Math.PI*2);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(0,-16);ctx.lineTo(0,8);ctx.moveTo(0,-9);ctx.lineTo(15,-2);ctx.moveTo(0,-9);ctx.lineTo(-15,-2);ctx.moveTo(0,8);ctx.lineTo(6+step*2,28);ctx.moveTo(0,8);ctx.lineTo(-6-step*2,28);ctx.stroke();
-  lineStyle(.55,1);ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.stroke();
-  ctx.shadowBlur=0;ctx.fillStyle='rgba(0,255,114,.82)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText(`Lv.${p.level||1} ${sanitizeNickname(p.name||'플레이어')}`,0,-42);
-  const hpPct=clamp((Number(p.hp)||0)/(Number(p.maxHp)||1),0,1);ctx.strokeStyle='rgba(0,255,114,.45)';ctx.strokeRect(-22,-36,44,4);ctx.fillStyle='rgba(0,255,114,.65)';ctx.fillRect(-22,-36,44*hpPct,4);
-  ctx.restore();
+async function confirmDeleteAccount(){
+  const typed=sanitizeNickname($('deleteNameInput')?.value||'');
+  const nick=sanitizeNickname(player.nickname||'플레이어');
+  if(typed!==nick){toast('닉네임이 일치하지 않습니다');return;}
+  const client=await ensureSupabaseClient();
+  if(!client){toast('Supabase 연결 실패');return;}
+  try{
+    const {data:{user}}=await client.auth.getUser();
+    const uid=(user&&user.id)||(cloudState.user&&cloudState.user.id);
+    if(!uid){toast('로그인 정보 없음');return;}
+    const {error}=await client.from(SUPABASE_CONFIG.table).delete().eq('user_id',uid);
+    if(error)throw error;
+    try{await client.auth.signOut();}catch(e){}
+    leaveOnline(false);storageRemove(saveKey);player=basePlayer();normalizePlayer();cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='탈퇴 완료';toast('계정 기록 삭제 완료');showKakaoLoginPage();
+  }catch(e){console.error(e);toast('탈퇴 실패: RLS 삭제 정책 확인');openPopup(`<div class="title">계정 탈퇴 실패</div><div class="card">${escapeHtml(e.message||String(e))}<br><br>Supabase에 delete policy가 필요할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.showOnlinePanel()">계정</button></div>`);}
 }
-function drawOnlinePlayers(){for(const id in onlineState.peers)drawRemotePlayerSprite(onlineState.peers[id]);}
+function showParty(){
+  normalizePlayer();
+  initPartyPresence();
+  const invites=Object.values(onlineState.invites||{});
+  const near=activePeers(220,true);
+  const members=onlineState.partyId?partyMembers():[];
+  const chat=onlineState.chat.slice(-8).map(c=>`<div>${escapeHtml(c.name)}: ${escapeHtml(c.text)}</div>`).join('')||'<div class="small">파티 채팅 없음</div>';
+  const inviteHtml=invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>';
+  const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b> · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${m.hp||0}/${m.maxHp||0}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
+  const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>${escapeHtml(p.name||'플레이어')}</b> · Lv.${p.level||1} · ${Math.round(dist(player.x,player.y,p.x,p.y))}m<div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
+  openPopup(`<div class="title">파티</div><div class="sub">${onlineStatusText()}${onlineState.partyId?`<br>파티 ID: ${escapeHtml(onlineState.partyId.slice(-10))}`:''}</div><div class="footerBtns"><button onclick="Game.connectOnlineFromPanel()">접속 확인</button><button onclick="Game.createParty()">파티 생성</button><button onclick="Game.leaveParty()">탈퇴</button></div><h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>근처 유저</h3><div class="partyMiniList">${nearHtml}</div><h3>파티 채팅</h3><div class="partyChatBox">${chat}</div><input id="partyChatInput" class="neonInput" maxlength="80" placeholder="파티 채팅"><div class="footerBtns"><button onclick="Game.sendPartyChat()">전송</button><button onclick="Game.closePopup()">닫기</button></div>`);
+}
+function showLogSettings(){
+  normalizePlayer();
+  const s=player.logSettings||{};
+  const row=(k,label)=>`<button class="card" onclick="Game.toggleLogSetting('${k}')"><h3>${label}</h3>${s[k]!==false?'ON':'OFF'}</button>`;
+  openPopup(`<div class="title">로그 / 채팅 설정</div><div class="sub">하단 시스템로그창에 채팅, 시스템, 전투로그를 통합 표시합니다.</div><div class="grid">${row('system','시스템 로그')}${row('combat','전투 로그')}${row('chat','채팅')}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+}
+function toggleLogSetting(k){normalizePlayer();player.logSettings[k]=player.logSettings[k]===false;updateLogBox();requestCloudSave('logSetting');showLogSettings();}
 function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
-function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드와 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
+function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드, 파티, 로그, 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showParty()">파티</button><button onclick="Game.showLogSettings()">로그/채팅</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
 function quickToggleAuto(){
   try{
     normalizePlayer();
@@ -4203,14 +4341,29 @@ function nearestNpc(){let b=null,bd=85;for(const n of npcs){if(n.kind==='portal'
 function talkToNpc(n){if(!n)return; if(n.kind==='quest')showQuest();else if(n.kind==='shop')showShop();else if(n.kind==='guild')showGuild();else if(n.kind==='jobAgency')showJobAgency();else if(n.kind==='dummy')showTrainingDummy();}
 function updateTalkPrompt(){
   const btn=$('talkPrompt');
-  if(currentField!=='town'||popupLayer.style.display==='flex'){talkTarget=null;btn.style.display='none';return;}
-  const n=nearestNpc(); talkTarget=n;
-  if(!n){btn.style.display='none';return;}
-  btn.textContent=`${n.name} 말걸기`; btn.style.display='block';
-  const bw=btn.offsetWidth||92, bh=btn.offsetHeight||30;
-  const sx=clamp(n.x-camera.x,bw/2+8,W-bw/2-8), sy=clamp(n.y-camera.y-48,Math.max(64,bh+8),H-120);
-  btn.style.left=`${sx}px`; btn.style.top=`${sy}px`;
+  if(popupLayer.style.display==='flex'){talkTarget=null;btn.style.display='none';return;}
+  let n=null;
+  if(currentField==='town')n=nearestNpc();
+  if(n){
+    talkTarget=n;
+    btn.textContent=`${n.name} 말걸기`; btn.style.display='block';
+    const bw=btn.offsetWidth||92, bh=btn.offsetHeight||30;
+    const sx=clamp(n.x-camera.x,bw/2+8,W-bw/2-8), sy=clamp(n.y-camera.y-48,Math.max(64,bh+8),H-120);
+    btn.style.left=`${sx}px`; btn.style.top=`${sy}px`;
+    return;
+  }
+  const p=nearOnlinePeer(135);
+  if(p){
+    talkTarget={kind:'peer',peerId:p.id};
+    btn.textContent='정보 / 파티';btn.style.display='block';
+    const bw=btn.offsetWidth||92,bh=btn.offsetHeight||30;
+    const sx=clamp(Number(p.x)-camera.x,bw/2+8,W-bw/2-8), sy=clamp(Number(p.y)-camera.y-58,Math.max(64,bh+8),H-120);
+    btn.style.left=`${sx}px`;btn.style.top=`${sy}px`;
+    return;
+  }
+  talkTarget=null;btn.style.display='none';
 }
+function handleTalkPrompt(){if(talkTarget&&talkTarget.kind==='peer'){showPeerAction(talkTarget.peerId);return;}talkToNpc(talkTarget);}
 function updatePortalTrigger(){
   if(currentField!=='town')return;
   const portal=npcs.find(n=>n.kind==='portal'); if(!portal)return;
@@ -4233,7 +4386,7 @@ function bind(){
   const dodgeBtn=$('dodgeBtn');
   dodgeBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();dodge();},{passive:false});
   dodgeBtn.onclick=e=>{e.preventDefault();};
-  $('potionBtn').onclick=usePotion; $('talkPrompt').onclick=()=>talkToNpc(talkTarget); $('statBtn').onclick=showStats; $('bagBtn').onclick=renderBag; $('codexBtn').onclick=()=>renderCodex(true); $('settingBtn').onclick=showSettings; zoneTag.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
+  $('potionBtn').onclick=usePotion; $('talkPrompt').onclick=handleTalkPrompt; $('statBtn').onclick=showParty; $('statPanel').onclick=showStats; $('bagBtn').onclick=renderBag; $('codexBtn').onclick=()=>renderCodex(true); $('settingBtn').onclick=showSettings; zoneTag.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
   mini.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();showFullMap();},{passive:false});
   $('autoBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();quickToggleAuto();},{passive:false});
   document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false}); document.addEventListener('contextmenu',e=>e.preventDefault()); document.addEventListener('selectstart',e=>e.preventDefault());
@@ -4282,7 +4435,7 @@ function startQuickGame(id='adventurer'){
   saveGame();
   setTimeout(showPatchNotes,80);
 }
-window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showParty,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showLogSettings,toggleLogSetting,showDeleteAccount,confirmDeleteAccount,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 
 // 시작 흐름: 업데이트중 → Supabase Kakao 로그인 → 서버 자동 로드 → 게임 진입
 player=basePlayer();
