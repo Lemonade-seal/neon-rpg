@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: party live users quest hud patch -->
+<!-- build: index6_054_emergency_no_online_stable -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -845,14 +845,26 @@
 <script>
 window.addEventListener('error', function(e){
   try{
+    var msg=String((e&&e.message)||'unknown');
+    window.__neonLastError=msg;
+    if(/Maximum call stack size exceeded|too much recursion/i.test(msg)){
+      window.__neonStackGuarded=true;
+      if(e&&e.preventDefault)e.preventDefault();
+      try{console.warn('NEON guarded stack error:',msg);}catch(_){}
+      return true;
+    }
+    if(window.__neonErrorBoxShown)return;
+    window.__neonErrorBoxShown=true;
     var box=document.createElement('div');
-    box.style.cssText='position:fixed;inset:12px;z-index:99999;border:1px solid #00ff72;background:#000;color:#00ff72;padding:14px;font:12px monospace;white-space:pre-wrap;overflow:auto;box-shadow:0 0 20px rgba(0,255,114,.35)';
-    box.textContent='게임 로딩 오류\n' + (e.message||'unknown') + '\n' + (e.filename||'') + ':' + (e.lineno||'');
+    box.style.cssText='position:fixed;left:12px;right:12px;top:12px;z-index:99999;border:1px solid #00ff72;background:#000;color:#00ff72;padding:12px;font:12px monospace;white-space:pre-wrap;overflow:auto;box-shadow:0 0 20px rgba(0,255,114,.35);max-height:38vh';
+    box.textContent='게임 오류\n' + msg + '\n' + (e.filename||'') + ':' + (e.lineno||'');
     document.body.appendChild(box);
   }catch(_){}
 });
 window.addEventListener('unhandledrejection', function(e){
   try{
+    var r=(e&&e.reason)||'';var m=String((r&&r.message)||r||'unknown');
+    if(/Maximum call stack size exceeded|too much recursion/i.test(m)){if(e&&e.preventDefault)e.preventDefault();return true;}
     var box=document.createElement('div');
     box.style.cssText='position:fixed;inset:12px;z-index:99999;border:1px solid #00ff72;background:#000;color:#00ff72;padding:14px;font:12px monospace;white-space:pre-wrap;overflow:auto;box-shadow:0 0 20px rgba(0,255,114,.35)';
     box.textContent='게임 로딩 오류\n' + ((e.reason&&e.reason.message)||e.reason||'unknown');
@@ -1302,7 +1314,7 @@ const SUPABASE_CONFIG={
   url:'https://tsfrskjgowlfxxbreptz.supabase.co',
   anonKey:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRzZnJza2pnb3dsZnh4YnJlcHR6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzMTEwMjQsImV4cCI6MjA5MTg4NzAyNH0.F_vDZf8-Liv56ALQTTKpyB20nuGnlHtWqU4brfbS2gg',
   table:'game_user_state',
-  redirectTo:'https://lemonade-seal.github.io/neon-rpg/index6.html'
+  redirectTo:'https://lemonade-seal.github.io/neon-rpg/index6.html?v=054'
 };
 let memorySave='';
 function storageGet(k){try{return window.localStorage?localStorage.getItem(k):memorySave;}catch(e){return memorySave||null;}}
@@ -1463,12 +1475,13 @@ const onlineState={enabled:false,status:'대기',client:null,channel:null,player
 storageSet('green_line_online_pid',onlineState.playerId);
 function myOnlineId(){return onlineState.playerId;}
 function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<8500)n++;}return n;}
-function onlineStatusText(){return onlineState.enabled?`온라인 · ${onlinePeerCount()}명`:`오프라인 · ${onlineState.status||'대기'}`;}
+function onlineStatusText(){return '실시간 유저 임시 점검 중';}
 function buildOnlinePayload(){
   normalizePlayer();
   return {id:myOnlineId(),userId:(cloudState.user&&cloudState.user.id)||'',name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,partyId:onlineState.partyId||'',ts:Date.now()};
 }
 async function initPartyPresence(){
+  onlineState.enabled=false;onlineState.status='실시간 유저 임시 점검 중';return false;
   const client=await ensureSupabaseClient(false);
   if(!client||!cloudState.user)return false;
   if(onlineState.channel&&onlineState.enabled)return true;
@@ -1539,18 +1552,7 @@ async function trackOnlinePresence(force=false){
   }
 }
 function pruneOnlinePeers(){const now=performance.now();for(const id in onlineState.peers){if(now-(onlineState.peers[id].seenAt||0)>12000)delete onlineState.peers[id];}}
-function updateOnline(dt){
-  if(cloudState.user&&!onlineState.connecting&&(!onlineState.channel||!onlineState.enabled)){
-    const t=performance.now();
-    if(!onlineState.lastConnectTry||t-onlineState.lastConnectTry>2500){
-      onlineState.lastConnectTry=t;
-      if(onlineState.channel&&!onlineState.enabled){try{onlineState.channel.unsubscribe();}catch(e){}onlineState.channel=null;}
-      initPartyPresence();
-    }
-  }
-  trackOnlinePresence(false);
-  pruneOnlinePeers();
-}
+function updateOnline(dt){return;}
 async function sendPartyBroadcast(event,payload){
   if(!onlineState.channel)await initPartyPresence();
   if(!onlineState.channel)return false;
@@ -1561,9 +1563,9 @@ function handlePartyInvite(p){if(!p||p.to!==myOnlineId())return;onlineState.invi
 function handlePartyAccept(p){if(!p)return;if(p.to===myOnlineId()||p.partyId===onlineState.partyId){msg(`${p.fromName||'유저'}님이 파티에 참가`, 'system');trackOnlinePresence(true);}}
 function handlePartyLeave(p){if(!p)return;if(p.partyId&&p.partyId===onlineState.partyId)msg(`${p.fromName||'유저'}님이 파티를 나감`, 'system');}
 function handlePartyChat(p){if(!p||!p.text)return;if(p.partyId&&onlineState.partyId&&p.partyId!==onlineState.partyId)return;const line={name:p.fromName||'유저',text:String(p.text).slice(0,80),t:p.t||Date.now()};onlineState.chat.push(line);while(onlineState.chat.length>30)onlineState.chat.shift();msg(`[파티] ${line.name}: ${line.text}`,'chat');}
-function activePeers(range=99999,fieldOnly=false){const now=performance.now();return Object.values(onlineState.peers).filter(p=>p&&now-(p.seenAt||0)<8500&&(!fieldOnly||p.field===currentField)&&dist(player.x,player.y,Number(p.x),Number(p.y))<=range).sort((a,b)=>dist(player.x,player.y,Number(a.x),Number(a.y))-dist(player.x,player.y,Number(b.x),Number(b.y)));}
+function activePeers(range=99999,fieldOnly=false){return [];}
 function nearOnlinePeer(range=128){return activePeers(range,true)[0]||null;}
-async function requestPartyToPeer(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}ensureParty();await initPartyPresence();await sendPartyBroadcast('party_invite',{to:id,partyId:onlineState.partyId});msg(`${p.name||'유저'}님에게 파티 신청`, 'system');toast('파티 신청 전송');trackOnlinePresence(true);}
+async function requestPartyToPeer(id){toast('실시간 파티 기능 임시 점검 중');return;}
 function acceptPartyInvite(from){const inv=onlineState.invites[from];if(!inv){toast('신청 정보 없음');return;}onlineState.partyId=inv.partyId;delete onlineState.invites[from];sendPartyBroadcast('party_accept',{to:from,partyId:onlineState.partyId});msg('파티 참가 완료','system');toast('파티 참가');trackOnlinePresence(true);showParty();}
 function declinePartyInvite(from){delete onlineState.invites[from];toast('파티 신청 거절');showParty();}
 function createParty(){ensureParty();trackOnlinePresence(true);toast('파티 생성');showParty();}
@@ -1586,7 +1588,7 @@ function drawRemotePlayerSprite(p){
   if(near){ctx.font='11px monospace';ctx.fillStyle='rgba(0,255,114,.96)';ctx.fillText('정보  |  파티',0,-63);}
   ctx.restore();
 }
-function drawOnlinePlayers(){for(const id in onlineState.peers)drawRemotePlayerSprite(onlineState.peers[id]);}
+function drawOnlinePlayers(){return;}
 function showPeerInfo(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">캐릭터 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>Lv.${p.level||1} · ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>HP ${p.hp||0}/${p.maxHp||0}<br>위치: ${escapeHtml(p.field||'')}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.closePopup()">닫기</button></div>`);}
 function showPeerAction(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">${escapeHtml(p.name||'플레이어')}</div><div class="grid"><button class="card" onclick="Game.showPeerInfo('${escapeHtml(id)}')"><h3>정보</h3>캐릭터 정보 보기</button><button class="card" onclick="Game.requestPartyToPeer('${escapeHtml(id)}')"><h3>파티</h3>파티 신청 보내기</button></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
 function leaveOnline(showToast=true){try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}onlineState.enabled=false;onlineState.connecting=false;onlineState.status='OFFLINE';onlineState.channel=null;onlineState.peers={};onlineState.partyId=null;onlineState.invites={};if(showToast)toast('온라인 연결 해제');}
@@ -1619,7 +1621,11 @@ window.addEventListener('orientationchange',()=>setTimeout(resize,90),{passive:t
 if(window.visualViewport)window.visualViewport.addEventListener('resize',resize,{passive:true});
 resize();
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
-function dist(a,b){const dx=a.x-b.x,dy=a.y-b.y;return Math.hypot(dx,dy);}
+function dist(a,b,c,d){
+  if(arguments.length>=4)return Math.hypot(Number(a)-Number(c),Number(b)-Number(d));
+  if(a&&b&&typeof a==='object'&&typeof b==='object')return Math.hypot(Number(a.x)-Number(b.x),Number(a.y)-Number(b.y));
+  return 999999;
+}
 function rnd(a,b){return a+Math.random()*(b-a);}function irnd(a,b){return Math.floor(rnd(a,b+1));}
 function chooseWeighted(list){const sum=list.reduce((s,x)=>s+x.weight,0);let r=Math.random()*sum;for(const x of list){r-=x.weight;if(r<=0)return x;}return list[0];}
 function fmt(v){return Math.round(v*10)/10;}
@@ -4353,7 +4359,22 @@ function showFullMap(){
   setTimeout(()=>{prepareFullMapCanvasSize();renderFullMapCanvas();},0);
 }
 
-function loop(ts){const dt=Math.min(.05,(ts-last)/1000||0);last=ts;if(!gamePaused)update(dt);draw();requestAnimationFrame(loop);}requestAnimationFrame(loop);
+function handleRuntimeError(scope,e){
+  const m=String((e&&e.message)||e||'unknown');
+  try{console.warn('NEON runtime guarded',scope,m);}catch(_){}
+  if(/Maximum call stack size exceeded|too much recursion/i.test(m)){
+    if(!window.__neonStackGuardedToast){window.__neonStackGuardedToast=1;try{msg('반복 호출 오류를 차단했습니다.', 'system');}catch(_){}}
+    return;
+  }
+  if(!window.__neonRuntimeErrorShown){window.__neonRuntimeErrorShown=1;try{msg('오류 차단: '+m,'system');}catch(_){}}
+}
+function loop(ts){
+  const dt=Math.min(.05,(ts-last)/1000||0);last=ts;
+  try{if(!gamePaused)update(dt);}catch(e){handleRuntimeError('update',e);}
+  try{draw();}catch(e){handleRuntimeError('draw',e);}
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 
 function dodge(){
   if(player.dodgeTimer>0||!player.classChosen)return;
