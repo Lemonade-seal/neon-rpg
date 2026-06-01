@@ -740,6 +740,7 @@
   }
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="wrap">
@@ -1232,10 +1233,130 @@ let joystick={active:false,id:null,cx:0,cy:0,dx:0,dy:0};
 let attackHeld=false, skillHeld=[false,false,false,false];
 let pendingLevelUps=0, growthOptions=[], growthSelectNeed=1, growthSelected=[], rouletteUsed=false, rouletteSpinning=false, popupMode='', codexOpenFields={};
 const saveKey='green_line_full_world_v1';
+const SUPABASE_CONFIG={
+  url:'YOUR_SUPABASE_PROJECT_URL',
+  anonKey:'YOUR_SUPABASE_ANON_KEY',
+  table:'game_user_state',
+  redirectTo:'https://lemonade-seal.github.io/neon-rpg/index6.html'
+};
 let memorySave='';
 function storageGet(k){try{return window.localStorage?localStorage.getItem(k):memorySave;}catch(e){return memorySave||null;}}
 function storageSet(k,v){memorySave=String(v);try{if(window.localStorage)localStorage.setItem(k,v);return true;}catch(e){return false;}}
 function storageRemove(k){memorySave='';try{if(window.localStorage)localStorage.removeItem(k);}catch(e){}}
+let supabaseClient=null;
+const cloudState={ready:false,loading:false,lastSave:0,lastAuto:0,lastSnapshot:'',saveTimer:null,saving:false,pending:false,user:null,session:null,status:'로그인 필요'};
+function supabaseConfigured(){return !!(SUPABASE_CONFIG.url&&SUPABASE_CONFIG.anonKey&&SUPABASE_CONFIG.url!=='YOUR_SUPABASE_PROJECT_URL'&&SUPABASE_CONFIG.anonKey!=='YOUR_SUPABASE_ANON_KEY');}
+function initSupabaseClient(){
+  if(!supabaseConfigured())return null;
+  if(supabaseClient)return supabaseClient;
+  if(!window.supabase||!window.supabase.createClient){toast('Supabase SDK 로딩 실패');return null;}
+  try{supabaseClient=window.supabase.createClient(SUPABASE_CONFIG.url,SUPABASE_CONFIG.anonKey,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});return supabaseClient;}
+  catch(e){console.error(e);toast('Supabase 초기화 실패');return null;}
+}
+function cloudUserLabel(){const u=cloudState.user;return u?((u.user_metadata&&(u.user_metadata.name||u.user_metadata.nickname||u.user_metadata.full_name))||u.email||u.id||'로그인됨'):'로그인 필요';}
+function kakaoAuthLabel(){return cloudState.user?`카카오/Supabase 로그인됨 · ${cloudState.status||'서버 연결'}`:'카카오/Supabase 로그인 필요';}
+function cloudStatusText(){return cloudState.user?`서버 계정: ${escapeHtml(cloudUserLabel())}<br>상태: ${escapeHtml(cloudState.status||'대기')}`:'서버 계정 없음';}
+function serializeCloudState(reason='auto'){
+  normalizePlayer();
+  return {version:39,reason,savedAt:Date.now(),currentField,mode:'town',player};
+}
+function applyCloudPayload(payload,row){
+  const p=(payload&&payload.player)||null;
+  if(p&&typeof p==='object')player=Object.assign(basePlayer(),p);
+  else player=basePlayer();
+  normalizePlayer();syncHp();
+  const fid=(FIELDS.find(f=>f.id===((payload&&payload.currentField)||row?.field_id))?((payload&&payload.currentField)||row?.field_id):'town');
+  mode='town';enterField(fid);closePopup();updateHud();
+}
+async function loadCloudStateAndEnter(){
+  const client=initSupabaseClient();if(!client)return false;
+  cloudState.loading=true;cloudState.status='서버 데이터 확인 중';
+  try{
+    const {data:{session},error:sessionError}=await client.auth.getSession();
+    if(sessionError)throw sessionError;
+    if(!session){cloudState.user=null;cloudState.ready=false;cloudState.status='로그인 필요';showKakaoLoginPage();return false;}
+    cloudState.session=session;cloudState.user=session.user;cloudState.status='서버 데이터 불러오는 중';
+    const {data,error}=await client.from(SUPABASE_CONFIG.table).select('*').eq('user_id',session.user.id).maybeSingle();
+    if(error)throw error;
+    cloudState.ready=true;cloudState.loading=false;
+    if(data&&data.player_data&&Object.keys(data.player_data).length){
+      applyCloudPayload(data.player_data,data);
+      cloudState.lastSnapshot=JSON.stringify(serializeCloudState('loaded'));
+      cloudState.status='서버 데이터 로드 완료';toast('서버 데이터 로드 완료');
+      return true;
+    }
+    player=basePlayer();normalizePlayer();syncHp();enterField('town');closePopup();
+    cloudState.status='신규 유저';
+    showTitlePage();
+    return true;
+  }catch(e){console.error(e);cloudState.loading=false;cloudState.ready=false;cloudState.status='서버 오류';openPopup(`<div class="title">서버 로드 실패</div><div class="card">Supabase 연결 또는 RLS 정책을 확인해야 합니다.<br><span class="small">${escapeHtml(e.message||String(e))}</span></div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">로그인 화면</button></div>`);return false;}
+}
+function showCloudLoadingPage(text='서버 데이터 확인 중...'){
+  mode='login';popupMode='kakaoLogin';zoneTag.textContent='로그인';
+  openPopup(`<div class="bootScreen"><div class="gameTitle">서버 접속</div><div class="bootPanel">${escapeHtml(text)}<br><span class="small">계정 기준으로 유저 정보를 자동으로 불러옵니다.</span></div></div>`);
+}
+async function startKakaoLogin(){
+  const client=initSupabaseClient();
+  if(!client){showKakaoLoginPage();return;}
+  try{
+    const {error}=await client.auth.signInWithOAuth({provider:'kakao',options:{redirectTo:SUPABASE_CONFIG.redirectTo}});
+    if(error)throw error;
+  }catch(e){console.error(e);toast('카카오/Supabase 로그인 호출 실패');}
+}
+async function showKakaoLoginPage(){
+  mode='login';popupMode='kakaoLogin';zoneTag.textContent='로그인';
+  if(!supabaseConfigured()){
+    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>Supabase Kakao 로그인을 설정해야 게임에 접속할 수 있습니다.</div><div class="card"><h3>Supabase 설정 필요</h3>파일 안의 <b>SUPABASE_CONFIG.url</b>, <b>SUPABASE_CONFIG.anonKey</b>를 실제 값으로 교체하고, Supabase Auth Kakao Provider와 <b>${escapeHtml(SUPABASE_CONFIG.table)}</b> 테이블/RLS 정책을 설정하십시오.</div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
+    return;
+  }
+  const client=initSupabaseClient();
+  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="grid"><button style="background:#fee500;color:#000;border-color:#fee500;box-shadow:none;" onclick="Game.startKakaoLogin()">카카오톡으로 로그인</button></div><div class="townNote">게임 내 저장/불러오기 없이 계정 기준 서버 자동 저장 방식으로 동작합니다.</div></div>`);
+  try{const {data}=await client.auth.getSession();if(data&&data.session){showCloudLoadingPage();await loadCloudStateAndEnter();}}catch(e){console.error(e);}
+}
+async function kakaoLogout(){
+  const client=initSupabaseClient();try{if(client)await client.auth.signOut();}catch(e){console.error(e);}cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='로그아웃';toast('로그아웃');showKakaoLoginPage();
+}
+function devKakaoLogin(){toast('개발용 로그인은 제거되었습니다');showKakaoLoginPage();}
+function requestCloudSave(reason='auto',immediate=false){
+  try{storageSet(saveKey,JSON.stringify(serializeCloudState(reason)));}catch(e){}
+  if(!cloudState.ready||!cloudState.user)return false;
+  if(cloudState.saveTimer){clearTimeout(cloudState.saveTimer);cloudState.saveTimer=null;}
+  const run=()=>saveServerState(reason);
+  if(immediate){run();return true;}
+  cloudState.saveTimer=setTimeout(run,900);
+  return true;
+}
+async function saveServerState(reason='auto'){
+  const client=initSupabaseClient();if(!client||!cloudState.ready||!cloudState.user)return false;
+  const payload=serializeCloudState(reason);
+  let snap='';try{snap=JSON.stringify(payload);}catch(e){snap=String(Date.now());}
+  if(reason==='auto'&&snap===cloudState.lastSnapshot)return true;
+  if(cloudState.saving){cloudState.pending=true;return false;}
+  cloudState.saving=true;cloudState.status='서버 저장 중';
+  try{
+    const row={user_id:cloudState.user.id,nickname:player.nickname,player_data:payload,field_id:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,level:Math.floor(player.level||1),job:player.job||'adventurer',hp:Math.round(player.hp||0),updated_at:new Date().toISOString()};
+    const {error}=await client.from(SUPABASE_CONFIG.table).upsert(row,{onConflict:'user_id'});
+    if(error)throw error;
+    cloudState.lastSave=Date.now();cloudState.lastSnapshot=snap;cloudState.status='서버 저장 완료';
+    return true;
+  }catch(e){console.error(e);cloudState.status='서버 저장 실패';return false;}
+  finally{cloudState.saving=false;if(cloudState.pending){cloudState.pending=false;requestCloudSave('pending',true);}}
+}
+function autoCloudSaveTick(dt){
+  if(!cloudState.ready||!cloudState.user)return;
+  const now=performance.now();
+  if(now-(cloudState.lastAuto||0)>4200){cloudState.lastAuto=now;requestCloudSave('auto',false);}
+}
+window.addEventListener('pagehide',()=>{try{requestCloudSave('pagehide',true);}catch(e){}});
+
+const onlineSaveKey='green_line_online_realtime_v1';
+function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
+function loadOnlineConfig(){try{return Object.assign({url:'',key:'',room:'neon-town'},JSON.parse(storageGet(onlineSaveKey)||'{}'));}catch(e){return {url:'',key:'',room:'neon-town'};}}
+function saveOnlineConfig(c){storageSet(onlineSaveKey,JSON.stringify({url:c.url||'',key:c.key||'',room:c.room||'neon-town'}));}
+const onlineState={enabled:false,status:'OFFLINE',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'',lastSend:0,peers:{},config:loadOnlineConfig()};
+storageSet('green_line_online_pid',onlineState.playerId);
+function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<6500)n++;}return n;}
+function onlineStatusText(){return onlineState.enabled?`온라인 ${onlineState.room||''} · ${onlinePeerCount()}명`:'오프라인';}
 function normalizePlayer(){player.weaponFace=Number.isFinite(player.weaponFace)?player.weaponFace:(Number.isFinite(player.dir)?player.dir:-Math.PI/2);const b=basePlayer();player=Object.assign(b,player||{});if(!player.job)player.job='adventurer';const jb=jobById(player.job||'adventurer');player.baseClass=player.baseClass||jb.baseClass||'adventurer';player.jobTier=player.job?jb.tier||0:0;player.classChosen=true;player.firstJobUnlocked=!!player.firstJobUnlocked;player.firstJobChosen=!!player.firstJobChosen;player.adventurerQuest=(player.adventurerQuest&&typeof player.adventurerQuest==='object')?Object.assign({accepted:false,done:false,dummyHits:0,completed:false},player.adventurerQuest):{accepted:false,done:false,dummyHits:0,completed:false};player.adventurerQuest.dummyHits=clamp(Math.floor(Number(player.adventurerQuest.dummyHits)||0),0,50);if(player.adventurerQuest.done||player.adventurerQuest.completed)player.firstJobUnlocked=true;if(player.job&&player.job!=='adventurer')player.firstJobChosen=true;player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');if(player.job&&!player.jobHistory.includes(player.job))player.jobHistory.push(player.job);player.unlockedHidden=(player.unlockedHidden&&typeof player.unlockedHidden==='object')?player.unlockedHidden:{};player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.atkTimerMax=Number(player.atkTimerMax)||0;player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,MAX_SKILL_STAR));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign({},player.codex[fid][i]||{},fresh[fid][i],{seen:(player.codex[fid][i]&&player.codex[fid][i].seen)||0,kills:(player.codex[fid][i]&&player.codex[fid][i].kills)||0});}player.neonStone=Math.max(0,Math.floor(Number(player.neonStone)||0));for(const fid in player.codex){if(Array.isArray(player.codex[fid])){for(const e of player.codex[fid]){if(e&&typeof e==='object'&&(!e.neonRewards||typeof e.neonRewards!=='object'))e.neonRewards={};}}}player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
 function addBuff(name,duration=2,mods={}){const old=player.activeBuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);Object.assign(old,mods);return;}player.activeBuffs.push(Object.assign({name,time:duration},mods));}
 function addDebuff(name,duration=2){const old=player.activeDebuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);return;}player.activeDebuffs.push({name,time:duration});}
@@ -1280,7 +1401,7 @@ function growthValueText(stat,value){
 }
 function msg(t){logBox.innerHTML=`&gt; ${t}<br>`+logBox.innerHTML;}
 function toast(t){toastBox.textContent=t;toastBox.style.display='block';clearTimeout(toastBox._t);toastBox._t=setTimeout(()=>toastBox.style.display='none',1400);}
-function popupAllowsCloseX(){return !['boot','title','nickname','class','update','growth','roulette','guide'].includes(String(popupMode||''));}
+function popupAllowsCloseX(){return !['boot','title','nickname','class','update','kakaoLogin','growth','roulette','guide'].includes(String(popupMode||''));}
 function openPopup(html){const raw=String(html||'');popup.innerHTML=(popupAllowsCloseX()&&!raw.includes('popupCloseX'))?`<button class="popupCloseX" onclick="Game.closePopup()">X</button>${raw}`:raw;popupLayer.style.display='flex';gamePaused=true;}
 function closePopup(){popupLayer.style.display='none';popup.innerHTML='';popup.style.width='';popup.style.height='';popup.style.maxWidth='';popup.style.maxHeight='';popup.style.padding='';popup.style.overflow='';gamePaused=false;popupMode='';}
 function lineStyle(alpha=1,width=2){ctx.strokeStyle=`rgba(0,255,114,${alpha})`;ctx.lineWidth=width;ctx.shadowColor='rgba(0,255,114,.72)';ctx.shadowBlur=8;ctx.lineCap='round';ctx.lineJoin='round';}
@@ -1389,11 +1510,13 @@ function showUpdatePage(){
       if(status)status.textContent='완료';
       if(fill)fill.style.width='100%';
       if(pct)pct.textContent='100%';
-      updateBootTimer=setTimeout(showTitlePage,420);
+      updateBootTimer=setTimeout(showKakaoLoginPage,420);
     }
   };
   updateBootTimer=setTimeout(step,130);
 }
+
+
 function showTitlePage(){
   mode='title'; popupMode='title'; zoneTag.textContent='타이틀';
   openPopup(`<button class="bootScreen" style="width:100%;background:transparent;border:0;color:var(--g);" onclick="Game.showNicknamePage()"><div class="gameTitle">GREEN LINE RPG</div><div class="bootPanel">초록 선으로 그려진 네온 월드</div><div class="blinkStart">반짝이는 문구를 터치하면 게임 시작</div></button>`);
@@ -2719,8 +2842,8 @@ function renderCodex(reset){
   openPopup(`<div class="title">몬스터 도감</div><div class="sub">구역별 기본값은 접힘입니다. 발견 전 몬스터는 ???로 표시됩니다.<br><span class="neonStone">보유 네온석: ${Math.floor(Number(player.neonStone)||0)}</span></div>${content}<div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
 }
 
-function saveGame(){const ok=storageSet(saveKey,JSON.stringify({player,currentField,mode}));toast(ok?'저장 완료':'임시 저장 완료');}
-function loadGame(){try{const raw=storageGet(saveKey);if(!raw)return false;const s=JSON.parse(raw);player=Object.assign(basePlayer(),s.player||{});normalizePlayer();syncHp();const fid=(FIELDS.find(f=>f.id===s.currentField)?s.currentField:'town');enterField(fid);closePopup();toast('불러오기 완료');return true;}catch(e){console.error(e);storageRemove(saveKey);player=basePlayer();normalizePlayer();enterField('town');return false;}}
+function saveGame(){requestCloudSave('event',true);}
+async function loadGame(){return await loadCloudStateAndEnter();}
 
 function update(dt){
   if(!player.classChosen)return; const oldX=player.x, oldY=player.y; const st=syncHp(); player.atkTimer=Math.max(0,player.atkTimer-dt);player.skillTimers=player.skillTimers||[player.skillTimer||0,0,0];for(let i=0;i<4;i++)player.skillTimers[i]=Math.max(0,(player.skillTimers[i]||0)-dt);player.skillTimer=0;player.potionTimer=Math.max(0,player.potionTimer-dt);player.dodgeTimer=Math.max(0,player.dodgeTimer-dt);player.dashTime=Math.max(0,player.dashTime-dt);player.attackAnim=Math.max(0,player.attackAnim-dt);player.hurt=Math.max(0,player.hurt-dt);player.shield=Math.max(0,player.shield-dt);
@@ -2731,7 +2854,7 @@ function update(dt){
   if(player.dashTime>0){const px=player.x,py=player.y,dashSpeed=420;player.x=clamp(player.x+Math.cos(player.dir)*dashSpeed*dt,28,fieldSize-28);player.y=clamp(player.y+Math.sin(player.dir)*dashSpeed*dt,28,fieldSize-28);resolveDungeonEntity(player,px,py,22);}
   resolveDungeonEntity(player,oldX,oldY,22);
   player.movingAnim=Math.hypot(player.x-oldX,player.y-oldY)>0.05;
-  updateMonsters(dt,st); updateProjectiles(dt); updateSummons(dt); updateEffects(dt); updateDrops(dt); updateCamera(); updateHud(); updateTalkPrompt(); updatePortalTrigger();
+  updateMonsters(dt,st); updateProjectiles(dt); updateSummons(dt); updateEffects(dt); updateDrops(dt); updateCamera(); updateHud(); updateTalkPrompt(); updatePortalTrigger(); updateOnline(dt); autoCloudSaveTick(dt);
 }
 
 function autoThreatInfo(range=760){
@@ -3919,6 +4042,7 @@ function renderFullMapCanvas(){
   for(const m of monsters)if(!m.dead)fullMapDot(c,tr.x(m.x),tr.y(m.y),m.boss?5.5:3.1,m.boss?'rgba(0,255,114,.95)':'rgba(0,255,114,.46)');
   for(const n of npcs)fullMapDot(c,tr.x(n.x),tr.y(n.y),n.kind==='portal'?5:3.4,'rgba(0,255,114,.70)');
   fullMapDot(c,tr.x(player.x),tr.y(player.y),6.2,'rgba(0,255,114,.98)','rgba(0,255,114,.22)');
+  if(onlineState.enabled){for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&p.field===currentField&&performance.now()-(p.seenAt||0)<6500)fullMapDot(c,tr.x(Number(p.x)||0),tr.y(Number(p.y)||0),4.6,'rgba(0,255,114,.72)','rgba(0,255,114,.12)');}}
   c.restore();
   c.strokeStyle='rgba(0,255,114,.82)';c.lineWidth=1.4;c.strokeRect(tr.pad+.5,tr.pad+.5,w-tr.pad*2-1,h-tr.pad*2-1);
 }
@@ -3939,8 +4063,37 @@ function dodge(){
   player.dashTime=.16; player.hurt=0;
   effects.push({type:'ring',x:player.x,y:player.y,life:.24,r:28});
 }
+
+function showOnlinePanel(){
+  const last=cloudState.lastSave?new Date(cloudState.lastSave).toLocaleTimeString():'아직 없음';
+  openPopup(`<div class="title">계정</div><div class="sub">로그인 방식: Supabase Kakao OAuth<br>${cloudStatusText()}<br>마지막 서버 저장: ${escapeHtml(last)}</div><div class="grid"><button onclick="Game.showKakaoLoginPage()">로그인 화면</button><button onclick="Game.kakaoLogout()">로그아웃</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">유저 정보는 서버에 자동 저장됩니다. 게임 내 수동 저장/불러오기 버튼은 사용하지 않습니다.</div>`);
+}
+function connectOnlineFromPanel(){showOnlinePanel();}
+function connectOnline(url,key,room){toast('카카오 로그인 방식으로 변경됨');showOnlinePanel();}
+function leaveOnline(showToast=true){onlineState.enabled=false;onlineState.status='KAKAO';onlineState.channel=null;onlineState.client=null;onlineState.peers={};if(showToast)toast('온라인 방 기능 제거됨');}
+function buildOnlinePayload(){
+  normalizePlayer();
+  return {id:onlineState.playerId,name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,ts:Date.now()};
+}
+function sendOnlineState(force=false){}
+function sendOnlinePing(){toast(kakaoAuthLabel());}
+function drawRemotePlayerSprite(p){
+  if(!p||p.field!==currentField)return;
+  const x=Number(p.x),y=Number(p.y);if(!Number.isFinite(x)||!Number.isFinite(y))return;
+  const age=performance.now()-(p.seenAt||0);if(age>6500)return;
+  ctx.save();ctx.translate(x,y);ctx.globalAlpha=clamp(1-age/7000,.25,.85);
+  const t=performance.now()/1000,step=p.moving?Math.sin(t*11+(x+y)*.01):0,bob=p.moving?Math.abs(step)*.8:0;
+  ctx.translate(0,-bob);
+  lineStyle(.68,1.55);ctx.beginPath();ctx.arc(0,-24,8,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,-16);ctx.lineTo(0,8);ctx.moveTo(0,-9);ctx.lineTo(15,-2);ctx.moveTo(0,-9);ctx.lineTo(-15,-2);ctx.moveTo(0,8);ctx.lineTo(6+step*2,28);ctx.moveTo(0,8);ctx.lineTo(-6-step*2,28);ctx.stroke();
+  lineStyle(.55,1);ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.stroke();
+  ctx.shadowBlur=0;ctx.fillStyle='rgba(0,255,114,.82)';ctx.font='10px monospace';ctx.textAlign='center';ctx.fillText(`Lv.${p.level||1} ${sanitizeNickname(p.name||'플레이어')}`,0,-42);
+  const hpPct=clamp((Number(p.hp)||0)/(Number(p.maxHp)||1),0,1);ctx.strokeStyle='rgba(0,255,114,.45)';ctx.strokeRect(-22,-36,44,4);ctx.fillStyle='rgba(0,255,114,.65)';ctx.fillRect(-22,-36,44*hpPct,4);
+  ctx.restore();
+}
+function drawOnlinePlayers(){for(const id in onlineState.peers)drawRemotePlayerSprite(onlineState.peers[id]);}
 function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
-function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">저장, 불러오기, 오토모드, 패치노트를 관리합니다.</div><div class="grid"><button onclick="Game.saveGame()">저장</button><button onclick="Game.loadGame()">불러오기</button><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">오토 설정에서는 스킬 슬롯과 자동 물약 퍼센트를 따로 지정합니다.</div>`);}
+function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드와 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
 function quickToggleAuto(){
   try{
     normalizePlayer();
@@ -4042,6 +4195,7 @@ function bind(){
   document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false}); document.addEventListener('contextmenu',e=>e.preventDefault()); document.addEventListener('selectstart',e=>e.preventDefault());
 }
 bind();
+window.addEventListener('pagehide',()=>leaveOnline(false));
 
 function startAdventurerGame(){
   const nick=sanitizeNickname(player.nickname||'플레이어');
@@ -4060,6 +4214,7 @@ function startAdventurerGame(){
   giveStarterItems();
   closePopup();
   msg('모험가로 시작했습니다. 장로에게 모험가 퀘스트를 받으십시오.');
+  saveGame();
   setTimeout(showElderGuide,120);
 }
 function startQuickGame(id='adventurer'){
@@ -4080,18 +4235,15 @@ function startQuickGame(id='adventurer'){
   giveStarterItems();
   closePopup();
   msg(`${jobById(id).name} 시작`);
+  saveGame();
   setTimeout(showPatchNotes,80);
 }
-window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 
-// 시작 흐름: 업데이트중 → 타이틀 → 닉네임 → 모험가 시작 → 장로 퀘스트 안내
-if(storageGet(saveKey)){
-  if(!loadGame()){
-    player=basePlayer(); normalizePlayer(); enterField('town');
-  }
-}else{
-  player=basePlayer(); normalizePlayer(); enterField('town');
-}
+// 시작 흐름: 업데이트중 → Supabase Kakao 로그인 → 서버 자동 로드 → 게임 진입
+player=basePlayer();
+normalizePlayer();
+enterField('town');
 showUpdatePage();
 updateHud();
 })();
