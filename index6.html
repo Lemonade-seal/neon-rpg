@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_063_online_party_chat_delete_reset -->
+<!-- build: index6_064_account_delete_online_rows_fix -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -960,6 +960,34 @@
     }
   }
 
+
+  /* 064: 접속 유저 행 레이아웃 */
+  .onlineUserRow{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:8px;
+    padding:7px 6px;
+    border-bottom:1px solid rgba(0,255,114,.12);
+  }
+  .onlineUserRow:last-child{border-bottom:0;}
+  .onlineUserMain{min-width:0;}
+  .onlineUserActions{
+    display:flex;
+    gap:4px;
+    justify-content:flex-end;
+    align-items:center;
+    white-space:nowrap;
+  }
+  .onlineUserActions button{
+    min-width:42px;
+    height:24px;
+    padding:2px 5px;
+    font-size:10px;
+    border-radius:7px;
+  }
+  .onlineUserRow.self .onlineUserActions{opacity:.65;font-size:10px;}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1558,6 +1586,13 @@ async function loadCloudStateAndEnter(){
     const {data,error}=await client.from(SUPABASE_CONFIG.table).select('*').eq('user_id',session.user.id).maybeSingle();
     if(error)throw error;
     cloudState.ready=true;cloudState.loading=false;
+    if(data&&data.player_data&&data.player_data.accountDeleted){
+      player=basePlayer();normalizePlayer();syncHp();enterField('town');closePopup();
+      cloudState.lastSnapshot=JSON.stringify(serializeCloudState('accountDeletedReset'));
+      cloudState.status='탈퇴 초기화 기록 감지';toast('신규 상태로 초기화');
+      showTitlePage();
+      return true;
+    }
     if(data&&data.player_data&&Object.keys(data.player_data).length){
       applyCloudPayload(data.player_data,data);
       cloudState.lastSnapshot=JSON.stringify(serializeCloudState('loaded'));
@@ -1601,6 +1636,7 @@ async function kakaoLogout(){
 }
 function devKakaoLogin(){toast('개발용 로그인은 제거되었습니다');showKakaoLoginPage();}
 function requestCloudSave(reason='auto',immediate=false){
+  if(cloudState.deleting||cloudState.accountResetting)return false;
   try{storageSet(saveKey,JSON.stringify(serializeCloudState(reason)));}catch(e){}
   if(!cloudState.ready||!cloudState.user)return false;
   if(cloudState.saveTimer){clearTimeout(cloudState.saveTimer);cloudState.saveTimer=null;}
@@ -1610,6 +1646,7 @@ function requestCloudSave(reason='auto',immediate=false){
   return true;
 }
 async function saveServerState(reason='auto'){
+  if(cloudState.deleting||cloudState.accountResetting)return false;
   const client=await ensureSupabaseClient(false);if(!client||!cloudState.ready||!cloudState.user)return false;
   const payload=serializeCloudState(reason);
   let snap='';try{snap=JSON.stringify(payload);}catch(e){snap=String(Date.now());}
@@ -1626,11 +1663,12 @@ async function saveServerState(reason='auto'){
   finally{cloudState.saving=false;if(cloudState.pending){cloudState.pending=false;requestCloudSave('pending',true);}}
 }
 function autoCloudSaveTick(dt){
+  if(cloudState.deleting||cloudState.accountResetting)return;
   if(!cloudState.ready||!cloudState.user)return;
   const now=performance.now();
   if(now-(cloudState.lastAuto||0)>4200){cloudState.lastAuto=now;requestCloudSave('auto',false);}
 }
-window.addEventListener('pagehide',()=>{try{requestCloudSave('pagehide',true);}catch(e){}});
+window.addEventListener('pagehide',()=>{try{if(!cloudState.deleting&&!cloudState.accountResetting)requestCloudSave('pagehide',true);}catch(e){}});
 
 const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
@@ -1982,6 +2020,7 @@ function showPeerInfo(id){const p=onlineState.peers[id];if(!p){toast('대상 없
 function showPeerAction(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">${escapeHtml(p.name||'플레이어')}</div><div class="grid"><button class="card" onclick="Game.showPeerInfo('${escapeHtml(id)}')"><h3>정보</h3>캐릭터 정보 보기</button><button class="card" onclick="Game.requestPartyToPeer('${escapeHtml(id)}')"><h3>파티</h3>파티 신청 보내기</button></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
 function leaveOnline(showToast=true){try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}onlineState.enabled=false;onlineState.connecting=false;onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.status='OFFLINE';onlineState.channel=null;onlineState.peers={};onlineState.partyId=null;onlineState.invites={};if(showToast)toast('온라인 연결 해제');}
 function connectOnlineFromPanel(){
+  if(!cloudState.user){toast('로그인 필요');showKakaoLoginPage();return;}
   onlineState.blocked=false;
   onlineState.drawBlocked=false;
   onlineState.status='재접속 중';
@@ -1989,7 +2028,7 @@ function connectOnlineFromPanel(){
   initPartyPresence(true).then(ok=>{
     if(ok){trackOnlinePresence(true);toast('온라인 접속 확인');}
     else toast('온라인 접속 실패');
-    showOnlineHub();
+    if(popupMode==='onlineHub')showOnlineHub(false);
   });
 }
 function connectOnline(url,key,room){return connectOnlineFromPanel();}
@@ -2085,7 +2124,7 @@ function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(
 
 function startClassSelect(){showJobAgency();}
 let updateBootTimer=null;
-const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_063';
+const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_064';
 function repairSkillSlotDuplicates(){
   normalizePlayer();
   const used=new Set();
@@ -2210,11 +2249,10 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 063","text":"- 온라인창에서 파티 채팅 제거\\n- 접속자 목록에서 접속ID 문자열 제거\\n- 온라인창을 접속자/랭킹 묶음과 파티 묶음으로 분리\\n- 채팅창 높이/위치 조정 및 스크롤 활성화\\n- 회원탈퇴 시 서버 기록과 로컬 성장 정보를 함께 초기화"},
+  {"ver":"현재 패치 064","text":"- 회원탈퇴 후 기존 데이터가 다시 돌아오는 현상 차단\\n- 탈퇴 중 자동저장 차단 및 서버 데이터 리셋 후 삭제 처리\\n- 온라인창 진입 시 오프라인이면 자동 재접속\\n- 접속 유저 목록을 레벨/닉네임/위치 + 우측 정보/파티신청 버튼 구조로 정리"},
+  {"ver":"이전 패치 063","text":"- 온라인창에서 파티 채팅 제거\\n- 접속자 목록에서 접속ID 문자열 제거\\n- 온라인창을 접속자/랭킹 묶음과 파티 묶음으로 분리\\n- 채팅창 높이/위치 조정 및 스크롤 활성화\\n- 회원탈퇴 시 서버 기록과 로컬 성장 정보를 함께 초기화"},
   {"ver":"이전 패치 062","text":"- HP/XP 수치가 1000 이상이면 k 단위로 표시\\n- 채팅창 경계선 추가 및 채팅/시스템/전투 버튼 우측 세로 배치\\n- 업데이트 버전이 바뀌면 업데이트 페이지 다시 표시\\n- 온라인창에서 재접속/유저리스트 토글 버튼 제거"},
-  {"ver":"이전 패치 061","text":"- 온라인창으로 파티 기능 통합\\n- 파티 신청/수락/거절 팝업과 알림 추가\\n- 스킬/보너스 스탯 추가 하향\\n- 몬스터 벽 끼임 보정 및 레벨 차이 패널티 강화"},
-  {"ver":"이전 패치 060","text":"- 실시간 유저 이동 보간 적용\\n- 다른 유저 좌표를 즉시 순간이동시키지 않고 목표 위치까지 부드럽게 추적"},
-  {"ver":"이전 패치 059","text":"- 스킬과 레벨업 보너스 스탯 1차 하향\\n- 몬스터가 없을 때 오토 자율 순찰 복구"}
+  {"ver":"이전 패치 061","text":"- 온라인창으로 파티 기능 통합\\n- 파티 신청/수락/거절 팝업과 알림 추가\\n- 스킬/보너스 스탯 추가 하향\\n- 몬스터 벽 끼임 보정 및 레벨 차이 패널티 강화"}
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
@@ -4900,22 +4938,69 @@ function clearAllLocalGameDataForAccountDelete(){
   try{onlineState.peers={};onlineState.invites={};onlineState.chat=[];onlineState.partyId=null;onlineState.enabled=false;onlineState.channel=null;}catch(e){}
   memorySave='';
 }
+function makeDeletedAccountResetPayload(){
+  const p=basePlayer();
+  p.nickname='플레이어';
+  return {version:64,reason:'account-delete-reset',accountDeleted:true,accountResetAt:Date.now(),savedAt:Date.now(),currentField:'town',mode:'town',player:p};
+}
+async function hardResetRemoteGameState(client,uid){
+  const table=SUPABASE_CONFIG.table;
+  const resetPayload=makeDeletedAccountResetPayload();
+  const row={
+    user_id:uid,
+    nickname:'플레이어',
+    player_data:resetPayload,
+    field_id:'town',
+    x:Number(resetPayload.player.x)||900,
+    y:Number(resetPayload.player.y)||900,
+    level:1,
+    job:'adventurer',
+    hp:Number(resetPayload.player.hp)||100,
+    updated_at:new Date().toISOString()
+  };
+  // 먼저 서버 값을 신규 상태로 덮어써서 delete policy가 막혀도 기존 성장 데이터가 되살아나지 않게 한다.
+  const up=await client.from(table).upsert(row,{onConflict:'user_id'});
+  if(up.error)throw up.error;
+  // delete policy가 열려 있으면 실제 행도 삭제한다. 막혀도 이미 reset row라서 기존 데이터는 복원되지 않는다.
+  try{await client.from(table).delete().eq('user_id',uid);}catch(e){console.warn('delete blocked, reset row kept',e);}
+  const verify=await client.from(table).select('player_data,level,job').eq('user_id',uid).maybeSingle();
+  if(verify.error&&verify.error.code!=='PGRST116')throw verify.error;
+  if(verify.data&&!(verify.data.player_data&&verify.data.player_data.accountDeleted)){
+    throw new Error('서버 초기화 검증 실패');
+  }
+  return true;
+}
 async function confirmDeleteAccount(){
   const typed=sanitizeNickname($('deleteNameInput')?.value||'');
   const nick=sanitizeNickname(player.nickname||'플레이어');
   if(typed!==nick){toast('닉네임이 일치하지 않습니다');return;}
   const client=await ensureSupabaseClient();
   if(!client){toast('Supabase 연결 실패');return;}
+  cloudState.deleting=true;
+  cloudState.accountResetting=true;
+  if(cloudState.saveTimer){clearTimeout(cloudState.saveTimer);cloudState.saveTimer=null;}
   try{
     const {data:{user}}=await client.auth.getUser();
     const uid=(user&&user.id)||(cloudState.user&&cloudState.user.id);
-    if(!uid){toast('로그인 정보 없음');return;}
-    const {error}=await client.from(SUPABASE_CONFIG.table).delete().eq('user_id',uid);
-    if(error)throw error;
-    try{await client.auth.signOut();}catch(e){}
-    leaveOnline(false);clearAllLocalGameDataForAccountDelete();storageRemove(saveKey);player=basePlayer();normalizePlayer();currentField='town';mode='town';cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.lastSave=0;cloudState.lastSnapshot='';cloudState.pending=false;cloudState.status='탈퇴 완료';toast('계정/성장 기록 전체 삭제 완료');showKakaoLoginPage();
-  }catch(e){console.error(e);toast('탈퇴 실패: RLS 삭제 정책 확인');openPopup(`<div class="title">계정 탈퇴 실패</div><div class="card">${escapeHtml(e.message||String(e))}<br><br>Supabase에 delete policy가 필요할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.showOnlinePanel()">계정</button></div>`);}
+    if(!uid){toast('로그인 정보 없음');cloudState.deleting=false;cloudState.accountResetting=false;return;}
+    await hardResetRemoteGameState(client,uid);
+    try{await client.auth.signOut({scope:'global'});}catch(e){try{await client.auth.signOut();}catch(_){}}
+    leaveOnline(false);
+    clearAllLocalGameDataForAccountDelete();
+    storageRemove(saveKey);
+    player=basePlayer();normalizePlayer();syncHp();
+    currentField='town';mode='town';
+    cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.lastSave=0;cloudState.lastSnapshot='';cloudState.pending=false;cloudState.saving=false;cloudState.status='탈퇴 완료';cloudState.deleting=false;cloudState.accountResetting=false;
+    toast('계정/성장 기록 전체 삭제 완료');
+    showKakaoLoginPage();
+  }catch(e){
+    console.error(e);
+    cloudState.deleting=false;cloudState.accountResetting=false;
+    toast('탈퇴 실패: 서버 초기화 확인 필요');
+    openPopup(`<div class="title">계정 탈퇴 실패</div><div class="card">${escapeHtml(e.message||String(e))}<br><br>기존 데이터가 다시 돌아오지 않게 서버 값을 먼저 신규 상태로 덮어쓴 뒤 삭제합니다.<br>계속 실패하면 Supabase update/delete RLS 정책을 확인하십시오.</div><div class="footerBtns"><button onclick="Game.showOnlinePanel()">계정</button></div>`);
+  }
 }
+
 function onlineUserListEnabled(){
   return storageGet('green_line_online_user_list_enabled')!=='0';
 }
@@ -4925,18 +5010,18 @@ function toggleOnlineUserList(){
   toast(next?'유저리스트 ON':'유저리스트 OFF');
   showOnlineHub();
 }
+function peerDisplayLocation(p){
+  const f=(FIELDS.find(x=>x.id===p.field)||{}).name||p.field||'';
+  if(p.field!==currentField)return `${f} · 다른 필드`;
+  const px=Number.isFinite(Number(p.drawX))?Number(p.drawX):Number(p.x);
+  const py=Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y);
+  return `${f} · ${Math.round(dist(player.x,player.y,px,py))}m`;
+}
 function onlineUserListRows(){
   const peers=activePeers(99999,false);
   const selfField=(FIELDS.find(f=>f.id===currentField)||{}).name||currentField;
-  const self=`<div class="partyMiniLine"><b>${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))}</b> · Lv.${player.level||1}<br><span class="small">나 · ${escapeHtml(selfField)}</span></div>`;
-  const peerRows=peers.map(p=>{
-    const f=(FIELDS.find(x=>x.id===p.field)||{}).name||p.field||'';
-    const same=p.field===currentField?'같은 필드':'다른 필드';
-    const px=Number.isFinite(Number(p.drawX))?Number(p.drawX):Number(p.x);
-    const py=Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y);
-    const d=p.field===currentField?` · ${Math.round(dist(player.x,player.y,px,py))}m`:'';
-    return `<div class="partyMiniLine"><b>${escapeHtml(p.name||'플레이어')}</b> · Lv.${p.level||1}<br><span class="small">${escapeHtml(f)} · ${same}${d}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button></div></div>`;
-  }).join('');
+  const self=`<div class="onlineUserRow self"><div class="onlineUserMain"><b>Lv.${player.level||1} ${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))}</b><br><span class="small">위치: ${escapeHtml(selfField)} · 나</span></div><div class="onlineUserActions"><span class="small">내 캐릭터</span></div></div>`;
+  const peerRows=peers.map(p=>`<div class="onlineUserRow"><div class="onlineUserMain"><b>Lv.${p.level||1} ${escapeHtml(p.name||'플레이어')}</b><br><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span></div><div class="onlineUserActions"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티신청</button></div></div>`).join('');
   return {count:1+peers.length,html:self+(peerRows||'<div class="partyMiniLine">다른 접속 유저 없음</div>'),peers};
 }
 function onlineRankingRows(){
@@ -4944,21 +5029,27 @@ function onlineRankingRows(){
   all.sort((a,b)=>(Number(b.level)||1)-(Number(a.level)||1)||String(a.name||'').localeCompare(String(b.name||'')));
   return all.slice(0,20).map((p,i)=>`<div class="partyMiniLine onlineRankLine"><b>#${i+1}</b><span>${escapeHtml(p.name||'플레이어')}${p.self?' <span class="small">(나)</span>':''}</span><span>Lv.${p.level||1}</span></div>`).join('');
 }
-function showOnlineHub(){
+function ensureOnlineHubConnection(refresh=false){
+  if(!cloudState.user){onlineState.status='로그인 필요';return;}
+  if(onlineState.enabled||onlineState.connecting)return;
+  onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.status='접속 중';
+  initPartyPresence(true).then(ok=>{
+    if(ok)trackOnlinePresence(true);
+    if(refresh&&popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),260);
+  });
+}
+function showOnlineHub(autoConnect=true){
+  popupMode='onlineHub';
   normalizePlayer();
-  initPartyPresence(false);
+  if(autoConnect)ensureOnlineHubConnection(true);
   const invites=Object.values(onlineState.invites||{});
   const allOnline=onlineUserListRows();
   const near=activePeers(220,true);
   const members=onlineState.partyId?partyMembers():[];
   const inviteHtml=invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>';
   const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b> · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${typeof fmtK==='function'?fmtK(m.hp||0):(m.hp||0)}/${typeof fmtK==='function'?fmtK(m.maxHp||0):(m.maxHp||0)}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
-  const nearHtml=near.length?near.map(p=>{
-    const px=Number.isFinite(Number(p.drawX))?Number(p.drawX):Number(p.x);
-    const py=Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y);
-    return `<div class="partyMiniLine"><b>${escapeHtml(p.name||'플레이어')}</b> · Lv.${p.level||1} · ${Math.round(dist(player.x,player.y,px,py))}m<div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`;
-  }).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
-  const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자 아이디</h3><span>${allOnline.count}명</span></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
+  const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>Lv.${p.level||1} ${escapeHtml(p.name||'플레이어')}</b><br><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
+  const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속 유저</h3><span>${allOnline.count}명</span></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
   const partyGroup=`<h3>파티</h3><div class="onlineGroupBox"><div class="footerBtns"><button onclick="Game.createParty()">파티 생성</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>${onlineState.partyId?`<div class="sub">파티 ID: ${escapeHtml(onlineState.partyId)}</div>`:''}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 파티 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
   openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 접속자 ${allOnline.count}명 · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
 }
@@ -5162,7 +5253,7 @@ function startQuickGame(id='adventurer'){
   saveGame();
   setTimeout(showPatchNotes,80);
 }
-window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,showParty,toggleOnlineUserList,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,ensureOnlineHubConnection,showParty,toggleOnlineUserList,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 
 // 시작 흐름: 버전별 최초 접속은 업데이트 점검 → 같은 버전 새로고침은 생략 → Supabase Kakao 로그인 → 서버 자동 로드 → 게임 진입
 player=basePlayer();
