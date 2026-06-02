@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_062_chat_ui_update_notes_online_clean -->
+<!-- build: index6_063_online_party_chat_delete_reset -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -901,6 +901,63 @@
   @media (orientation:landscape) and (max-height:430px){
     #logToggleBar{bottom:calc(var(--safe-bottom) + 10px)!important;}
     #logToggleBar button{height:15px!important;min-height:15px!important;font-size:7.5px!important;line-height:7.5px!important;}
+  }
+
+
+  /* 063: 채팅창 위치/높이/스크롤 재정렬 */
+  .log{
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch!important;
+    touch-action:pan-y!important;
+    bottom:calc(var(--safe-bottom) + var(--action-group-h) + var(--control-bottom) + 7px)!important;
+    right:calc(60px + var(--safe-right))!important;
+    scrollbar-width:thin;
+  }
+  #logToggleBar{
+    bottom:calc(var(--safe-bottom) + var(--action-group-h) + var(--control-bottom) + 7px)!important;
+    gap:2px!important;
+  }
+  #logToggleBar button{
+    height:18px!important;
+    min-height:18px!important;
+  }
+  .onlineGroupBox{
+    border:1px solid rgba(0,255,114,.28);
+    border-radius:12px;
+    padding:8px;
+    margin:6px 0 12px;
+    background:rgba(0,255,114,.025);
+  }
+  @media (orientation:landscape){
+    .log{
+      height:52px!important;
+      min-height:52px!important;
+      max-height:52px!important;
+      bottom:calc(var(--safe-bottom) + 6px)!important;
+      right:calc(var(--safe-right) + var(--action-group-w) + 78px)!important;
+    }
+    #logToggleBar{
+      bottom:calc(var(--safe-bottom) + 6px)!important;
+    }
+  }
+  @media (orientation:landscape) and (max-height:430px){
+    .log{
+      height:48px!important;
+      min-height:48px!important;
+      max-height:48px!important;
+      bottom:calc(var(--safe-bottom) + 5px)!important;
+    }
+    #logToggleBar{
+      bottom:calc(var(--safe-bottom) + 5px)!important;
+    }
+    #logToggleBar button{
+      height:15px!important;
+      min-height:15px!important;
+    }
   }
 
 </style>
@@ -1994,8 +2051,9 @@ const gameLog=[];
 function logEnabled(type){const s=(player&&player.logSettings)||{};return s[type]!==false;}
 function updateLogBox(){
   if(!logBox)return;
-  const rows=gameLog.filter(e=>logEnabled(e.type)).slice(-9).reverse().map(e=>`<div>&gt; ${escapeHtml(e.text)}</div>`).join('');
+  const rows=gameLog.filter(e=>logEnabled(e.type)).slice(-70).map(e=>`<div>&gt; ${escapeHtml(e.text)}</div>`).join('');
   logBox.innerHTML=rows;
+  logBox.scrollTop=logBox.scrollHeight;
 }
 function msg(t,type='system'){
   const entry={type:type||'system',text:String(t||''),t:Date.now()};
@@ -2027,7 +2085,7 @@ function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(
 
 function startClassSelect(){showJobAgency();}
 let updateBootTimer=null;
-const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_062';
+const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_063';
 function repairSkillSlotDuplicates(){
   normalizePlayer();
   const used=new Set();
@@ -2152,11 +2210,11 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 062","text":"- HP/XP 수치가 1000 이상이면 k 단위로 표시\n- 채팅창 경계선 추가 및 채팅/시스템/전투 버튼 우측 세로 배치\n- 업데이트 버전이 바뀌면 업데이트 페이지 다시 표시\n- 온라인창에서 재접속/유저리스트 토글 버튼 제거"},
-  {"ver":"이전 패치 061","text":"- 온라인창으로 파티 기능 통합\n- 파티 신청/수락/거절 팝업과 알림 추가\n- 스킬/보너스 스탯 추가 하향\n- 몬스터 벽 끼임 보정 및 레벨 차이 패널티 강화"},
-  {"ver":"이전 패치 060","text":"- 실시간 유저 이동 보간 적용\n- 다른 유저 좌표를 즉시 순간이동시키지 않고 목표 위치까지 부드럽게 추적"},
-  {"ver":"이전 패치 059","text":"- 스킬과 레벨업 보너스 스탯 1차 하향\n- 몬스터가 없을 때 오토 자율 순찰 복구"},
-  {"ver":"이전 패치 058","text":"- 로그창의 실시간 유저 접속 표시 제거\n- 유저리스트 ON/OFF 기능 추가\n- 카톡 브라우저 실시간 접속 대응 구조 유지"}
+  {"ver":"현재 패치 063","text":"- 온라인창에서 파티 채팅 제거\\n- 접속자 목록에서 접속ID 문자열 제거\\n- 온라인창을 접속자/랭킹 묶음과 파티 묶음으로 분리\\n- 채팅창 높이/위치 조정 및 스크롤 활성화\\n- 회원탈퇴 시 서버 기록과 로컬 성장 정보를 함께 초기화"},
+  {"ver":"이전 패치 062","text":"- HP/XP 수치가 1000 이상이면 k 단위로 표시\\n- 채팅창 경계선 추가 및 채팅/시스템/전투 버튼 우측 세로 배치\\n- 업데이트 버전이 바뀌면 업데이트 페이지 다시 표시\\n- 온라인창에서 재접속/유저리스트 토글 버튼 제거"},
+  {"ver":"이전 패치 061","text":"- 온라인창으로 파티 기능 통합\\n- 파티 신청/수락/거절 팝업과 알림 추가\\n- 스킬/보너스 스탯 추가 하향\\n- 몬스터 벽 끼임 보정 및 레벨 차이 패널티 강화"},
+  {"ver":"이전 패치 060","text":"- 실시간 유저 이동 보간 적용\\n- 다른 유저 좌표를 즉시 순간이동시키지 않고 목표 위치까지 부드럽게 추적"},
+  {"ver":"이전 패치 059","text":"- 스킬과 레벨업 보너스 스탯 1차 하향\\n- 몬스터가 없을 때 오토 자율 순찰 복구"}
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
@@ -4827,6 +4885,21 @@ function showDeleteAccount(){
   openPopup(`<div class="title">계정 탈퇴</div><div class="card"><h3>서버 기록 삭제</h3>탈퇴하면 <b>${escapeHtml(SUPABASE_CONFIG.table)}</b>의 내 게임 기록이 삭제됩니다.<br>확인하려면 현재 닉네임 <b>${escapeHtml(player.nickname||'플레이어')}</b>을 정확히 입력하십시오.</div><input id="deleteNameInput" class="neonInput" maxlength="10" placeholder="닉네임 입력"><div class="footerBtns"><button onclick="Game.confirmDeleteAccount()">확인</button><button onclick="Game.showOnlinePanel()">취소</button></div>`);
   setTimeout(()=>$('deleteNameInput')?.focus(),80);
 }
+function clearAllLocalGameDataForAccountDelete(){
+  try{
+    if(window.localStorage){
+      const keys=[];
+      for(let i=0;i<localStorage.length;i++){
+        const k=localStorage.key(i)||'';
+        if(k.startsWith('green_line')||k.includes('neon-rpg')||k.includes('neon_rpg')||k.startsWith('sb-')||k.toLowerCase().includes('supabase'))keys.push(k);
+      }
+      keys.forEach(k=>{try{localStorage.removeItem(k);}catch(e){}});
+    }
+  }catch(e){console.error(e);}
+  try{gameLog.length=0;}catch(e){}
+  try{onlineState.peers={};onlineState.invites={};onlineState.chat=[];onlineState.partyId=null;onlineState.enabled=false;onlineState.channel=null;}catch(e){}
+  memorySave='';
+}
 async function confirmDeleteAccount(){
   const typed=sanitizeNickname($('deleteNameInput')?.value||'');
   const nick=sanitizeNickname(player.nickname||'플레이어');
@@ -4840,7 +4913,7 @@ async function confirmDeleteAccount(){
     const {error}=await client.from(SUPABASE_CONFIG.table).delete().eq('user_id',uid);
     if(error)throw error;
     try{await client.auth.signOut();}catch(e){}
-    leaveOnline(false);storageRemove(saveKey);player=basePlayer();normalizePlayer();cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='탈퇴 완료';toast('계정 기록 삭제 완료');showKakaoLoginPage();
+    leaveOnline(false);clearAllLocalGameDataForAccountDelete();storageRemove(saveKey);player=basePlayer();normalizePlayer();currentField='town';mode='town';cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.lastSave=0;cloudState.lastSnapshot='';cloudState.pending=false;cloudState.status='탈퇴 완료';toast('계정/성장 기록 전체 삭제 완료');showKakaoLoginPage();
   }catch(e){console.error(e);toast('탈퇴 실패: RLS 삭제 정책 확인');openPopup(`<div class="title">계정 탈퇴 실패</div><div class="card">${escapeHtml(e.message||String(e))}<br><br>Supabase에 delete policy가 필요할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.showOnlinePanel()">계정</button></div>`);}
 }
 function onlineUserListEnabled(){
@@ -4855,41 +4928,39 @@ function toggleOnlineUserList(){
 function onlineUserListRows(){
   const peers=activePeers(99999,false);
   const selfField=(FIELDS.find(f=>f.id===currentField)||{}).name||currentField;
-  const selfId=myOnlineId();
-  const self=`<div class="partyMiniLine"><b>${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))}</b> · Lv.${player.level||1}<br><span class="small">나 · ${escapeHtml(selfField)}</span><br><span class="onlineId">접속ID: ${escapeHtml(selfId)}</span></div>`;
+  const self=`<div class="partyMiniLine"><b>${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))}</b> · Lv.${player.level||1}<br><span class="small">나 · ${escapeHtml(selfField)}</span></div>`;
   const peerRows=peers.map(p=>{
     const f=(FIELDS.find(x=>x.id===p.field)||{}).name||p.field||'';
     const same=p.field===currentField?'같은 필드':'다른 필드';
     const px=Number.isFinite(Number(p.drawX))?Number(p.drawX):Number(p.x);
     const py=Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y);
     const d=p.field===currentField?` · ${Math.round(dist(player.x,player.y,px,py))}m`:'';
-    return `<div class="partyMiniLine"><b>${escapeHtml(p.name||'플레이어')}</b> · Lv.${p.level||1}<br><span class="small">${escapeHtml(f)} · ${same}${d}</span><br><span class="onlineId">접속ID: ${escapeHtml(p.id||'')}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`;
+    return `<div class="partyMiniLine"><b>${escapeHtml(p.name||'플레이어')}</b> · Lv.${p.level||1}<br><span class="small">${escapeHtml(f)} · ${same}${d}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button></div></div>`;
   }).join('');
   return {count:1+peers.length,html:self+(peerRows||'<div class="partyMiniLine">다른 접속 유저 없음</div>'),peers};
 }
 function onlineRankingRows(){
   const all=[Object.assign(buildOnlinePayload(),{self:true})].concat(Object.values(onlineState.peers||{}));
   all.sort((a,b)=>(Number(b.level)||1)-(Number(a.level)||1)||String(a.name||'').localeCompare(String(b.name||'')));
-  return all.slice(0,20).map((p,i)=>`<div class="partyMiniLine onlineRankLine"><b>#${i+1}</b><span>${escapeHtml(p.name||'플레이어')}<br><span class="onlineId">${p.self?'나':escapeHtml(String(p.id||'').slice(-12))}</span></span><span>Lv.${p.level||1}</span></div>`).join('');
+  return all.slice(0,20).map((p,i)=>`<div class="partyMiniLine onlineRankLine"><b>#${i+1}</b><span>${escapeHtml(p.name||'플레이어')}${p.self?' <span class="small">(나)</span>':''}</span><span>Lv.${p.level||1}</span></div>`).join('');
 }
 function showOnlineHub(){
   normalizePlayer();
   initPartyPresence(false);
-  const listOn=true;
   const invites=Object.values(onlineState.invites||{});
   const allOnline=onlineUserListRows();
   const near=activePeers(220,true);
   const members=onlineState.partyId?partyMembers():[];
-  const chat=onlineState.chat.slice(-8).map(c=>`<div>${escapeHtml(c.name)}: ${escapeHtml(c.text)}</div>`).join('')||'<div class="small">파티 채팅 없음</div>';
-  const inviteHtml=invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<br><span class="onlineId">접속ID: ${escapeHtml(String(i.from||'').slice(-12))}</span><div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>';
-  const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b> · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${m.hp||0}/${m.maxHp||0}<br><span class="onlineId">접속ID: ${escapeHtml(m.id||myOnlineId())}</span></div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
+  const inviteHtml=invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>';
+  const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b> · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${typeof fmtK==='function'?fmtK(m.hp||0):(m.hp||0)}/${typeof fmtK==='function'?fmtK(m.maxHp||0):(m.maxHp||0)}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
   const nearHtml=near.length?near.map(p=>{
     const px=Number.isFinite(Number(p.drawX))?Number(p.drawX):Number(p.x);
     const py=Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y);
-    return `<div class="partyMiniLine"><b>${escapeHtml(p.name||'플레이어')}</b> · Lv.${p.level||1} · ${Math.round(dist(player.x,player.y,px,py))}m<br><span class="onlineId">접속ID: ${escapeHtml(p.id||'')}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`;
+    return `<div class="partyMiniLine"><b>${escapeHtml(p.name||'플레이어')}</b> · Lv.${p.level||1} · ${Math.round(dist(player.x,player.y,px,py))}m<div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`;
   }).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
-  const listHtml=listOn?`<div class="onlineSectionTitle"><h3>접속자 ID</h3><span>${allOnline.count}명</span></div><div class="partyMiniList">${allOnline.html}</div>`:`<div class="onlineSectionTitle"><h3>접속자 ID</h3><span>${allOnline.count}명</span></div><div class="partyMiniList"><div class="partyMiniLine">유저리스트 비활성화 중<br><span class="small">버튼을 누르면 닉네임/레벨 목록을 다시 표시합니다.</span></div></div>`;
-  openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 접속자 ${allOnline.count}명 · 근처 ${near.length}명${onlineState.partyId?`<br>파티 ID: ${escapeHtml(onlineState.partyId)}`:''}</div><div class="footerBtns"><button onclick="Game.createParty()">파티 생성</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>${listHtml}<h3>랭킹</h3><div class="partyMiniList">${onlineRankingRows()}</div><h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 파티 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>근처 유저 / 파티 신청</h3><div class="partyMiniList">${nearHtml}</div><h3>파티 채팅</h3><div class="partyChatBox">${chat}</div><input id="partyChatInput" class="neonInput" maxlength="80" placeholder="파티 채팅"><div class="footerBtns"><button onclick="Game.sendPartyChat()">전송</button><button onclick="Game.closePopup()">닫기</button></div>`);
+  const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자 아이디</h3><span>${allOnline.count}명</span></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
+  const partyGroup=`<h3>파티</h3><div class="onlineGroupBox"><div class="footerBtns"><button onclick="Game.createParty()">파티 생성</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>${onlineState.partyId?`<div class="sub">파티 ID: ${escapeHtml(onlineState.partyId)}</div>`:''}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 파티 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
+  openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 접속자 ${allOnline.count}명 · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
 }
 function showParty(){showOnlineHub();}
 function updateLogToggleButtons(){
@@ -4913,7 +4984,7 @@ function toggleHudLogSetting(k){
   requestCloudSave('logSetting');
 }
 function showQuickChat(){
-  openPopup(`<div class="title">채팅 입력</div><div class="sub">로그창을 터치해서 연 입력창입니다. 파티가 있으면 파티 채팅으로도 전송됩니다.</div><input id="quickChatInput" class="neonInput" maxlength="80" placeholder="채팅 내용" style="width:100%;font:inherit;padding:11px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:12px;user-select:text;-webkit-user-select:text;caret-color:var(--g)"><div class="footerBtns"><button onclick="Game.sendQuickChat()">전송</button><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">채팅 입력</div><div class="sub">로그창을 터치해서 연 입력창입니다.</div><input id="quickChatInput" class="neonInput" maxlength="80" placeholder="채팅 내용" style="width:100%;font:inherit;padding:11px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:12px;user-select:text;-webkit-user-select:text;caret-color:var(--g)"><div class="footerBtns"><button onclick="Game.sendQuickChat()">전송</button><button onclick="Game.closePopup()">닫기</button></div>`);
   setTimeout(()=>$('quickChatInput')?.focus(),60);
 }
 function sendQuickChat(){
@@ -4921,7 +4992,6 @@ function sendQuickChat(){
   const text=String(input&&input.value||'').trim().slice(0,80);
   if(!text){toast('내용 없음');return;}
   msg(`${sanitizeNickname(player.nickname||'플레이어')}: ${text}`,'chat');
-  if(onlineState.partyId)sendPartyBroadcast('party_chat',{partyId:onlineState.partyId,text});
   closePopup();
 }
 function showLogSettings(){
@@ -5092,7 +5162,7 @@ function startQuickGame(id='adventurer'){
   saveGame();
   setTimeout(showPatchNotes,80);
 }
-window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,showParty,toggleOnlineUserList,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,showParty,toggleOnlineUserList,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 
 // 시작 흐름: 버전별 최초 접속은 업데이트 점검 → 같은 버전 새로고침은 생략 → Supabase Kakao 로그인 → 서버 자동 로드 → 게임 진입
 player=basePlayer();
