@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_074_leave_online_fix -->
+<!-- build: index6_077_online_identity_keepalive -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1224,6 +1224,36 @@
     display:inline-flex!important;align-items:center!important;justify-content:center!important;
   }
 
+
+
+  /* 077: 접속자 행 닉네임+위치 한 줄 통합 표시 */
+  .onlineUserLine{
+    gap:5px!important;
+  }
+  .onlineUserLine .onlineIdentity{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    display:block!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+  .onlineUserLine .onlineIdentity .onlineNickText{
+    font-weight:900;
+    text-shadow:0 0 7px rgba(0,255,114,.5);
+  }
+  .onlineUserLine .onlineIdentity .onlineLocText{
+    opacity:.82;
+  }
+  .onlineUserLine .onlineNick,
+  .onlineUserLine .onlineLoc{
+    max-width:none!important;
+    flex:initial!important;
+  }
+  .onlineUserInBox.oneLine.self.noBtns .onlineIdentity{
+    width:100%!important;
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1908,7 +1938,7 @@ window.addEventListener('pagehide',()=>{try{if(!cloudState.deleting&&!cloudState
 
 const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
-const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,peers:{},partyId:null,invites:{},chat:[]};
+const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,lastHeartbeat:0,keepAliveTimer:null,peers:{},partyId:null,invites:{},chat:[]};
 storageSet('green_line_online_pid',onlineState.playerId);
 function leaveOnline(showToast=true){
   try{
@@ -2118,6 +2148,7 @@ async function trackOnlinePresence(force=false){
   try{
     await onlineState.channel.track(payload);
     await onlineState.channel.send({type:'broadcast',event:'online_state',payload});
+    onlineState.lastHeartbeat=performance.now();
     return true;
   }catch(e){
     console.error(e);
@@ -5336,10 +5367,13 @@ function peerDisplayLocation(p){
 function onlineUserListRows(){
   const peers=activePeers(99999,false);
   const selfField=(FIELDS.find(f=>f.id===currentField)||{}).name||currentField;
-  const self=`<div class="partyMiniLine onlineUserInBox oneLine self noBtns"><div class="onlineUserLine"><b>Lv.${player.level||1}</b><span class="onlineNick">${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))} <em>(나)</em></span><span class="small onlineLoc">위치: ${escapeHtml(selfField)}</span></div></div>`;
+  const selfNick=escapeHtml(sanitizeNickname(player.nickname||'플레이어'));
+  const self=`<div class="partyMiniLine onlineUserInBox oneLine self noBtns"><div class="onlineUserLine"><b>Lv.${player.level||1}</b><span class="onlineIdentity"><span class="onlineNickText">${selfNick} <em>(나)</em></span><span class="onlineLocText"> · 위치: ${escapeHtml(selfField)}</span></span></div></div>`;
   const peerRows=peers.map(p=>{
     const id=escapeHtml(p.id||'');
-    return `<div class="partyMiniLine onlineUserInBox oneLine"><div class="onlineUserLine"><b>Lv.${p.level||1}</b><span class="onlineNick">${escapeHtml(p.name||'플레이어')}</span><span class="small onlineLoc">위치: ${escapeHtml(peerDisplayLocation(p))}</span></div><div class="onlineUserBoxBtns"><button type="button" onclick="Game.showPeerInfo('${id}')">정보</button><button type="button" onclick="Game.requestPartyToPeer('${id}')">파티신청</button></div></div>`;
+    const nick=escapeHtml(p.name||'플레이어');
+    const loc=escapeHtml(peerDisplayLocation(p));
+    return `<div class="partyMiniLine onlineUserInBox oneLine"><div class="onlineUserLine"><b>Lv.${p.level||1}</b><span class="onlineIdentity"><span class="onlineNickText">${nick}</span><span class="onlineLocText"> · 위치: ${loc}</span></span></div><div class="onlineUserBoxBtns"><button type="button" onclick="Game.showPeerInfo('${id}')">정보</button><button type="button" onclick="Game.requestPartyToPeer('${id}')">파티신청</button></div></div>`;
   }).join('');
   return {count:1+peers.length,html:self+(peerRows||'<div class="partyMiniLine">다른 접속 유저 없음</div>'),peers};
 }
@@ -5373,6 +5407,30 @@ function forceOnlineKeepAlive(){
     onlineState.lastConnectTry=now;
     ensureOnlineHubConnection(popupMode==='onlineHub',true);
   }
+}
+function onlineKeepAliveTick(reason='heartbeat'){
+  try{
+    if(!cloudState.user||cloudState.deleting||cloudState.accountResetting)return false;
+    if(typeof document!=='undefined'&&document.hidden)return false;
+    const now=performance.now();
+    if(onlineState.enabled&&onlineState.channel){
+      if(!onlineState.sending&&now-(onlineState.lastHeartbeat||0)>4200){
+        trackOnlinePresence(true);
+      }
+      return true;
+    }
+    if(!onlineState.connecting){
+      scheduleOnlineReconnect(reason,350);
+    }
+    return false;
+  }catch(e){
+    console.error(e);
+    return false;
+  }
+}
+function startOnlineKeepAlive(){
+  if(onlineState.keepAliveTimer)return;
+  onlineState.keepAliveTimer=setInterval(()=>onlineKeepAliveTick('interval'),5000);
 }
 
 function connectOnlineFromPanel(){
@@ -5596,6 +5654,7 @@ window.addEventListener('pageshow',()=>resumeOnlineAfterHidden('pageshow'));
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)resumeOnlineAfterHidden('visibilitychange');});
 window.addEventListener('focus',()=>resumeOnlineAfterHidden('focus'));
 window.addEventListener('online',()=>resumeOnlineAfterHidden('online'));
+startOnlineKeepAlive();
 
 function startAdventurerGame(){
   const nick=sanitizeNickname(player.nickname||'플레이어');
