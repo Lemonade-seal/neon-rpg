@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_112_bag_slot_categories -->
+<!-- build: index6_123_dummy_position_persist / prev: index6_122_dummy_stable_rebuild -->
 <style>
   :root{--g:#00ff72;--obj-rgb:0,255,114;--gd:rgba(var(--obj-rgb),.55);--gf:rgba(var(--obj-rgb),.18);--gb:rgba(var(--obj-rgb),.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1728,6 +1728,10 @@
     pointer-events:none;
   }
 
+
+  /* 124: 파티 버튼 4개 표시 안정화 */
+  .onlineGroupBox .footerBtns button{min-width:0;font-size:10px;padding-left:4px!important;padding-right:4px!important;}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -2478,7 +2482,7 @@ function applyCloudPayload(payload,row){
   else player=basePlayer();
   normalizePlayer();syncHp();
   const fid=(FIELDS.find(f=>f.id===((payload&&payload.currentField)||row?.field_id))?((payload&&payload.currentField)||row?.field_id):'town');
-  mode='town';enterField(fid);closePopup();updateHud();
+  mode='town';enterField(fid);restorePersistentParty();closePopup();updateHud();
 }
 async function loadCloudStateAndEnter(){
   const client=await ensureSupabaseClient();if(!client)return false;
@@ -2487,7 +2491,7 @@ async function loadCloudStateAndEnter(){
     const {data:{session},error:sessionError}=await client.auth.getSession();
     if(sessionError)throw sessionError;
     if(!session){cloudState.user=null;cloudState.ready=false;cloudState.status='로그인 필요';showKakaoLoginPage();return false;}
-    cloudState.session=session;cloudState.user=session.user;cloudState.status='서버 데이터 불러오는 중';initPartyPresence();
+    cloudState.session=session;cloudState.user=session.user;cloudState.devPreview=false;cloudState.status='서버 데이터 불러오는 중';restorePersistentParty();initPartyPresence();
     const {data,error}=await client.from(SUPABASE_CONFIG.table).select('*').eq('user_id',session.user.id).maybeSingle();
     if(error)throw error;
     cloudState.ready=true;cloudState.loading=false;
@@ -2537,7 +2541,7 @@ async function showKakaoLoginPage(){
   try{const {data}=await client.auth.getSession();if(data&&data.session){showCloudLoadingPage();await loadCloudStateAndEnter();}}catch(e){console.error(e);}
 }
 async function kakaoLogout(){
-  leaveOnline(false);const client=await ensureSupabaseClient(false);try{if(client)await client.auth.signOut();}catch(e){console.error(e);}cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='로그아웃';toast('로그아웃');showKakaoLoginPage();
+  savePersistentParty('logout');cloudState.devPreview=false;leaveOnline(false);const client=await ensureSupabaseClient(false);try{if(client)await client.auth.signOut();}catch(e){console.error(e);}cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='로그아웃';toast('로그아웃');showKakaoLoginPage();
 }
 
 function applyDevWarriorSkillPreset(){
@@ -2563,6 +2567,8 @@ function applyDevWarriorSkillPreset(){
 function devKakaoLogin(){
   try{
     leaveOnline(false);
+    cloudState.devPreview=true;
+    storageSet('green_line_dev_dummy_enabled','1');
     cloudState.ready=false;
     cloudState.loading=false;
     cloudState.user=null;
@@ -2578,11 +2584,12 @@ function devKakaoLogin(){
           player=Object.assign(basePlayer(),data.player);
           normalizePlayer();syncHp();
           applyDevWarriorSkillPreset();
+          restorePersistentParty();
           currentField=data.currentField||data.field||'town';
           mode=currentField==='town'?'town':'field';
           enterField(currentField||'town');
           closePopup();
-          msg('개발자 미리보기로 접속했습니다. 서버 저장/온라인은 비활성입니다.');
+          updateDevDummyAI(0.016);msg('개발자 미리보기로 접속했습니다. 서버 저장/온라인은 비활성입니다. AI 더미 유저가 활성화되었습니다.');
           return;
         }
       }catch(e){console.warn('dev local load skipped',e);}
@@ -2590,11 +2597,12 @@ function devKakaoLogin(){
     player=basePlayer();
     player.nickname=sanitizeNickname(player.nickname||'DEV');
     applyDevWarriorSkillPreset();
+    restorePersistentParty();
     mode='town';
     enterField('town');
     giveStarterItems();
     closePopup();
-    msg('개발자 미리보기로 접속했습니다. 서버 저장/온라인은 비활성입니다.');
+    updateDevDummyAI(0.016);msg('개발자 미리보기로 접속했습니다. 서버 저장/온라인은 비활성입니다. AI 더미 유저가 활성화되었습니다.');
   }catch(e){console.error(e);toast('개발자 로그인 오류');showKakaoLoginPage();}
 }
 function requestCloudSave(reason='auto',immediate=false){
@@ -2634,8 +2642,66 @@ window.addEventListener('pagehide',()=>{try{if(!cloudState.deleting&&!cloudState
 
 const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
-const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,lastHeartbeat:0,lastPresenceTrack:0,lastPayloadX:null,lastPayloadY:null,lastPayloadField:'',lastPayloadAt:0,sendSeq:0,keepAliveTimer:null,peers:{},joinNotice:{},presenceReady:false,partyId:null,invites:{},chat:[]};
+const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,lastHeartbeat:0,lastPresenceTrack:0,lastPayloadX:null,lastPayloadY:null,lastPayloadField:'',lastPayloadAt:0,sendSeq:0,keepAliveTimer:null,peers:{},joinNotice:{},presenceReady:false,partyId:null,partyOwnerId:'',invites:{},chat:[],devDummy:null};
 storageSet('green_line_online_pid',onlineState.playerId);
+
+const partyPersistKey='green_line_party_state_v2';
+const DEV_DUMMY_ID='dev_dummy_ai_warrior';
+const DEV_DUMMY_NICK_KEY='green_line_dev_dummy_nick_v4';
+const DEV_DUMMY_PROFILES=[
+  {id:'dev_dummy_ai_warrior',name:'강철두더지',job:'warrior',jobName:'전사',weapon:'AI 장검',levelOffset:0,range:72,skillBase:3},
+  {id:'dev_dummy_ai_archer',name:'네온참새',job:'archer',jobName:'궁수',weapon:'AI 활',levelOffset:-1,range:230,skillBase:3},
+  {id:'dev_dummy_ai_mage',name:'회로마녀',job:'mageRoot',jobName:'마법사',weapon:'AI 지팡이',levelOffset:-2,range:210,skillBase:3},
+  {id:'dev_dummy_ai_summon',name:'정령두부',job:'summonist',jobName:'소환사',weapon:'AI 소환봉',levelOffset:-1,range:180,skillBase:3},
+  {id:'dev_dummy_ai_engineer',name:'기어콩',job:'engineerRoot',jobName:'공학자',weapon:'AI 공구총',levelOffset:-2,range:190,skillBase:3}
+];
+function devDummyIds(){return DEV_DUMMY_PROFILES.map(p=>p.id);}
+function isDevDummyId(id){return devDummyIds().includes(String(id||''));}
+function devDummyProfile(id){return DEV_DUMMY_PROFILES.find(p=>p.id===String(id||''))||DEV_DUMMY_PROFILES[0];}
+function devDummyNickname(profile){
+  if(profile&&profile.name)return sanitizeNickname(profile.name);
+  let n='';
+  try{n=storageGet(DEV_DUMMY_NICK_KEY)||'';}catch(_){ }
+  if(!n){
+    n=(DEV_DUMMY_PROFILES[0]&&DEV_DUMMY_PROFILES[0].name)||'AI동료';
+    try{storageSet(DEV_DUMMY_NICK_KEY,n);}catch(_){ }
+  }
+  return sanitizeNickname(n||'AI동료');
+}
+function partyStorageRead(){try{return JSON.parse(storageGet(partyPersistKey)||'null')||null;}catch(e){return null;}}
+function partyStorageWrite(data){try{storageSet(partyPersistKey,JSON.stringify(data||{}));}catch(e){}}
+function restorePersistentParty(){
+  try{
+    const local=partyStorageRead();
+    const saved=(player&&player.partyState&&typeof player.partyState==='object')?player.partyState:null;
+    const ps=(saved&&saved.partyId)?saved:local;
+    if(ps&&ps.partyId){
+      onlineState.partyId=String(ps.partyId||'');
+      onlineState.partyOwnerId=String(ps.partyOwnerId||ps.ownerId||myOnlineId());
+      if(!player.partyState)player.partyState={};
+      player.partyState=Object.assign({},ps,{partyId:onlineState.partyId,partyOwnerId:onlineState.partyOwnerId,updatedAt:Date.now()});
+      partyStorageWrite(player.partyState);
+      return true;
+    }
+  }catch(e){console.warn('party restore skipped',e);}
+  return false;
+}
+function savePersistentParty(reason='party'){
+  try{
+    if(!player||typeof player!=='object')return false;
+    const state={partyId:onlineState.partyId||'',partyOwnerId:onlineState.partyOwnerId||'',updatedAt:Date.now(),reason};
+    player.partyState=state;
+    partyStorageWrite(state);
+    try{requestCloudSave(reason,false);}catch(_){ }
+    return true;
+  }catch(e){console.warn('party save skipped',e);return false;}
+}
+function clearPersistentParty(reason='partyClear'){
+  try{onlineState.partyId=null;onlineState.partyOwnerId='';if(player)player.partyState={partyId:'',partyOwnerId:'',updatedAt:Date.now(),reason};storageRemove(partyPersistKey);try{requestCloudSave(reason,false);}catch(_){}}catch(e){}
+}
+function isPartyLeader(){return !!onlineState.partyId && String(onlineState.partyOwnerId||myOnlineId())===String(myOnlineId());}
+function partyLeaderLabel(){return isPartyLeader()?'파티장':'파티원';}
+function ensurePartyOwner(){if(onlineState.partyId&&!onlineState.partyOwnerId){onlineState.partyOwnerId=myOnlineId();savePersistentParty('partyOwnerFix');}return onlineState.partyOwnerId||'';}
 function leaveOnline(showToast=true){
   try{
     const ch=onlineState.channel;
@@ -2730,9 +2796,22 @@ function scheduleOnlineReconnect(reason='retry',delay=1800){
   },delay);
   return true;
 }
+function compactOnlineEquip(){
+  try{
+    normalizePlayer();
+    const eq=player&&player.equip?player.equip:{};
+    const w=eq.weapon||null;
+    return {weapon:w?{name:String(w.name||'').slice(0,28),slot:'weapon',rarity:String(w.rarity||'').slice(0,8),level:Math.max(1,Math.floor(Number(w.level)||1))}:null};
+  }catch(e){return {weapon:null};}
+}
+function sanitizePeerEquip(raw){
+  const src=(raw&&typeof raw==='object')?raw:{};
+  const w=(src.weapon&&typeof src.weapon==='object')?src.weapon:null;
+  return {weapon:w?{name:String(w.name||'').slice(0,28),slot:'weapon',rarity:String(w.rarity||'').slice(0,8),level:Math.max(1,Math.floor(Number(w.level)||1))}:null};
+}
 function buildOnlinePayload(){
   normalizePlayer();
-  return {id:myOnlineId(),userId:(cloudState.user&&cloudState.user.id)||'',name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,partyId:onlineState.partyId||'',ts:Date.now()};
+  return {id:myOnlineId(),userId:(cloudState.user&&cloudState.user.id)||'',name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,equip:compactOnlineEquip(),partyId:onlineState.partyId||'',partyOwnerId:onlineState.partyOwnerId||'',ts:Date.now()};
 }
 async function initPartyPresence(force=false){
   if(force){onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.enabled=false;onlineState.connecting=false;}
@@ -2758,6 +2837,9 @@ async function initPartyPresence(force=false){
       .on('broadcast',{event:'party_accept'},({payload})=>handlePartyAccept(payload))
       .on('broadcast',{event:'party_decline'},({payload})=>handlePartyDecline(payload))
       .on('broadcast',{event:'party_leave'},({payload})=>handlePartyLeave(payload))
+      .on('broadcast',{event:'party_disband'},({payload})=>handlePartyDisband(payload))
+      .on('broadcast',{event:'party_kick'},({payload})=>handlePartyKick(payload))
+      .on('broadcast',{event:'party_leader'},({payload})=>handlePartyLeader(payload))
       .on('broadcast',{event:'party_chat'},({payload})=>handlePartyChat(payload))
       .on('broadcast',{event:'stage_portal_open'},({payload})=>handleStagePortalOpen(payload))
       .subscribe(async status=>{
@@ -2823,7 +2905,9 @@ function sanitizePeerPayload(p,seenAt=performance.now()){
     field,
     hp:Math.max(0,Number(p.hp)||0),
     maxHp:Math.max(1,Number(p.maxHp)||1),
-    partyId:String(p.partyId||'')
+    equip:sanitizePeerEquip(p.equip||p.equipVisual||{}),
+    partyId:String(p.partyId||''),
+    partyOwnerId:String(p.partyOwnerId||'')
   };
   if(prev&&field===prevField&&prevTs&&incomingTs+700<prevTs){
     return Object.assign({},prev,identity,{seenAt,moving:!!p.moving||!!prev.moving,visualMoving:!!prev.visualMoving});
@@ -2904,6 +2988,452 @@ function smoothPeerPosition(p,dt){
   p.visualMoving=left>0.7||gapBase>0.7||now-(Number(p.lastMoveAt)||0)<680;
   if(left<=0.55&&!moving){p.drawX=baseX;p.drawY=baseY;}
 }
+
+
+function devDummyModeActive(){return !!(cloudState&&cloudState.devPreview)||storageGet('green_line_dev_dummy_enabled')==='1';}
+function dummySpawnOffset(i){const a=(i/Math.max(1,DEV_DUMMY_PROFILES.length))*Math.PI*2;return {x:Math.cos(a)*82,y:Math.sin(a)*58};}
+const DEV_DUMMY_WORLD_STATE_KEY='green_line_dev_dummy_world_state_v2';
+let devDummyWorldLastSave=0;
+function devDummyFieldSize(fieldId){
+  const f=stageField(fieldId)||FIELDS.find(x=>x.id===fieldId)||FIELDS.find(x=>x.id==='town')||FIELDS[0];
+  return Math.max(600,Number(f&&f.size)||fieldSize||1800);
+}
+function readDevDummyWorldState(){
+  try{const raw=storageGet(DEV_DUMMY_WORLD_STATE_KEY);const data=raw?JSON.parse(raw):{};return data&&typeof data==='object'?data:{};}catch(_){return {};}
+}
+function writeDevDummyWorldState(force=false){
+  try{
+    const now=performance.now();
+    if(!force&&now-devDummyWorldLastSave<900)return false;
+    devDummyWorldLastSave=now;
+    const data={};
+    for(const id of devDummyIds()){
+      const d=onlineState&&onlineState.peers?onlineState.peers[id]:null;
+      if(!d||!d.devDummy)continue;
+      data[id]={
+        id:d.id,field:d.field||'town',x:Number(d.x)||0,y:Number(d.y)||0,targetX:Number(d.targetX)||Number(d.x)||0,targetY:Number(d.targetY)||Number(d.y)||0,drawX:Number(d.drawX)||Number(d.x)||0,drawY:Number(d.drawY)||Number(d.y)||0,dir:Number(d.dir)||0,
+        level:Math.max(1,Math.floor(Number(d.level)||1)),exp:Math.max(0,Math.floor(Number(d.exp)||0)),nextExp:Math.max(60,Math.floor(Number(d.nextExp)||120)),gold:Math.max(0,Math.floor(Number(d.gold)||0)),
+        hp:Math.max(1,Number(d.hp)||1),maxHp:Math.max(1,Number(d.maxHp)||1),equip:d.equip||{},skillStars:d.skillStars||{},skillSlots:Array.isArray(d.skillSlots)?d.skillSlots:[1,2,3,4],
+        aiState:d.aiState||'',aiCleared:d.aiCleared||{},aiDiscovered:d.aiDiscovered||{},aiTargetField:d.aiTargetField||d.field||'plain',aiPortalTarget:d.aiPortalTarget||null,aiPortalTravel:Number(d.aiPortalTravel)||0,t:Date.now()
+      };
+    }
+    storageSet(DEV_DUMMY_WORLD_STATE_KEY,JSON.stringify(data));
+    return true;
+  }catch(e){console.warn('dev dummy state save skipped',e);return false;}
+}
+function applyDevDummySavedState(d,profile){
+  try{
+    const data=readDevDummyWorldState();
+    const saved=data&&data[profile.id];
+    if(!saved||!saved.field)return d;
+    const f=stageField(saved.field)||FIELDS.find(x=>x.id===saved.field);
+    if(!f)return d;
+    const size=devDummyFieldSize(f.id);
+    d.field=f.id;d.x=clamp(Number(saved.x)||d.x||120,28,size-28);d.y=clamp(Number(saved.y)||d.y||120,28,size-28);
+    d.targetX=clamp(Number(saved.targetX)||d.x,28,size-28);d.targetY=clamp(Number(saved.targetY)||d.y,28,size-28);
+    d.drawX=clamp(Number(saved.drawX)||d.x,28,size-28);d.drawY=clamp(Number(saved.drawY)||d.y,28,size-28);d.dir=Number(saved.dir)||0;
+    d.level=Math.max(1,Math.floor(Number(saved.level)||d.level||1));d.exp=Math.max(0,Math.floor(Number(saved.exp)||0));d.nextExp=Math.max(60,Math.floor(Number(saved.nextExp)||d.nextExp||120));d.gold=Math.max(0,Math.floor(Number(saved.gold)||d.gold||0));
+    d.maxHp=Math.max(1,Number(saved.maxHp)||d.maxHp||1);d.hp=clamp(Number(saved.hp)||d.maxHp,1,d.maxHp);
+    d.equip=saved.equip&&typeof saved.equip==='object'?saved.equip:d.equip;d.skillStars=saved.skillStars&&typeof saved.skillStars==='object'?saved.skillStars:d.skillStars;d.skillSlots=Array.isArray(saved.skillSlots)?saved.skillSlots:d.skillSlots;
+    d.aiState=saved.aiState||d.aiState;d.aiCleared=saved.aiCleared&&typeof saved.aiCleared==='object'?saved.aiCleared:d.aiCleared;d.aiDiscovered=saved.aiDiscovered&&typeof saved.aiDiscovered==='object'?saved.aiDiscovered:d.aiDiscovered;d.aiTargetField=saved.aiTargetField||d.aiTargetField;d.aiPortalTarget=saved.aiPortalTarget||null;d.aiPortalTravel=Number(saved.aiPortalTravel)||0;
+  }catch(e){console.warn('dev dummy saved state skipped',e);}
+  return d;
+}
+function makeDevDummyPeer(profile=DEV_DUMMY_PROFILES[0],idx=0){
+  profile=profile||DEV_DUMMY_PROFILES[0];
+  const px=Number(player&&player.x)||fieldSize/2, py=Number(player&&player.y)||fieldSize/2;
+  const off=dummySpawnOffset(idx);
+  const lv=Math.max(6,Math.floor(Number(player.level)||8)+Number(profile.levelOffset||0));
+  const stars=Math.max(2,Math.min(7,Math.floor(lv/5)+Number(profile.skillBase||1)));
+  const d={
+    id:profile.id,userId:profile.id,name:devDummyNickname(profile),job:profile.job,jobName:profile.jobName,level:lv,exp:0,nextExp:Math.round(90+lv*28),gold:360+idx*80,
+    skillStars:{[profile.job]:stars},skillSlots:[1,2,3,4],
+    equip:{weapon:{name:profile.weapon||'AI 훈련무기',slot:'weapon',rarity:'일반',level:Math.max(1,lv)}},
+    field:currentField,x:px+off.x,y:py+off.y,targetX:px+off.x,targetY:py+off.y,drawX:px+off.x,drawY:py+off.y,dir:0,hp:260,maxHp:260,
+    moving:false,visualMoving:false,partyId:onlineState.partyId||'',partyOwnerId:onlineState.partyOwnerId||'',seenAt:performance.now(),ts:Date.now(),
+    devDummy:true,profileId:profile.id,aiAtk:0,aiSkill:1.2+idx*.35,aiThink:0,aiShop:0,aiPortal:0,aiInvite:0,aiState:'자율활동',aiCleared:{},aiDiscovered:{plain:true},aiTargetField:'plain',aiPortalTarget:null,aiPortalTravel:0,attackAnim:0
+  };
+  return applyDevDummySavedState(d,profile);
+}
+function ensureDevDummies(){
+  if(!onlineState.peers)onlineState.peers={};
+  if(!devDummyModeActive()){
+    for(const id of devDummyIds())delete onlineState.peers[id];
+    return [];
+  }
+  return DEV_DUMMY_PROFILES.map((profile,idx)=>{
+    let d=onlineState.peers[profile.id];
+    if(!d||!d.devDummy)d=makeDevDummyPeer(profile,idx);
+    d.id=profile.id;d.userId=profile.id;d.profileId=profile.id;d.name=devDummyNickname(profile);d.job=profile.job;d.jobName=profile.jobName;d.devDummy=true;
+    onlineState.peers[profile.id]=d;
+    return d;
+  });
+}
+function devDummyInParty(d){return !!(d&&onlineState.partyId&&d.partyId&&d.partyId===onlineState.partyId);}
+function devDummyFieldName(d){const f=stageField(d&&d.field)||FIELDS.find(x=>x.id===(d&&d.field));return f?f.name:(d&&d.field)||'알 수 없음';}
+function devDummyBestField(d){
+  const lv=Math.max(1,Math.floor(Number(d.level)||1));
+  const arr=stageFields().filter(f=>lv+5>=Number(f.level||1));
+  const known=(d.aiDiscovered&&typeof d.aiDiscovered==='object')?d.aiDiscovered:{};
+  const cleared=(d.aiCleared&&typeof d.aiCleared==='object')?d.aiCleared:{};
+  let best=arr[0]||stageFields()[0];
+  for(const f of arr){if(known[f.id]!==false)best=f;if(!cleared[f.id]){best=f;break;}}
+  return best||stageFields()[0];
+}
+function devDummyStageSpawnPoint(fieldId){
+  const f=stageField(fieldId)||FIELDS.find(x=>x.id===fieldId)||FIELDS[1];
+  const size=Number(f&&f.size)||fieldSize||2200;
+  return {x:Math.max(120,Math.min(size-120,220)),y:Math.max(120,Math.min(size-120,220))};
+}
+function devDummyPortalPoint(d,targetField){
+  if(!d)return null;
+  if(d.field==='town')return {x:900,y:1465};
+  if(d.field===currentField){
+    const type=(targetField==='town'||targetField===prevStageId(d.field))?'prev':'next';
+    const p=stagePortalPoint(type);
+    if(p)return p;
+  }
+  const f=stageField(d.field)||FIELDS.find(x=>x.id===d.field);
+  const size=Number(f&&f.size)||fieldSize||2200;
+  return {x:targetField==='town'?220:Math.max(220,size-220),y:targetField==='town'?220:Math.max(220,size-220)};
+}
+function devDummyMoveToward(d,x,y,st,dt,stop=58){
+  const ox=Number(d.x)||0, oy=Number(d.y)||0;
+  const dx=x-ox,dy=y-oy,distTo=Math.hypot(dx,dy);
+  if(distTo<=stop){d.moving=false;return true;}
+  let goal={x,y};
+  try{if(d.field===currentField&&typeof dungeonSteerPoint==='function')goal=dungeonSteerPoint(d,x,y);}catch(_){ }
+  const a=Math.atan2(goal.y-d.y,goal.x-d.x);
+  const speed=(st&&st.speed)||140;
+  const size=devDummyFieldSize(d.field);
+  d.x=clamp(d.x+Math.cos(a)*speed*dt,28,size-28);
+  d.y=clamp(d.y+Math.sin(a)*speed*dt,28,size-28);
+  d.dir=a;d.moving=true;
+  try{if(d.field===currentField&&typeof resolveDungeonEntity==='function')resolveDungeonEntity(d,ox,oy,18);}catch(_){ }
+  return false;
+}
+function devDummyBeginPortal(d,target,reason='portal'){
+  if(!d||!target)return false;
+  d.aiPortalTarget={fieldId:target,reason};
+  d.aiState='포털 이동중';
+  d.aiPortalTravel=0;
+  return true;
+}
+function devDummySetField(d,fieldId,reason='portal'){
+  const f=stageField(fieldId)||FIELDS.find(x=>x.id===fieldId);
+  if(!d||!f)return false;
+  d.field=f.id;
+  d.aiTargetField=f.id;
+  d.aiState=reason==='town'?'상점 정비':(reason==='next'?'다음 던전 이동':'포털 이동');
+  const idx=Math.max(0,devDummyIds().indexOf(d.id));
+  const off=dummySpawnOffset(idx);
+  const size=devDummyFieldSize(f.id);
+  let p=devDummyStageSpawnPoint(f.id);
+  if(f.id==='town')p={x:clamp(900+off.x*.55,28,size-28),y:clamp(1465+off.y*.35,28,size-28)};
+  d.x=p.x; d.y=p.y; d.targetX=p.x; d.targetY=p.y; d.drawX=p.x; d.drawY=p.y; d.vx=0; d.vy=0; d.aiPortalTarget=null; d.aiPortalTravel=0; d.seenAt=performance.now(); d.ts=Date.now();
+  writeDevDummyWorldState(true);
+  return true;
+}
+function devDummyStats(d){
+  const lv=Math.max(1,Math.floor(Number(d.level)||1));
+  const w=d&&d.equip&&d.equip.weapon?Math.max(1,Number(d.equip.weapon.level)||lv):lv;
+  const profile=devDummyProfile(d&&d.profileId||d&&d.id);
+  const ranged=profile&&profile.range>110;
+  return {atk:Math.round(10+lv*2.2+w*.75),def:Math.round(4+lv*.55),maxHp:Math.round(210+lv*18+w*4),speed:(ranged?132:138)+Math.min(52,lv*.45),aspd:1.0+Math.min(.55,lv*.006),range:(profile&&profile.range)||80};
+}
+function devDummyLevelCheck(d){
+  if(!d)return;
+  d.nextExp=Math.max(60,Math.floor(Number(d.nextExp)||120));
+  d.exp=Math.max(0,Math.floor(Number(d.exp)||0));
+  let up=0;
+  while(d.exp>=d.nextExp&&up<12){d.exp-=d.nextExp;d.level++;d.nextExp=Math.round(d.nextExp*1.24+24);up++;}
+  if(up){
+    const st=devDummyStats(d);d.maxHp=st.maxHp;d.hp=d.maxHp;
+    if(d.field===currentField)effects.push({type:'text',x:d.x,y:d.y-56,t:`${d.name} Lv.${d.level}`,life:1.0,vy:-20,big:true});
+    msg(`${d.name}이 Lv.${d.level} 달성`, 'system');
+  }
+}
+function devDummyGearShop(d,force=false){
+  if(!d)return false;
+  d.aiShop=(Number(d.aiShop)||0)-1;
+  if(!force&&d.aiShop>0)return false;
+  d.aiShop=8+Math.random()*8;
+  const lv=Math.max(1,Math.floor(Number(d.level)||1));
+  d.gold=Math.max(0,Math.floor(Number(d.gold)||0));
+  if(!d.equip)d.equip={};
+  const profile=devDummyProfile(d.profileId||d.id);
+  if(!d.equip.weapon)d.equip.weapon={name:profile.weapon||'AI 훈련무기',slot:'weapon',rarity:'일반',level:1};
+  const need=Math.max(1,Math.floor(Number(d.equip.weapon.level)||1));
+  if(lv>need+1&&d.gold>=80+lv*8){
+    d.gold-=80+lv*8;
+    d.equip.weapon={name:`${profile.weapon||'AI 무기'} +${Math.floor(lv/6)}`,slot:'weapon',rarity:lv>=40?'에픽':lv>=20?'레어':'일반',level:lv};
+    msg(`${d.name}이 장비를 교체했습니다.`, 'system');
+  }
+  d.skillStars=d.skillStars&&typeof d.skillStars==='object'?d.skillStars:{};
+  const cur=Math.max(0,Number(d.skillStars[profile.job])||0);
+  const want=Math.min(MAX_SKILL_STAR,Math.max(1,Math.floor(lv/6)+1));
+  if(want>cur&&d.gold>=120+want*70){
+    d.gold-=120+want*70;
+    d.skillStars[profile.job]=want;
+    msg(`${d.name}이 ${want}성 ${profile.jobName} 스킬을 구매했습니다.`, 'system');
+  }
+  return true;
+}
+function devDummyEquipLoot(d,item){
+  if(!d||!item)return false;
+  if(!d.equip)d.equip={};
+  const slot=item.slot||'weapon';
+  const old=d.equip[slot];
+  const oldLv=old?Number(old.level)||0:0;
+  const newLv=Number(item.level)||0;
+  if(!old||newLv>=oldLv){d.equip[slot]=item;if(d.field===currentField)effects.push({type:'text',x:d.x,y:d.y-58,t:`${d.name} 장착`,life:.9,vy:-18});return true;}
+  return false;
+}
+function devDummyGain(d,exp,gold){
+  if(!d)return;
+  d.exp=Math.max(0,Math.floor(Number(d.exp)||0)+Math.max(0,Math.round(exp||0)));
+  d.gold=Math.max(0,Math.floor(Number(d.gold)||0)+Math.max(0,Math.round(gold||0)));
+  devDummyLevelCheck(d);
+}
+function recordMonsterDamage(m,actorId,actorName,dmg){
+  if(!m||!actorId||!Number.isFinite(Number(dmg))||dmg<=0)return;
+  if(!m.damageBy||typeof m.damageBy!=='object')m.damageBy={};
+  const id=String(actorId);
+  const row=m.damageBy[id]||{id,name:actorName||id,dmg:0,t:0};
+  row.name=actorName||row.name;row.dmg=(Number(row.dmg)||0)+Number(dmg);row.t=performance.now();
+  m.damageBy[id]=row;
+}
+function topDamageContributor(m){
+  let best=null,bd=-1;
+  const rows=m&&m.damageBy?Object.values(m.damageBy):[];
+  for(const r of rows){const v=Number(r&&r.dmg)||0;if(v>bd){bd=v;best=r;}}
+  return best;
+}
+function devDummyDealDamage(d,m,dmg,kind='ally'){
+  if(!d||!m||m.dead)return false;
+  const final=Math.max(1,Math.round(Number(dmg)||1));
+  m.hp-=final;m.hit=.18;
+  recordMonsterDamage(m,d.id||d.profileId,d.name||'AI동료',final);
+  effects.push({type:'text',x:m.x,y:m.y-34,t:`-${final}`,life:.55,vy:-18});
+  effects.push({type:'spark',x:m.x,y:m.y,life:.2,r:10});
+  if(m.hp<=0){
+    if(devDummyInParty(d)){killMonster(m);return true;}
+    m.dead=true;
+    const exp=Math.round((m.boss?42:12)+(m.level||1)*3.6);
+    const gold=Math.round((m.boss?70:10)+(m.level||1)*2.6);
+    devDummyGain(d,exp,gold);
+    effects.push({type:'ring',x:m.x,y:m.y,life:.55,r:m.boss?40:24});
+    if(m.boss){
+      d.aiCleared=d.aiCleared&&typeof d.aiCleared==='object'?d.aiCleared:{};
+      d.aiCleared[currentField]=true;
+      msg(`${d.name}이 ${m.name||'보스'}를 처치했습니다.`, 'system');
+    }
+    if(Math.random()<((m.boss?.85:.24))){
+      const item=makeItem(Math.max(1,(m.level||1)+irnd(-1,2)),null,null,d.job||'warrior');
+      drops.push({x:m.x+irnd(-20,20),y:m.y+irnd(-20,20),item,life:18,ownerId:d.id,ownerName:d.name});
+    }
+    if(mode==='field' && monsters.filter(x=>!x.dead).length<7 && !m.boss)spawnMonster(false);
+    return true;
+  }
+  return false;
+}
+function devDummyAttackEffects(d,target,skill=false){
+  if(!d||!target)return;
+  d.attackAnim=.24;
+  const a=Math.atan2(target.y-d.y,target.x-d.x);
+  d.dir=a;
+  const sx=d.x+Math.cos(a)*18, sy=d.y+Math.sin(a)*18-6;
+  effects.push({type:'linepop',x:sx,y:sy,tx:target.x,ty:target.y});
+  effects.push({type:'spark',x:target.x,y:target.y,life:skill?.36:.2,r:skill?22:12});
+  if(skill)effects.push({type:'ring',x:target.x,y:target.y,life:.55,r:52});
+}
+function devDummySkillCooldown(d){
+  const profile=devDummyProfile(d&&d.profileId||d&&d.id);
+  const stars=d&&d.skillStars?Math.max(1,Number(d.skillStars[profile.job])||1):1;
+  const base={warrior:4.8,archer:3.8,mageRoot:5.8,summonist:6.4,engineerRoot:5.2}[profile.job]||4.8;
+  return base+Math.max(0,stars-3)*.55;
+}
+function devDummyCastSkill(d,target){
+  if(!d||!target)return false;
+  const st=devDummyStats(d);
+  const profile=devDummyProfile(d.profileId||d.id);
+  const rank=Math.max(1,Math.min(MAX_SKILL_STAR,Number(d.skillStars&&d.skillStars[profile.job])||1));
+  const dmg=Math.round(st.atk*(1.35+rank*.25));
+  devDummyAttackEffects(d,target,true);
+  devDummyDealDamage(d,target,dmg,'aiSkill');
+  const r=profile.job==='mageRoot'?72+rank*8:48+rank*5;
+  for(const m of monsters){
+    if(m&&m!==target&&!m.dead&&Math.hypot(m.x-target.x,m.y-target.y)<=r)devDummyDealDamage(d,m,Math.round(dmg*(profile.job==='mageRoot'?.52:.38)),'aiSkillSplash');
+  }
+  return true;
+}
+function devDummyMaybeInvite(d,reason='boss'){
+  if(!d||onlineState.partyId)return false;
+  const now=performance.now();
+  if(now-(Number(d.aiInvite)||0)<45000)return false;
+  d.aiInvite=now;
+  const partyId='party_'+String(d.id||DEV_DUMMY_ID)+'_'+Date.now().toString(36);
+  d.partyId=partyId;d.partyOwnerId=d.id||DEV_DUMMY_ID;
+  onlineState.invites[d.id]={from:d.id,fromName:d.name||'AI동료',to:myOnlineId(),partyId,partyOwnerId:d.id,t:Date.now(),reason};
+  msg(`${d.name}이 보스 공략 지원을 요청했습니다.`, 'system');
+  toast(`${d.name} 파티 신청`);
+  try{showPartyInvitePopup(onlineState.invites[d.id]);}catch(_){ }
+  return true;
+}
+function devDummyRequestPortal(d,target,reason){
+  if(!d||!target)return false;
+  if(d.aiPortalTarget&&d.aiPortalTarget.fieldId===target)return true;
+  return devDummyBeginPortal(d,target,reason);
+}
+function devDummyUpdatePortalMove(d,st,dt){
+  if(!d||!d.aiPortalTarget)return false;
+  d.aiPortalTravel=(Number(d.aiPortalTravel)||0)+dt;
+  const target=d.aiPortalTarget.fieldId;
+  const p=devDummyPortalPoint(d,target);
+  if(!p){d.aiPortalTarget=null;return false;}
+  const visible=d.field===currentField;
+  if(visible){
+    const reached=devDummyMoveToward(d,p.x,p.y,st,dt,64);
+    if(reached)devDummySetField(d,target,d.aiPortalTarget.reason||'portal');
+    return true;
+  }
+  // 보이지 않는 맵에서는 이동 시간이 지난 뒤에만 포털 도착으로 처리한다.
+  if(d.aiPortalTravel>4.5+rnd(0,1.5))devDummySetField(d,target,d.aiPortalTarget.reason||'portal');
+  return true;
+}
+function devDummyAutonomousSim(d,dt,st){
+  if(!d)return;
+  d.aiThink=(Number(d.aiThink)||0)-dt;
+  d.aiPortal=(Number(d.aiPortal)||0)-dt;
+  d.aiShop=(Number(d.aiShop)||0)-dt;
+  if(!d.field||!FIELDS.find(f=>f.id===d.field))d.field='town';
+  if(devDummyUpdatePortalMove(d,st,dt))return;
+  if(d.aiThink<=0){
+    d.aiThink=1.2+Math.random()*1.0;
+    if(d.field==='town'){
+      devDummyGearShop(d,true);
+      const next=devDummyBestField(d);
+      if(next&&d.aiPortal<=0){d.aiPortal=8+Math.random()*5;devDummyRequestPortal(d,next.id,'next');msg(`${d.name}이 ${next.name} 포털로 이동합니다.`, 'system');}
+    }else{
+      const f=stageField(d.field)||stageFields()[0];
+      const bossHard=(f&&Number(f.level||1)>Number(d.level||1)+4);
+      if(bossHard){devDummyMaybeInvite(d,'bossHard');devDummyGain(d,12+Number(f.level||1),8+Number(f.level||1));}
+      else{
+        devDummyGain(d,18+Number(f.level||1)*3,14+Number(f.level||1)*2);
+        if(Math.random()<.20)devDummyGearShop(d,false);
+        d.aiCleared=d.aiCleared&&typeof d.aiCleared==='object'?d.aiCleared:{};
+        d.aiDiscovered=d.aiDiscovered&&typeof d.aiDiscovered==='object'?d.aiDiscovered:{};
+        if(Math.random()<.11||Number(d.level||1)>=Number(f.level||1)+3){
+          d.aiCleared[f.id]=true;
+          const nx=nextStageId(f.id);
+          if(nx){d.aiDiscovered[nx]=true;if(Math.random()<.48&&d.aiPortal<=0){d.aiPortal=9+Math.random()*6;devDummyRequestPortal(d,nx,'next');msg(`${d.name}이 다음 포털로 이동합니다.`, 'system');}}
+        }
+        if(Math.random()<.06&&d.aiPortal<=0){d.aiPortal=7+Math.random()*6;devDummyRequestPortal(d,'town','town');msg(`${d.name}이 마을 포털로 이동합니다.`, 'system');}
+      }
+    }
+  }
+  if(d.field===currentField){
+    const ox=Number(d.x)||200, oy=Number(d.y)||200;
+    const angle=Number(d.aiWalkAngle)||Math.random()*Math.PI*2;
+    d.aiWalkAngle=angle+(Math.random()-.5)*.38;
+    d.x=clamp(ox+Math.cos(d.aiWalkAngle)*34*dt,28,fieldSize-28);
+    d.y=clamp(oy+Math.sin(d.aiWalkAngle)*34*dt,28,fieldSize-28);
+    try{if(typeof resolveDungeonEntity==='function')resolveDungeonEntity(d,ox,oy,18);}catch(_){ }
+    const moved=Math.hypot(d.x-ox,d.y-oy);d.vx=moved>0?(d.x-ox)/Math.max(.016,dt):0;d.vy=moved>0?(d.y-oy)/Math.max(.016,dt):0;d.moving=moved>.15;d.visualMoving=d.moving;
+  }
+}
+function devDummyFollowPointNearPlayer(idx=0){
+  const px=Number(player&&player.x)||fieldSize/2;
+  const py=Number(player&&player.y)||fieldSize/2;
+  const base=dummySpawnOffset(idx);
+  const offsets=[base,{x:68,y:38},{x:-68,y:38},{x:68,y:-38},{x:-68,y:-38},{x:0,y:76},{x:76,y:0},{x:-76,y:0},{x:0,y:-76},{x:36,y:36},{x:-36,y:36}];
+  for(const o of offsets){
+    const x=clamp(px+o.x,28,fieldSize-28);
+    const y=clamp(py+o.y,28,fieldSize-28);
+    try{if(!dungeonActive()||dungeonPointWalkable(x,y,18))return {x,y};}catch(_){return {x,y};}
+  }
+  try{if(typeof nearestDungeonPoint==='function'){const p=nearestDungeonPoint(px+base.x,py+base.y,18);return {x:clamp(Number(p.x)||px,28,fieldSize-28),y:clamp(Number(p.y)||py,28,fieldSize-28)};}}catch(_){ }
+  return {x:clamp(px+base.x,28,fieldSize-28),y:clamp(py+base.y,28,fieldSize-28)};
+}
+function rebaseDevDummyToPlayer(reason='portal'){
+  try{
+    if(!devDummyModeActive())return false;
+    const list=ensureDevDummies();
+    list.forEach((d,idx)=>{
+      if(!devDummyInParty(d)){
+        d.seenAt=performance.now();d.ts=Date.now();onlineState.peers[d.id]=d;
+        return;
+      }
+      const p=devDummyFollowPointNearPlayer(idx);
+      d.field=currentField;d.x=p.x;d.y=p.y;d.targetX=p.x;d.targetY=p.y;d.drawX=p.x;d.drawY=p.y;d.vx=0;d.vy=0;d.moving=false;d.visualMoving=false;d.dir=Number(player&&player.dir)||d.dir||0;d.partyId=onlineState.partyId||d.partyId||'';d.partyOwnerId=onlineState.partyOwnerId||d.partyOwnerId||'';d.seenAt=performance.now();d.ts=Date.now();d.portalFollowReason=reason;onlineState.peers[d.id]=d;
+    });
+    writeDevDummyWorldState(true);
+    return true;
+  }catch(e){console.warn('dev dummy portal follow skipped',e);return false;}
+}
+function nearestMonsterFromPoint(x,y,range=760){
+  let best=null,bd=range;
+  for(const m of monsters||[]){if(!m||m.dead)continue;const d=dist(x,y,m.x,m.y);if(d<bd){best=m;bd=d;}}
+  return best;
+}
+function updateOneDevDummyAI(d,dt,profile,idx){
+  d.name=devDummyNickname(profile);d.job=profile.job;d.jobName=profile.jobName;d.profileId=profile.id;d.devDummy=true;d.userId=profile.id;
+  d.skillStars=d.skillStars&&typeof d.skillStars==='object'?d.skillStars:{[profile.job]:3};
+  if(!d.skillStars[profile.job])d.skillStars[profile.job]=Math.max(2,Math.min(7,Math.floor((Number(d.level)||8)/5)+Number(profile.skillBase||1)));
+  d.skillSlots=Array.isArray(d.skillSlots)?d.skillSlots:[1,2,3,4];
+  const party=devDummyInParty(d);
+  if(party){
+    d.partyId=onlineState.partyId||d.partyId||'';d.partyOwnerId=onlineState.partyOwnerId||d.partyOwnerId||'';
+    if(d.field&&d.field!==currentField){const p=devDummyFollowPointNearPlayer(idx);d.field=currentField;d.x=p.x;d.y=p.y;d.drawX=p.x;d.drawY=p.y;}
+  }else{
+    if(d.partyId&&d.partyId!==onlineState.partyId){/* 초대 대기 중이면 유지 */}else{d.partyId='';d.partyOwnerId='';}
+  }
+  const now=performance.now();
+  const ox=Number(d.x)||player.x, oy=Number(d.y)||player.y;
+  const st=devDummyStats(d);
+  d.maxHp=st.maxHp;d.hp=clamp(Number(d.hp)||d.maxHp,1,d.maxHp);d.attackAnim=Math.max(0,(Number(d.attackAnim)||0)-dt);d.aiAtk=(Number(d.aiAtk)||0)-dt;d.aiSkill=(Number(d.aiSkill)||0)-dt;
+  if(!party){
+    devDummyAutonomousSim(d,dt,st);
+    if(d.field===currentField&&!d.aiPortalTarget){
+      const target=nearestMonsterFromPoint(d.x,d.y,Math.max(620,st.range+260));
+      if(target){
+        const gap=Math.hypot(target.x-d.x,target.y-d.y);
+        const want=st.range>120?Math.min(st.range*.72,240):76;
+        if(gap>want){devDummyMoveToward(d,target.x,target.y,st,dt,want);}
+        else{d.moving=false;d.dir=angleLerp(Number(d.dir)||0,Math.atan2(target.y-d.y,target.x-d.x),.2);if(target.boss&&d.hp<d.maxHp*.42)devDummyMaybeInvite(d,'bossLowHp');if(d.aiSkill<=0){d.aiSkill=devDummySkillCooldown(d);devDummyCastSkill(d,target);}else if(d.aiAtk<=0){d.aiAtk=Math.max(.30,.72/(st.aspd||1));devDummyAttackEffects(d,target,false);devDummyDealDamage(d,target,st.atk,'aiAttack');}}
+      }
+    }
+  }else{
+    d.field=currentField;
+    const target=nearestMonsterFromPoint(d.x,d.y,Math.max(720,st.range+260));
+    let gx=player.x+dummySpawnOffset(idx).x, gy=player.y+dummySpawnOffset(idx).y, wantDist=64;
+    if(target){gx=target.x;gy=target.y;wantDist=st.range>120?Math.min(st.range*.65,230):(target.boss?92:62);}
+    const dd=Math.hypot(gx-d.x,gy-d.y);
+    if(dd>wantDist){devDummyMoveToward(d,gx,gy,st,dt,wantDist);}else{d.moving=false;if(target)d.dir=angleLerp(Number(d.dir)||0,Math.atan2(target.y-d.y,target.x-d.x),.18);}
+    if(target&&Math.hypot(target.x-d.x,target.y-d.y)<Math.max(104,st.range*.82)){
+      if(d.aiSkill<=0){d.aiSkill=devDummySkillCooldown(d);devDummyCastSkill(d,target);}else if(d.aiAtk<=0){d.aiAtk=Math.max(.28,.68/(st.aspd||1));devDummyAttackEffects(d,target,false);devDummyDealDamage(d,target,st.atk,'ally');}
+    }
+  }
+  const size=devDummyFieldSize(d.field);
+  d.x=clamp(d.x,28,size-28);d.y=clamp(d.y,28,size-28);
+  const moved=Math.hypot(d.x-ox,d.y-oy);d.vx=moved>0?(d.x-ox)/Math.max(.016,dt):0;d.vy=moved>0?(d.y-oy)/Math.max(.016,dt):0;d.targetX=d.x;d.targetY=d.y;
+  if(d.field===currentField){
+    try{if(typeof resolveDungeonEntity==='function')resolveDungeonEntity(d,ox,oy,18);}catch(_){ }
+    d.drawX=d.x;d.drawY=d.y;d.visualMoving=moved>.12||d.attackAnim>0;
+  }else{
+    d.visualMoving=moved>.12||d.attackAnim>0;
+  }
+  d.seenAt=now;d.ts=Date.now();onlineState.peers[d.id]=d;
+}
+function updateDevDummyAI(dt){
+  try{
+    const list=ensureDevDummies();
+    list.forEach((d,idx)=>{try{updateOneDevDummyAI(d,dt,devDummyProfile(d.profileId||d.id),idx);}catch(e){console.warn('dev dummy one skipped',d&&d.id,e);const p=devDummyProfile(d&&d.id);onlineState.peers[p.id]=makeDevDummyPeer(p,idx);}});
+    writeDevDummyWorldState(false);
+  }catch(e){console.warn('dev dummy ai skipped',e);}
+}
+
+
 function updateOnlinePeerSmoothing(dt){
   for(const id in onlineState.peers){
     smoothPeerPosition(onlineState.peers[id],dt);
@@ -2912,6 +3442,8 @@ function updateOnlinePeerSmoothing(dt){
 function syncOnlinePresence(){
   try{
     const ch=onlineState.channel;if(!ch)return;
+    const preserved={};
+    for(const id in onlineState.peers||{}){const p=onlineState.peers[id];if(p&&p.devDummy)preserved[id]=p;}
     const state=ch.presenceState();const now=performance.now();const next={};
     Object.keys(state||{}).forEach(key=>{
       const arr=state[key]||[];
@@ -2923,6 +3455,7 @@ function syncOnlinePresence(){
         }
       }
     });
+    if(devDummyModeActive())for(const id in preserved)next[id]=preserved[id];
     onlineState.peers=next;
     onlineState.presenceReady=true;
     prunePeerJoinNotice();
@@ -2996,10 +3529,13 @@ function pruneOnlinePeers(){
   const now=performance.now();
   for(const id in onlineState.peers){
     const p=onlineState.peers[id];
-    if(!p||now-(p.seenAt||0)>12000)delete onlineState.peers[id];
+    if(!p){delete onlineState.peers[id];continue;}
+    if(p.devDummy)continue;
+    if(now-(p.seenAt||0)>12000)delete onlineState.peers[id];
   }
 }
 function updateOnline(dt){
+  updateDevDummyAI(dt);
   updateOnlinePeerSmoothing(dt);
   try{
     if(!cloudState.user)return;
@@ -3022,9 +3558,9 @@ function updateOnline(dt){
 async function sendPartyBroadcast(event,payload){
   if(!onlineState.channel)await initPartyPresence();
   if(!onlineState.channel)return false;
-  try{await onlineState.channel.send({type:'broadcast',event,payload:Object.assign({from:myOnlineId(),fromName:sanitizeNickname(player.nickname||'플레이어'),partyId:onlineState.partyId||'',t:Date.now()},payload||{})});return true;}catch(e){console.error(e);toast('파티 통신 실패');return false;}
+  try{await onlineState.channel.send({type:'broadcast',event,payload:Object.assign({from:myOnlineId(),fromName:sanitizeNickname(player.nickname||'플레이어'),partyId:onlineState.partyId||'',partyOwnerId:onlineState.partyOwnerId||'',t:Date.now()},payload||{})});return true;}catch(e){console.error(e);toast('파티 통신 실패');return false;}
 }
-function ensureParty(){if(!onlineState.partyId)onlineState.partyId='party_'+myOnlineId()+'_'+Date.now().toString(36);return onlineState.partyId;}
+function ensureParty(){if(!onlineState.partyId){onlineState.partyId='party_'+myOnlineId()+'_'+Date.now().toString(36);onlineState.partyOwnerId=myOnlineId();savePersistentParty('partyCreate');}else ensurePartyOwner();return onlineState.partyId;}
 function showPartyInvitePopup(p){
   const from=escapeHtml(p.from||'');
   openPopup(`<div class="title">파티 신청</div><div class="card"><h3>${escapeHtml(p.fromName||'유저')}</h3>상대가 파티 신청을 보냈습니다.<br><span class="onlineId">접속ID: ${escapeHtml(String(p.from||'').slice(-12))}</span></div><div class="footerBtns"><button onclick="Game.acceptPartyInvite('${from}')">수락</button><button onclick="Game.declinePartyInvite('${from}')">거절</button></div>`);
@@ -3039,11 +3575,16 @@ function handlePartyInvite(p){
 function handlePartyAccept(p){
   if(!p)return;
   if(p.to===myOnlineId()){
+    onlineState.partyId=p.partyId||onlineState.partyId;
+    onlineState.partyOwnerId=p.partyOwnerId||onlineState.partyOwnerId||myOnlineId();
+    savePersistentParty('partyAcceptLeader');
     msg(`${p.fromName||'유저'}님이 파티 신청을 수락했습니다.`, 'system');
     toast('파티 신청 수락');
     trackOnlinePresence(true);
     openPopup(`<div class="title">파티 수락</div><div class="card"><h3>${escapeHtml(p.fromName||'유저')}</h3>파티 신청을 수락했습니다.</div><div class="footerBtns"><button onclick="Game.showOnlineHub()">온라인</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
   }else if(p.partyId===onlineState.partyId){
+    if(p.partyOwnerId)onlineState.partyOwnerId=p.partyOwnerId;
+    savePersistentParty('partyAcceptMember');
     msg(`${p.fromName||'유저'}님이 파티에 참가`, 'system');
     trackOnlinePresence(true);
   }
@@ -3055,6 +3596,87 @@ function handlePartyDecline(p){
   openPopup(`<div class="title">파티 거절</div><div class="card"><h3>${escapeHtml(p.fromName||'유저')}</h3>파티 신청을 거절했습니다.</div><div class="footerBtns"><button onclick="Game.showOnlineHub()">온라인</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function handlePartyLeave(p){if(!p)return;if(p.partyId&&p.partyId===onlineState.partyId)msg(`${p.fromName||'유저'}님이 파티를 나감`, 'system');}
+function clearLocalPartyMembersForDisband(partyId){
+  try{
+    if(onlineState.peers){
+      Object.values(onlineState.peers).forEach(peer=>{
+        if(peer&&peer.partyId===partyId){peer.partyId='';peer.partyOwnerId='';}
+      });
+    }
+  }catch(e){console.warn('party member local clear skipped',e);}
+}
+function handlePartyDisband(p){
+  if(!p||!p.partyId||p.partyId!==onlineState.partyId)return;
+  const oldPartyId=onlineState.partyId;
+  const leaderName=p.fromName||'파티장';
+  clearLocalPartyMembersForDisband(oldPartyId);
+  clearPersistentParty('partyDisbanded');
+  onlineState.invites={};
+  trackOnlinePresence(true);
+  msg(`${leaderName}님이 파티를 해산했습니다.`,'system');
+  toast('파티가 해산되었습니다');
+  if(popupMode==='onlineHub')showOnlineHub(false);
+}
+function handlePartyKick(p){
+  if(!p||!p.partyId||p.partyId!==onlineState.partyId)return;
+  if(p.to===myOnlineId()){
+    clearPersistentParty('partyKicked');
+    onlineState.invites={};
+    toast('파티에서 내보내졌습니다');
+    msg('파티에서 내보내졌습니다.','system');
+    trackOnlinePresence(true);
+    if(popupMode==='onlineHub')showOnlineHub(false);
+  }else if(p.to){
+    msg(`${p.toName||'파티원'}님을 파티에서 내보냈습니다.`,'system');
+  }
+}
+function handlePartyLeader(p){
+  if(!p||!p.partyId||p.partyId!==onlineState.partyId)return;
+  if(p.newLeader){onlineState.partyOwnerId=String(p.newLeader);savePersistentParty('partyLeaderChange');trackOnlinePresence(true);}
+  const label=p.newLeaderName||'새 파티장';
+  msg(`${label}님에게 파티장을 넘겼습니다.`,'system');
+  if(popupMode==='onlineHub')showOnlineHub(false);
+}
+function showTransferPartyLeader(){
+  if(!onlineState.partyId){toast('파티 없음');return;}
+  if(!isPartyLeader()){toast('파티장만 넘길 수 있습니다');return;}
+  const members=partyMembers().filter(m=>m.id&&m.id!==myOnlineId());
+  if(!members.length){toast('넘길 파티원이 없습니다');return;}
+  const rows=members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'유저')}</b> · Lv.${m.level||1}<div class="footerBtns"><button onclick="Game.transferPartyLeader('${escapeHtml(m.id)}')">파티장 넘기기</button></div></div>`).join('');
+  openPopup(`<div class="title">파티장 넘기기</div><div class="partyMiniList">${rows}</div><div class="footerBtns"><button onclick="Game.showOnlineHub(false)">취소</button></div>`);
+}
+function transferPartyLeader(id){
+  if(!onlineState.partyId){toast('파티 없음');return;}
+  if(!isPartyLeader()){toast('파티장만 넘길 수 있습니다');return;}
+  const p=(onlineState.peers&&onlineState.peers[id])||null;
+  if(!p){toast('대상 파티원 없음');showOnlineHub(false);return;}
+  if(p.partyId!==onlineState.partyId){toast('같은 파티원이 아닙니다');return;}
+  onlineState.partyOwnerId=id;
+  savePersistentParty('partyLeaderTransfer');
+  if(id===DEV_DUMMY_ID||p.devDummy){toast('AI전사에게 파티장을 넘겼습니다');}
+  else sendPartyBroadcast('party_leader',{partyId:onlineState.partyId,newLeader:id,newLeaderName:p.name||'유저'});
+  trackOnlinePresence(true);
+  showOnlineHub(false);
+}
+function showKickPartyMember(){
+  if(!onlineState.partyId){toast('파티 없음');return;}
+  if(!isPartyLeader()){toast('파티장만 내보낼 수 있습니다');return;}
+  const members=partyMembers().filter(m=>m.id&&m.id!==myOnlineId());
+  if(!members.length){toast('내보낼 파티원이 없습니다');return;}
+  const rows=members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'유저')}</b> · Lv.${m.level||1}<div class="footerBtns"><button onclick="Game.kickPartyMember('${escapeHtml(m.id)}')">내보내기</button></div></div>`).join('');
+  openPopup(`<div class="title">파티원 내보내기</div><div class="partyMiniList">${rows}</div><div class="footerBtns"><button onclick="Game.showOnlineHub(false)">취소</button></div>`);
+}
+function kickPartyMember(id){
+  if(!onlineState.partyId){toast('파티 없음');return;}
+  if(!isPartyLeader()){toast('파티장만 내보낼 수 있습니다');return;}
+  const p=onlineState.peers&&onlineState.peers[id];
+  if(!p){toast('대상 파티원 없음');showOnlineHub(false);return;}
+  if(id===DEV_DUMMY_ID||p.devDummy){p.partyId='';p.partyOwnerId='';toast('AI전사를 파티에서 내보냈습니다');msg('AI전사를 파티에서 내보냈습니다.','system');showOnlineHub(false);return;}
+  sendPartyBroadcast('party_kick',{partyId:onlineState.partyId,to:id,toName:p.name||'유저'});
+  toast('내보내기 요청 전송');
+  showOnlineHub(false);
+}
+
 function handlePartyChat(p){if(!p||!p.text)return;if(p.partyId&&onlineState.partyId&&p.partyId!==onlineState.partyId)return;const line={name:p.fromName||'유저',text:String(p.text).slice(0,80),t:p.t||Date.now()};onlineState.chat.push(line);while(onlineState.chat.length>30)onlineState.chat.shift();msg(`[파티] ${line.name}: ${line.text}`,'chat');}
 function activePeers(range=99999,fieldOnly=false){
   const now=performance.now();
@@ -3067,13 +3689,25 @@ async function requestPartyToPeer(id){
   if(!id||id===myOnlineId()){toast('자기 자신에게는 신청할 수 없습니다');return;}
   const p=onlineState.peers&&onlineState.peers[id];
   if(!p){toast('대상 유저 없음');showOnlineHub(false);return;}
+  if(id===DEV_DUMMY_ID||p.devDummy){
+    ensureParty();
+    p.partyId=onlineState.partyId;
+    p.partyOwnerId=onlineState.partyOwnerId||myOnlineId();
+    p.seenAt=performance.now();
+    savePersistentParty('devDummyParty');
+    trackOnlinePresence(true);
+    toast('AI전사가 파티에 참가');
+    msg('AI전사가 파티에 참가했습니다.','system');
+    showOnlineHub(false);
+    return;
+  }
   if(!onlineState.enabled){
     onlineState.blocked=false;
     onlineState.drawBlocked=false;
     await initPartyPresence(true);
   }
   const partyId=ensureParty();
-  const ok=await sendPartyBroadcast('party_invite',{to:id,partyId});
+  const ok=await sendPartyBroadcast('party_invite',{to:id,partyId,partyOwnerId:onlineState.partyOwnerId||myOnlineId()});
   if(ok){
     toast('파티 신청 전송');
     msg(`${p.name||'유저'}님에게 파티 신청`, 'system');
@@ -3086,8 +3720,10 @@ function acceptPartyInvite(from){
   const inv=onlineState.invites[from];
   if(!inv){toast('신청 정보 없음');return;}
   onlineState.partyId=inv.partyId;
+  onlineState.partyOwnerId=inv.partyOwnerId||inv.from||onlineState.partyOwnerId||from;
+  savePersistentParty('partyJoin');
   delete onlineState.invites[from];
-  sendPartyBroadcast('party_accept',{to:from,partyId:onlineState.partyId});
+  sendPartyBroadcast('party_accept',{to:from,partyId:onlineState.partyId,partyOwnerId:onlineState.partyOwnerId});
   msg('파티 참가 완료','system');
   toast('파티 참가');
   trackOnlinePresence(true);
@@ -3102,13 +3738,36 @@ function declinePartyInvite(from){
 }
 function createParty(){
   ensureParty();
-  if(!onlineState.enabled){gameSafeCall('connectOnlineFromPanel');return;}
+  if(!onlineState.enabled&&cloudState.user){gameSafeCall('connectOnlineFromPanel');return;}
   trackOnlinePresence(true);
-  toast('파티 생성');
+  toast('파티 준비');
   showOnlineHub();
 }
-function leaveParty(){if(!onlineState.partyId){toast('파티 없음');return;}const old=onlineState.partyId;sendPartyBroadcast('party_leave',{partyId:old});onlineState.partyId=null;onlineState.invites={};trackOnlinePresence(true);msg('파티 탈퇴','system');showOnlineHub();}
-function partyMembers(){const self=buildOnlinePayload();const arr=[self];for(const p of Object.values(onlineState.peers)){if(p.partyId&&onlineState.partyId&&p.partyId===onlineState.partyId)arr.push(p);}return arr;}
+function leaveParty(){
+  if(!onlineState.partyId){toast('파티 없음');return;}
+  const old=onlineState.partyId;
+  sendPartyBroadcast('party_leave',{partyId:old});
+  clearLocalPartyMembersForDisband(old);
+  clearPersistentParty('partyLeave');
+  onlineState.invites={};
+  trackOnlinePresence(true);
+  msg('파티 탈퇴','system');
+  showOnlineHub(false);
+}
+async function disbandParty(){
+  if(!onlineState.partyId){toast('파티 없음');return;}
+  if(!isPartyLeader()){toast('파티장만 해산할 수 있습니다');return;}
+  const old=onlineState.partyId;
+  try{await sendPartyBroadcast('party_disband',{partyId:old});}catch(e){console.warn(e);}
+  clearLocalPartyMembersForDisband(old);
+  clearPersistentParty('partyDisband');
+  onlineState.invites={};
+  trackOnlinePresence(true);
+  msg('파티 해산','system');
+  toast('파티 해산');
+  showOnlineHub(false);
+}
+function partyMembers(){restorePersistentParty();ensurePartyOwner();const self=buildOnlinePayload();const arr=[self];for(const p of Object.values(onlineState.peers)){if(p.partyId&&onlineState.partyId&&p.partyId===onlineState.partyId)arr.push(p);}return arr;}
 function sendPartyChat(){const input=$('partyChatInput');const text=String(input?.value||'').trim().slice(0,80);if(!text){toast('내용 없음');return;}if(!onlineState.partyId){toast('파티 생성 또는 참가 필요');return;}if(input)input.value='';const line={name:sanitizeNickname(player.nickname||'플레이어'),text,t:Date.now()};onlineState.chat.push(line);while(onlineState.chat.length>30)onlineState.chat.shift();msg(`[파티] ${line.name}: ${text}`,'chat');sendPartyBroadcast('party_chat',{partyId:onlineState.partyId,text});showOnlineHub();}
 function drawRemotePlayerSprite(p){
   if(!p||p.field!==currentField)return;
@@ -3117,44 +3776,66 @@ function drawRemotePlayerSprite(p){
   if(!Number.isFinite(x)||!Number.isFinite(y))return;
   const age=performance.now()-(Number(p.seenAt)||0);
   if(age>8500)return;
-  const near=dist(player.x,player.y,x,y)<145;
   const maxHp=Math.max(1,Number(p.maxHp)||1);
   const curHp=clamp(Number.isFinite(Number(p.hp))?Number(p.hp):maxHp,0,maxHp);
   const hpPct=clamp(curHp/maxHp,0,1);
   ctx.save();
   ctx.translate(x,y);
   ctx.globalAlpha=clamp(1-age/10000,.62,.96);
+
+  // 본인 캐릭터와 같은 졸라맨 골격/무기 표현을 사용한다.
+  const hurt=.9;
   const t=performance.now()/1000;
   const moving=!!p.visualMoving||!!p.moving;
   const step=moving?Math.sin(t*11+(x+y)*.01):0;
-  const bob=moving?Math.abs(step)*.8:0;
+  const bob=moving?Math.abs(step)*.95:0;
+  const armSwing=moving?step*2.15:0;
+  const legSwing=moving?step*4.1:0;
+  const atkP=clamp((Number(p.attackAnim)||0)/.24,0,1);
+  const swing=Math.sin(atkP*Math.PI);
+  const wind=swing*4.5;
+
   ctx.translate(0,-bob);
 
-  lineStyle(.72,1.55);
-  ctx.beginPath();
-  ctx.arc(0,-24,8,0,Math.PI*2);
-  ctx.moveTo(0,-16);ctx.lineTo(0,8);
-  ctx.moveTo(0,-9);ctx.lineTo(15,-2);
-  ctx.moveTo(0,-9);ctx.lineTo(-15,-2);
-  ctx.moveTo(0,8);ctx.lineTo(6+step*2,28);
-  ctx.moveTo(0,8);ctx.lineTo(-6-step*2,28);
-  ctx.stroke();
+  lineStyle(hurt,1.8);
+  ctx.beginPath();ctx.arc(0,-24,8,0,Math.PI*2);ctx.stroke();
+  lineStyle(.75,.85);ctx.beginPath();ctx.moveTo(-2.5,-26);ctx.lineTo(-2.6,-26.1);ctx.moveTo(2.5,-26);ctx.lineTo(2.6,-26.1);ctx.stroke();
+
+  lineStyle(hurt,1.8);
+  ctx.beginPath();ctx.moveTo(0,-16);ctx.lineTo(0,8);ctx.stroke();
+
+  const shoulderX=0, shoulderY=-9;
+  const elbowX=10+armSwing*.18+swing*3.4;
+  const elbowY=-6-swing*6.4;
+  const gripX=17+wind+swing*6.2;
+  const gripY=-6-armSwing*.12+swing*7.5;
+  ctx.beginPath();ctx.moveTo(shoulderX,shoulderY);ctx.lineTo(elbowX,elbowY);ctx.lineTo(gripX,gripY);ctx.stroke();
+
+  const leftGripX=-16-armSwing*.28;
+  const leftGripY=2+swing*2.1;
+  ctx.beginPath();ctx.moveTo(0,-9);ctx.lineTo(-11-armSwing*.32,-4+swing*1.4);ctx.lineTo(leftGripX,leftGripY);ctx.stroke();
+
+  ctx.beginPath();ctx.moveTo(0,8);ctx.lineTo(5.6+legSwing*.24,19);ctx.lineTo(7+legSwing*.75,29);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(0,8);ctx.lineTo(-5.6-legSwing*.24,19);ctx.lineTo(-7-legSwing*.75,29);ctx.stroke();
+
+  const rawFace=Number.isFinite(Number(p.dir))?Number(p.dir):-Math.PI/2;
+  p.weaponFace=angleLerp(Number.isFinite(Number(p.weaponFace))?Number(p.weaponFace):rawFace,rawFace,.18);
+  const bladeAngle=p.weaponFace;
+  drawClassWeapon(p.job||'adventurer',gripX,gripY,bladeAngle,atkP,leftGripX,leftGripY,{equip:sanitizePeerEquip(p.equip||{}),attackAnim:Number(p.attackAnim)||0});
 
   lineStyle((p.partyId&&onlineState.partyId&&p.partyId===onlineState.partyId)?0.78:0.52,1);
-  ctx.beginPath();
-  ctx.arc(0,0,24,0,Math.PI*2);
-  ctx.stroke();
+  ctx.beginPath();ctx.arc(0,0,24,0,Math.PI*2);ctx.stroke();
 
   ctx.shadowBlur=0;
   ctx.textAlign='center';
-  ctx.font='10px monospace';
-  ctx.fillStyle=themeLine(.96);
-  ctx.fillText(sanitizeNickname(p.name||'플레이어'),0,-58);
+  ctx.font='11px monospace';
+  ctx.fillStyle=themeLine(.98);
+  ctx.fillText(`Lv.${p.level||1} ${sanitizeNickname(p.name||'플레이어')}`,0,-42);
 
-  const hpW=58,hpH=8,hpY=-49;
+  const hpW=58,hpH=8,hpY=-34;
   ctx.save();
   ctx.shadowColor=themeLine(.7);
-  ctx.shadowBlur=8;
+  ctx.shadowBlur=7;
   ctx.fillStyle=themeBg();
   ctx.fillRect(-hpW/2,hpY,hpW,hpH);
   ctx.strokeStyle=themeLine(.95);
@@ -3164,13 +3845,9 @@ function drawRemotePlayerSprite(p){
   ctx.fillRect(-hpW/2+2,hpY+2,(hpW-4)*hpPct,hpH-4);
   ctx.restore();
 
-  if(near){
-    ctx.font='11px monospace';
-    ctx.fillStyle=themeLine(.98);
-    ctx.fillText('정보  |  파티',0,-72);
-  }
   ctx.restore();
 }
+
 function drawOnlinePlayers(){
   if(onlineState.drawBlocked)return;
   try{
@@ -3180,7 +3857,7 @@ function drawOnlinePlayers(){
       const p=onlineState.peers[id];
       if(!p||id===myOnlineId())continue;
       if(selfUserId&&p.userId&&String(p.userId)===selfUserId)continue;
-      const key=p.userId?('u:'+String(p.userId)):('p:'+String(p.id||id));
+      const key=p.devDummy?('d:'+String(p.id||id)):(p.userId?('u:'+String(p.userId)):('p:'+String(p.id||id)));
       const old=picked[key];
       if(!old||Number(p.seenAt||0)>Number(old.seenAt||0))picked[key]=p;
     }
@@ -3212,7 +3889,9 @@ function showPeerInfo(id){
     return;
   }
   const loc=peerDisplayLocation(p);
-  openPopup(`<div class="title">유저 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>레벨: ${p.level||1}<br>직업: ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>위치: ${escapeHtml(loc)}<br>HP: ${Math.round(p.hp||0)}/${Math.round(p.maxHp||0)}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.safeCall('showOnlineHub','false')">온라인</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+  const weapon=p.equip&&p.equip.weapon?p.equip.weapon:null;
+  const weaponLine=weapon?`<br>무기: ${escapeHtml(weapon.name||'장착 무기')} Lv.${weapon.level||1}`:'';
+  openPopup(`<div class="title">유저 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>레벨: ${p.level||1}<br>직업: ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>위치: ${escapeHtml(loc)}<br>HP: ${Math.round(p.hp||0)}/${Math.round(p.maxHp||0)}${weaponLine}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.safeCall('showOnlineHub','false')">온라인</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function connectOnline(url,key,room){return connectOnlineFromPanel();}
 function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
@@ -4073,6 +4752,7 @@ function enterField(id){
   currentField=f.id; fieldSize=Number(f.size)||1800; if(zoneTag)zoneTag.textContent=f.name||'필드';
   player.x=fieldSize/2; player.y=fieldSize/2; monsters=[]; drops=[]; projectiles=[]; effects=[]; summons=[]; npcs=[]; dungeonMap=null;
   if(f.id==='town') setupTown(); else {ensureCodexForField(f); setupField(f);}
+  try{rebaseDevDummyToPlayer('partyFollow');}catch(_){ }
 }
 function setupTown(){
   mode='town'; dungeonMap=null; fieldSize=1800; player.x=900; player.y=1080;
@@ -4280,6 +4960,7 @@ function doDamage(target,base,kind='hit',canCrit=true){
   if(target.weak)dmg*=1.25;
   dmg=Math.max(1,Math.floor(dmg*lb.deal*rnd(.84,1.08)));
   target.hp-=dmg; target.hit=.18;
+  try{recordMonsterDamage(target,myOnlineId(),sanitizeNickname(player.nickname||'플레이어'),dmg);}catch(_){ }
   effects.push({type:'text',x:target.x,y:target.y-22,t:crit?`CRIT ${dmg}`:`${dmg}`,life:.75,vy:-28,big:crit});
   effects.push({type:'spark',x:target.x,y:target.y,life:.25,r:8+Math.random()*8});
   // 흡혈 수정: 실제 피해량 기준으로 즉시 회복한다. 장비/성장/직업 흡혈이 모두 여기로 들어온다.
@@ -5274,6 +5955,47 @@ function updateAuto(dt){
     }
   }catch(e){console.error(e);player.autoMode=false;toast('오토 전투 오류 복구');}
 }
+
+function monsterActorCandidates(m){
+  const arr=[{id:myOnlineId(),kind:'player',actor:player,x:player.x,y:player.y,name:sanitizeNickname(player.nickname||'플레이어')}];
+  for(const id of devDummyIds()){
+    const p=onlineState.peers&&onlineState.peers[id];
+    if(p&&p.devDummy&&p.field===currentField&&performance.now()-(p.seenAt||0)<5000)arr.push({id:p.id,kind:'dummy',actor:p,x:Number(p.x)||0,y:Number(p.y)||0,name:p.name||'AI동료'});
+  }
+  return arr;
+}
+function monsterAggroTarget(m){
+  const arr=monsterActorCandidates(m);
+  if(!arr.length)return {id:myOnlineId(),kind:'player',actor:player,x:player.x,y:player.y};
+  const rows=m&&m.damageBy?m.damageBy:{};
+  let total=0;for(const k in rows)total+=Math.max(0,Number(rows[k]&&rows[k].dmg)||0);
+  let best=arr[0],bestScore=-Infinity;
+  for(const a of arr){
+    const d=Math.hypot((m.x||0)-a.x,(m.y||0)-a.y);
+    const dmg=rows[a.id]?Math.max(0,Number(rows[a.id].dmg)||0):0;
+    const dmgScore=total>0?(dmg/total)*1000:0;
+    const distScore=clamp((760-d)/760,0,1)*160;
+    const score=dmgScore+distScore+(a.kind==='player'?4:0);
+    if(score>bestScore){bestScore=score;best=a;}
+  }
+  return best;
+}
+function hitMonsterTarget(target,amount,m){
+  if(!target||target.kind==='player'){playerHit(amount,m);return;}
+  const d=target.actor;if(!d)return;
+  const st=devDummyStats(d);
+  const dmg=Math.max(1,Math.round((Number(amount)||1)-(Number(st.def)||0)*.45));
+  d.hp=clamp((Number(d.hp)||st.maxHp)-dmg,0,st.maxHp);
+  effects.push({type:'text',x:d.x,y:d.y-48,t:`-${dmg}`,life:.65,vy:-18});
+  effects.push({type:'spark',x:d.x,y:d.y,life:.2,r:10});
+  if(d.hp<=0){d.hp=Math.round(st.maxHp*.62);d.aiPortalTarget=null;d.aiState='후퇴 회복';if(d.field===currentField)effects.push({type:'ring',x:d.x,y:d.y,life:.7,r:34});}
+}
+function fireMonsterAtTarget(m,target){
+  if(!target||target.kind==='player'){fireMonsterProjectile(m);return;}
+  const d=target.actor;if(!d)return;
+  effects.push({type:'linepop',x:m.x,y:m.y,tx:d.x,ty:d.y});
+  hitMonsterTarget(target,m.atk,m);
+}
 function monsterAggroRange(m,los,d){
   if(los)return m.boss?760:(m.ranged?620:560);
   const roomFactor=dungeonActive()?0.45:0.75;
@@ -5307,16 +6029,19 @@ function antiStuckMonster(m,ox,oy,d,aggroed,dt){
     m.stuckTime=0;
   }
 }
+
 function updateMonsters(dt,st){
   for(const m of monsters){
     if(m.dead)continue;
     const ox=m.x, oy=m.y;
     if(m.hit>0)m.hit-=dt;if(m.slow>0)m.slow-=dt;if(m.weak>0)m.weak-=dt;if(m.poison>0){m.poison-=dt;if(Math.random()<dt*1.5)doDamage(m,st.atk*.20*st.skillPower,'poison',false);}
-    let d=dist(m,player);
-    const goal=dungeonSteerPoint(m,player.x,player.y);
+    const target=monsterAggroTarget(m);
+    const tx=Number(target.x)||player.x, ty=Number(target.y)||player.y;
+    let d=Math.hypot(m.x-tx,m.y-ty);
+    const goal=dungeonSteerPoint(m,tx,ty);
     let a=Math.atan2(goal.y-m.y,goal.x-m.x);
-    const los=dungeonLineWalkable(m.x,m.y,player.x,player.y,8);
-    const directA=Math.atan2(player.y-m.y,player.x-m.x);
+    const los=dungeonLineWalkable(m.x,m.y,tx,ty,8);
+    const directA=Math.atan2(ty-m.y,tx-m.x);
     const sp=m.speed*(m.slow>0?.45:1);
     const aggroRange=monsterAggroRange(m,los,d);
     const aggroed=d<aggroRange;
@@ -5333,39 +6058,34 @@ function updateMonsters(dt,st){
         else if(d>maxR && d<aggroRange){m.x+=Math.cos(a)*sp*.42*dt;m.y+=Math.sin(a)*sp*.42*dt;}
       }
       resolveDungeonEntity(m,ox,oy,m.boss?34:19);
-      d=dist(m,player);
+      d=Math.hypot(m.x-tx,m.y-ty);
       m.shoot=(m.shoot||0)-dt;
-      if(los && aggroed && d<maxR && m.shoot<=0){m.shoot=m.boss?rnd(1.35,2.05):(mobile?rnd(2.0,3.1):rnd(2.8,4.2));fireMonsterProjectile(m);}
+      if(los && aggroed && d<maxR && m.shoot<=0){m.shoot=m.boss?rnd(1.35,2.05):(mobile?rnd(2.0,3.1):rnd(2.8,4.2));fireMonsterAtTarget(m,target);}
     }else{
       if(aggroed){m.x+=Math.cos(a)*sp*(los?1:.42)*dt;m.y+=Math.sin(a)*sp*(los?1:.42)*dt;}
       resolveDungeonEntity(m,ox,oy,m.boss?34:19);
-      d=dist(m,player);
-      if(d<(m.boss?52:38) && dungeonLineWalkable(m.x,m.y,player.x,player.y,8)){m.shoot=(m.shoot||0)-dt;if(m.shoot<=0){m.shoot=m.boss?0.85:1.2;playerHit(m.atk,m);}}
+      d=Math.hypot(m.x-tx,m.y-ty);
+      if(d<(m.boss?52:38) && dungeonLineWalkable(m.x,m.y,tx,ty,8)){m.shoot=(m.shoot||0)-dt;if(m.shoot<=0){m.shoot=m.boss?0.85:1.2;hitMonsterTarget(target,m.atk,m);}}
     }
-    d=dist(m,player);
+    const pd=dist(m,player);
     const gap=m.boss?48:35;
-    if(d<gap){const aa=Math.atan2(player.y-m.y,player.x-m.x);const push=(gap-d||1)*0.55; const mx=m.x,my=m.y,px=player.x,py=player.y; m.x-=Math.cos(aa)*push; m.y-=Math.sin(aa)*push; player.x=clamp(player.x+Math.cos(aa)*push*0.28,28,fieldSize-28); player.y=clamp(player.y+Math.sin(aa)*push*0.28,28,fieldSize-28); resolveDungeonEntity(m,mx,my,m.boss?34:19); resolveDungeonEntity(player,px,py,22);}
+    if(pd<gap){const aa=Math.atan2(player.y-m.y,player.x-m.x);const push=(gap-pd||1)*0.55; const mx=m.x,my=m.y,px=player.x,py=player.y; m.x-=Math.cos(aa)*push; m.y-=Math.sin(aa)*push; player.x=clamp(player.x+Math.cos(aa)*push*0.28,28,fieldSize-28); player.y=clamp(player.y+Math.sin(aa)*push*0.28,28,fieldSize-28); resolveDungeonEntity(m,mx,my,m.boss?34:19); resolveDungeonEntity(player,px,py,22);}
     antiStuckMonster(m,ox,oy,d,aggroed,dt);
     const moved=Math.hypot(m.x-ox,m.y-oy);
     m.movingAnim=moved>0.22;
-    if(m.movingAnim){
-      m.moveAngle=Math.atan2(m.y-oy,m.x-ox);
-      const stride=m.boss?1.75:3.25;
-      m.walkPhase=((Number(m.walkPhase)||0)+dt*stride*clamp(moved/Math.max(1,(m.speed||60)*dt),.45,1.85))%1;
-    }else{
-      m.walkPhase=(Number(m.walkPhase)||0)*.88;
-    }
+    if(m.movingAnim){m.moveAngle=Math.atan2(m.y-oy,m.x-ox);const stride=m.boss?1.75:3.25;m.walkPhase=((Number(m.walkPhase)||0)+dt*stride*clamp(moved/Math.max(1,(m.speed||60)*dt),.45,1.85))%1;}else{m.walkPhase=(Number(m.walkPhase)||0)*.88;}
   }
   for(let i=0;i<monsters.length;i++){
     const a=monsters[i]; if(!a||a.dead)continue;
     for(let j=i+1;j<monsters.length;j++){
       const b=monsters[j]; if(!b||b.dead)continue;
-      const dx=b.x-a.x, dy=b.y-a.y, d=Math.hypot(dx,dy)||0.001, need=(a.boss||b.boss)?44:28;
-      if(d<need){const ax=a.x,ay=a.y,bx=b.x,by=b.y,push=(need-d)/2, ux=dx/d, uy=dy/d; a.x-=ux*push; a.y-=uy*push; b.x+=ux*push; b.y+=uy*push; resolveDungeonEntity(a,ax,ay,a.boss?34:19); resolveDungeonEntity(b,bx,by,b.boss?34:19);}
+      const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),min=(a.boss?42:24)+(b.boss?42:24);
+      if(d>0&&d<min){const push=(min-d)*.22,ux=dx/d,uy=dy/d; a.x-=ux*push;b.x+=ux*push;a.y-=uy*push;b.y+=uy*push;}
     }
   }
   monsters=monsters.filter(m=>!m.dead || m.hit>-.5);
 }
+
 function updateProjectiles(dt){
   for(const p of projectiles){
     p.life-=dt;
@@ -5411,30 +6131,74 @@ function updateEffects(dt){
   effects=effects.filter(e=>e.life>0);
 }
 function pickupRange(st){return clamp(90+(st.magnet||80)+(st.speed-120)*.28+(player.level-1)*.9,80,620);}
-function collectDrop(d){
+
+function localPartyLootActors(){
+  const arr=[{id:myOnlineId(),name:sanitizeNickname(player.nickname||'플레이어'),kind:'player',actor:player}];
+  if(onlineState.partyId){
+    for(const id of devDummyIds()){
+      const p=onlineState.peers&&onlineState.peers[id];
+      if(p&&p.devDummy&&p.partyId===onlineState.partyId&&p.field===currentField)arr.push({id:p.id,name:p.name||'AI동료',kind:'dummy',actor:p});
+    }
+  }
+  return arr;
+}
+function chooseDropOwnerForMonster(m){
+  if(onlineState.partyId){
+    const arr=localPartyLootActors();
+    const idx=Number(onlineState.partyLootIndex)||0;
+    onlineState.partyLootIndex=(idx+1)%Math.max(1,arr.length);
+    const pick=arr[idx%arr.length]||arr[0];
+    return {id:pick.id,name:pick.name,kind:pick.kind,party:true};
+  }
+  const top=topDamageContributor(m);
+  if(top&&isDevDummyId(top.id)){
+    const d=onlineState.peers&&onlineState.peers[top.id];
+    if(d&&d.field===currentField)return {id:d.id,name:d.name||top.name,kind:'dummy',party:false};
+  }
+  return {id:myOnlineId(),name:sanitizeNickname(player.nickname||'플레이어'),kind:'player',party:false};
+}
+function actorForDropOwner(drop){
+  if(drop&&drop.ownerId&&isDevDummyId(drop.ownerId)){
+    const d=onlineState.peers&&onlineState.peers[drop.ownerId];
+    if(d&&d.field===currentField)return {kind:'dummy',actor:d,range:145};
+  }
+  return {kind:'player',actor:player,range:pickupRange(computeStats())};
+}
+
+function collectDrop(d,collector=null){
   if(!d||d.picked||!d.item)return;
   d.picked=true; d.life=-1;
+  const info=collector||actorForDropOwner(d);
+  if(info.kind==='dummy'&&info.actor){
+    devDummyEquipLoot(info.actor,d.item);
+    effects.push({type:'text',x:info.actor.x,y:info.actor.y-48,t:`획득 ${d.item.name}`,life:1,vy:-22,big:false});
+    return;
+  }
   player.inventory.push(d.item);
   player.discoveredItems[d.item.name]=true;
   effects.push({type:'text',x:player.x,y:player.y-48,t:`획득 ${d.item.name}`,life:1,vy:-22,big:false});
   toast(`${d.item.rarity} 장비 획득`);
 }
 function updateDrops(dt){
-  const st=computeStats(),range=pickupRange(st);
   for(const d of drops){
     if(d.picked)continue;
     d.life-=dt;
-    const dx=player.x-d.x,dy=player.y-d.y,dd=Math.hypot(dx,dy);
+    const info=actorForDropOwner(d);
+    const a=info.actor||player;
+    const ax=Number(a.x)||player.x, ay=Number(a.y)||player.y;
+    const dx=ax-d.x,dy=ay-d.y,dd=Math.hypot(dx,dy);
+    const range=info.range||120;
     if(dd<range){
-      const pull=clamp(160+range*1.2,220,850);
+      const pull=clamp(180+range*1.4,240,900);
       const ux=dd>0?dx/dd:0,uy=dd>0?dy/dd:0;
       d.x+=ux*pull*dt; d.y+=uy*pull*dt;
       d.life=Math.max(d.life,8);
     }
-    if(dd<24)collectDrop(d);
+    if(dd<24)collectDrop(d,info);
   }
   drops=drops.filter(d=>!d.picked&&d.life>0);
 }
+
 function updateCamera(){
   const tx=clamp(player.x-W/2,0,Math.max(0,fieldSize-W));
   const ty=clamp(player.y-H/2,0,Math.max(0,fieldSize-H));
@@ -5963,13 +6727,14 @@ function drawFieldGround(){
 
 function drawWorldBounds(){lineStyle(.35,3);ctx.strokeRect(10,10,fieldSize-20,fieldSize-20);}
 function drawTown(){lineStyle(.28,1.3);for(let x=360;x<=1440;x+=180){ctx.beginPath();ctx.moveTo(x,520);ctx.lineTo(x,1340);ctx.stroke();}for(let y=560;y<=1320;y+=160){ctx.beginPath();ctx.moveTo(380,y);ctx.lineTo(1420,y);ctx.stroke();}const buildings=[{x:770,y:455,w:260,h:180,label:'마을회관',roof:'dome'},{x:430,y:760,w:250,h:190,label:'잡화점',roof:'flat'},{x:1130,y:760,w:250,h:190,label:'길드',roof:'tower'},{x:770,y:1365,w:260,h:180,label:'포털',roof:'gate'},{x:430,y:1120,w:250,h:160,label:'직업소개소',roof:'tower'},{x:1140,y:1120,w:250,h:160,label:'훈련소',roof:'dome'}];for(const b of buildings){lineStyle(.72,2);ctx.strokeRect(b.x,b.y,b.w,b.h);lineStyle(.36,1);for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(b.x+b.w*i/3,b.y+20);ctx.lineTo(b.x+b.w*i/3,b.y+b.h-20);ctx.stroke();}lineStyle(.82,1.8);ctx.beginPath();if(b.roof==='dome'){ctx.arc(b.x+b.w/2,b.y,Math.min(b.w*.45,75),Math.PI,0);}else if(b.roof==='tower'){ctx.moveTo(b.x+30,b.y);ctx.lineTo(b.x+b.w/2,b.y-70);ctx.lineTo(b.x+b.w-30,b.y);}else if(b.roof==='gate'){ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+b.w/2,b.y-65);ctx.lineTo(b.x+b.w,b.y);}else{ctx.moveTo(b.x+16,b.y-28);ctx.lineTo(b.x+b.w-16,b.y-28);ctx.lineTo(b.x+b.w,b.y);ctx.lineTo(b.x,b.y);ctx.closePath();}ctx.stroke();ctx.font='12px monospace';ctx.fillStyle=themeLine(.72);ctx.textAlign='center';ctx.fillText(b.label,b.x+b.w/2,b.y+b.h+18);}lineStyle(.55,1.5);ctx.beginPath();ctx.arc(900,920,120,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(900,920,58,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(780,920);ctx.lineTo(1020,920);ctx.moveTo(900,800);ctx.lineTo(900,1040);ctx.stroke();for(const n of npcs){lineStyle(.9,2);if(n.kind==='portal'){const spin=performance.now()/700;ctx.beginPath();ctx.arc(n.x,n.y,48,0,Math.PI*2);ctx.stroke();ctx.beginPath();for(let a=0;a<Math.PI*4.5;a+=.28){const r=5+a*2.7;ctx.lineTo(n.x+Math.cos(a+spin)*r,n.y+Math.sin(a+spin)*r);}ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-58,n.y+62);ctx.lineTo(n.x+58,n.y+62);ctx.stroke();}else if(n.kind==='dummy'){const sway=Math.sin(performance.now()/320)*1.5;ctx.beginPath();ctx.moveTo(n.x,n.y-38);ctx.lineTo(n.x,n.y+34);ctx.moveTo(n.x-26,n.y-16+sway);ctx.lineTo(n.x+26,n.y-16-sway);ctx.moveTo(n.x-18,n.y+34);ctx.lineTo(n.x+18,n.y+34);ctx.stroke();ctx.strokeRect(n.x-13,n.y-30,26,32);ctx.beginPath();ctx.arc(n.x,n.y-45,10,0,Math.PI*2);ctx.moveTo(n.x-18,n.y-56);ctx.lineTo(n.x+18,n.y-56);ctx.moveTo(n.x-10,n.y-62);ctx.lineTo(n.x+10,n.y-62);ctx.stroke();ctx.font='9px monospace';ctx.fillStyle=themeLine(.75);ctx.textAlign='center';ctx.fillText('50타',n.x,n.y-11);}else{ctx.beginPath();ctx.arc(n.x,n.y,20,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-15,n.y+27);ctx.lineTo(n.x+15,n.y+27);ctx.stroke();}ctx.font='12px monospace';ctx.fillStyle=themeLine(.95);ctx.textAlign='center';ctx.fillText(n.name,n.x,n.kind==='dummy'?n.y-74:(n.kind==='portal'?n.y-86:n.y-38));}}
-function drawClassWeapon(jobId, gripX, gripY, bladeAngle, atkP, leftGripX, leftGripY){
+function drawClassWeapon(jobId, gripX, gripY, bladeAngle, atkP, leftGripX, leftGripY, actor){
+  actor=actor||player||{};
   const jb=jobById(jobId||'blade');
   const job=jb.weaponBase||jb.skillBase||jobId||'blade';
   const ux=Math.cos(bladeAngle), uy=Math.sin(bladeAngle), px=Math.cos(bladeAngle+Math.PI/2), py=Math.sin(bladeAngle+Math.PI/2);
   const line=(a,w,fn)=>{lineStyle(a,w);ctx.beginPath();fn();ctx.stroke();};
   const orb=(x,y,r,a=.85)=>{lineStyle(a,1.4);ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke();};
-  if((jb.id==='adventurer') || (player.equip&&player.equip.weapon&&['나뭇가지','몽둥이'].includes(player.equip.weapon.name))){
+  if((jb.id==='adventurer') || (actor.equip&&actor.equip.weapon&&['나뭇가지','몽둥이'].includes(actor.equip.weapon.name))){
     const buttX=gripX-ux*11, buttY=gripY-uy*11;
     const midX=gripX+ux*18+px*1.6, midY=gripY+uy*18+py*1.6;
     const tipX=gripX+ux*37+px*2.4, tipY=gripY+uy*37+py*2.4;
@@ -5982,7 +6747,7 @@ function drawClassWeapon(jobId, gripX, gripY, bladeAngle, atkP, leftGripX, leftG
     return;
   }
   if(job==='ranger'){
-    const bowX=gripX+ux*8, bowY=gripY+uy*8, r=23, pull=player.attackAnim>0?Math.sin(atkP*Math.PI)*7:2;
+    const bowX=gripX+ux*8, bowY=gripY+uy*8, r=23, pull=(Number(actor.attackAnim)||0)>0?Math.sin(atkP*Math.PI)*7:2;
     line(1,1.8,()=>{ctx.arc(bowX,bowY,r,bladeAngle-Math.PI*.55,bladeAngle+Math.PI*.55);});
     line(.78,1,()=>{ctx.moveTo(bowX+Math.cos(bladeAngle-Math.PI*.55)*r,bowY+Math.sin(bladeAngle-Math.PI*.55)*r);ctx.lineTo(gripX-px*pull,gripY-py*pull);ctx.lineTo(bowX+Math.cos(bladeAngle+Math.PI*.55)*r,bowY+Math.sin(bladeAngle+Math.PI*.55)*r);});
     line(.95,1.4,()=>{ctx.moveTo(gripX-ux*11,gripY-uy*11);ctx.lineTo(gripX+ux*26,gripY+uy*26);ctx.moveTo(gripX+ux*26,gripY+uy*26);ctx.lineTo(gripX+ux*18+px*4,gripY+uy*18+py*4);ctx.moveTo(gripX+ux*26,gripY+uy*26);ctx.lineTo(gripX+ux*18-px*4,gripY+uy*18-py*4);});
@@ -6622,16 +7387,23 @@ function showOnlineHub(autoConnect=true){
   if(autoConnect==='false')autoConnect=false;
   popupMode='onlineHub';
   normalizePlayer();
+  restorePersistentParty();
+  updateDevDummyAI(0.016);
   if(autoConnect)ensureOnlineHubConnection(true,true);
   const invites=Object.values(onlineState.invites||{});
   const allOnline=onlineUserListRows();
   const near=activePeers(220,true);
   const members=onlineState.partyId?partyMembers():[];
   const inviteHtml=invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>';
-  const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b> · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${typeof fmtK==='function'?fmtK(m.hp||0):(m.hp||0)}/${typeof fmtK==='function'?fmtK(m.maxHp||0):(m.maxHp||0)}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
+  const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b>${m.id===onlineState.partyOwnerId?' <span class="small">[파티장]</span>':''} · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${typeof fmtK==='function'?fmtK(m.hp||0):(m.hp||0)}/${typeof fmtK==='function'?fmtK(m.maxHp||0):(m.maxHp||0)}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
   const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>Lv.${p.level||1} ${escapeHtml(p.name||'플레이어')}</b><br><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
-  const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자 아이디</h3></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
-  const partyGroup=`<h3>파티</h3><div class="onlineGroupBox"><div class="footerBtns"><button onclick="Game.createParty()">파티 생성</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>${onlineState.partyId?`<div class="sub">파티 ID: ${escapeHtml(onlineState.partyId)}</div>`:''}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 파티 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
+  const onlineGroup=onlineState.partyId
+    ? `<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`
+    : `<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자 아이디</h3></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
+  const partyButtons=onlineState.partyId
+    ? `<div class="footerBtns"><button onclick="Game.showTransferPartyLeader()">파티장 넘기기</button><button onclick="Game.showKickPartyMember()">내보내기</button><button onclick="Game.disbandParty()">파티해산</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>`
+    : '';
+  const partyGroup=`<h3>파티</h3><div class="onlineGroupBox">${partyButtons}${onlineState.partyId?`<div class="sub">파티 ID: ${escapeHtml(onlineState.partyId)} · ${escapeHtml(partyLeaderLabel())}</div>`:'<div class="sub">파티는 상대에게 파티 신청을 보내면 자동으로 유지됩니다.</div>'}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 파티 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
   openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function showParty(){showOnlineHub();}
@@ -6854,15 +7626,6 @@ function updateTalkPrompt(){
     btn.style.left=`${sx}px`; btn.style.top=`${sy}px`;
     return;
   }
-  const p=nearOnlinePeer(135);
-  if(p){
-    talkTarget={kind:'peer',peerId:p.id};
-    btn.textContent='정보 / 파티';btn.style.display='block';
-    const bw=btn.offsetWidth||92,bh=btn.offsetHeight||30;
-    const sx=clamp(Number(p.x)-camera.x,bw/2+8,W-bw/2-8), sy=clamp(Number(p.y)-camera.y-58,Math.max(64,bh+8),H-120);
-    btn.style.left=`${sx}px`;btn.style.top=`${sy}px`;
-    return;
-  }
   talkTarget=null;btn.style.display='none';
 }
 function handleTalkPrompt(){if(talkTarget&&talkTarget.kind==='peer'){gameSafeCall('showPeerAction',talkTarget.peerId);return;}talkToNpc(talkTarget);}
@@ -6909,6 +7672,28 @@ function bindStatPanelWideClick(){
   },{passive:false});
 }
 
+function worldPointFromClient(clientX,clientY){
+  const r=game.getBoundingClientRect();
+  const sx=(clientX-r.left)/(r.width||1), sy=(clientY-r.top)/(r.height||1);
+  return {x:camera.x+sx*W,y:camera.y+sy*H};
+}
+function peerAtClient(clientX,clientY){
+  if(popupLayer&&popupLayer.style.display==='flex')return null;
+  const pt=worldPointFromClient(clientX,clientY);
+  const now=performance.now();
+  let best=null,bd=46;
+  for(const id in onlineState.peers||{}){
+    const p=onlineState.peers[id];
+    if(!p||p.field!==currentField||now-(p.seenAt||0)>8500)continue;
+    const x=Number.isFinite(Number(p.drawX))?Number(p.drawX):Number(p.x);
+    const y=Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y);
+    if(!Number.isFinite(x)||!Number.isFinite(y))continue;
+    const d=Math.hypot(pt.x-x,pt.y-(y-8));
+    if(d<bd){bd=d;best=p;}
+  }
+  return best;
+}
+
 function bind(){
   const joy=$('joy'), stick=$('stick');
   const setJoy=(clientX,clientY)=>{const r=joy.getBoundingClientRect();const cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=clientX-cx,dy=clientY-cy;const len=Math.hypot(dx,dy),max=r.width/2-22;if(len>max){dx=dx/len*max;dy=dy/len*max;}joystick.dx=dx/max;joystick.dy=dy/max;stick.style.transform=`translate(${dx}px,${dy}px)`;};
@@ -6923,9 +7708,18 @@ function bind(){
   dodgeBtn.onclick=e=>{e.preventDefault();};
   $('potionBtn').onclick=usePotion; $('talkPrompt').onclick=handleTalkPrompt; $('statBtn').onclick=showOnlineHub; bindStatPanelWideClick(); $('bagBtn').onclick=renderBag; $('codexBtn').onclick=()=>renderCodex(true); $('settingBtn').onclick=showSettings; const lb=$('log'); if(lb)lb.onclick=showQuickChat; $('logChatBtn').onclick=()=>toggleHudLogSetting('chat'); $('logSystemBtn').onclick=()=>toggleHudLogSetting('system'); $('logCombatBtn').onclick=()=>toggleHudLogSetting('combat'); updateLogToggleButtons(); zoneTag.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
   mini.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();showFullMap();},{passive:false});
+  game.addEventListener('pointerdown',e=>{
+    if(isTextEditingTarget(e.target))return;
+    const p=peerAtClient(e.clientX,e.clientY);
+    if(p&&(e.pointerType!=='mouse'||e.shiftKey)){
+      e.preventDefault();e.stopPropagation();
+      showPeerInfo(p.id);
+      return;
+    }
+  },{passive:false});
   game.addEventListener('mousemove',e=>{updateMouseAim(e.clientX,e.clientY);},{passive:true});
   game.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')updateMouseAim(e.clientX,e.clientY);},{passive:true});
-  game.addEventListener('mousedown',e=>{if(isTextEditingTarget(e.target))return;updateMouseAim(e.clientX,e.clientY);if(e.button===0){e.preventDefault();attackHeld=true;normalAttack(false);}else if(e.button===2){e.preventDefault();dodge(true);}}, {passive:false});
+  game.addEventListener('mousedown',e=>{if(isTextEditingTarget(e.target))return;const p=(e.shiftKey?peerAtClient(e.clientX,e.clientY):null);if(p){e.preventDefault();e.stopPropagation();showPeerInfo(p.id);return;}updateMouseAim(e.clientX,e.clientY);if(e.button===0){e.preventDefault();attackHeld=true;normalAttack(false);}else if(e.button===2){e.preventDefault();dodge(true);}}, {passive:false});
   window.addEventListener('mouseup',e=>{if(e.button===0)attackHeld=false;}, {passive:true});
   document.addEventListener('keydown',e=>{
     if(isTextEditingTarget(e.target)||e.repeat)return;
@@ -7058,7 +7852,7 @@ function safeConnectOnlineFromPanel(){
 }
 
 applyThemeColors();
-window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSkillInfoPanel,showSkillSlotSelectPopup,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,setAutoBattleType,showSkillInfoPanel,showSkillSlotSettings,clearSkillSlots,beginSkillDrag,beginSkillPointerDrag,skillSlotDragOver,skillSlotDragLeave,dropSkillOnSlot,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,disbandParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSkillInfoPanel,showSkillSlotSelectPopup,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showTransferPartyLeader,transferPartyLeader,showKickPartyMember,kickPartyMember,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,setAutoBattleType,showSkillInfoPanel,showSkillSlotSettings,clearSkillSlots,beginSkillDrag,beginSkillPointerDrag,skillSlotDragOver,skillSlotDragLeave,dropSkillOnSlot,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 try{
   window.showPeerAction=(id)=>gameSafeCall('showPeerAction',id);
   globalThis.showPeerAction=window.showPeerAction;
