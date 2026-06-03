@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_090_stage_portal_progression -->
+<!-- build: index6_094_death_cooldown_portal_ai -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -2143,9 +2143,17 @@ function handleStagePortalOpen(p){
 }
 function usePrevStagePortal(){
   const target=prevStageId(currentField)||'town';
+  const f=stageField(target);
+  const label=target==='town'?'네온 마을':(f?f.name:'이전 맵');
+  openPopup(`<div class="title">이전 포털 이동</div><div class="sub">${escapeHtml(label)}로 이동하시겠습니까?</div><div class="footerBtns"><button onclick="Game.confirmPrevStagePortal()">확인</button><button onclick="Game.safeCall('closePopup')">취소</button></div>`);
+}
+function confirmPrevStagePortal(){
+  const target=prevStageId(currentField)||'town';
+  closePopup();
   enterField(target);
   updateHud();
   toast(target==='town'?'마을로 이동':'이전 맵 이동');
+  requestCloudSave('prevStagePortal',true);
 }
 function useNextStagePortal(){
   const target=nextStageId(currentField);
@@ -4107,6 +4115,24 @@ function castHighTierSkill(aj,rank,st,skAtk,pow,radius,range){
   }
   return true;
 }
+function skillCooldownFactor(aj,slot,rank){
+  slot=clamp(Number(slot)||1,1,4);
+  const summonLike=['summoner','mechanic'];
+  if(summonLike.includes(aj)){
+    const table=[.88,1.06,1.24,1.46];
+    return table[slot-1]||1;
+  }
+  if(aj==='paladin'||aj==='mirror')return [1.04,.92,1.18,1.34][slot-1]||1;
+  if(aj==='mage'||aj==='hexer'||aj==='alchemist')return [.96,1.08,1.22,1.40][slot-1]||1;
+  return [.94,1.02,1.16,1.30][slot-1]||1;
+}
+function summonAttackCooldown(s){
+  if(!s)return .85;
+  if(Number.isFinite(Number(s.attackCd)))return Math.max(.18,Number(s.attackCd));
+  const base=s.kind==='turret'?.58:.88;
+  const power=Math.max(.5,Math.min(2.4,Number(s.atk)||1));
+  return Math.max(.28,base*(s.kind==='turret'?1:1.06)*(power>80?.92:1));
+}
 function useSkill(slot=1,fromAuto=false){
   slot=clamp(Number(slot)||1,1,4); const idx=slot-1;
   const st=computeStats(); if((player.skillTimers&&player.skillTimers[idx]>0)||player.skillTimer>0)return;
@@ -4122,7 +4148,7 @@ function useSkill(slot=1,fromAuto=false){
   const range=105+rank*7;
 
   if(fromAuto && !autoSkillCanCast(aj,rank,st,radius,range))return;
-  const cd=Math.max(1.35,cdBase*(1-st.cooldown)*sc.cooldown);
+  const cd=Math.max(1.05,cdBase*(1-st.cooldown)*sc.cooldown*skillCooldownFactor(aj,slot,rank));
   player.skillTimers[idx]=cd;
   player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];
   player.skillTimerMax[idx]=cd;
@@ -4211,6 +4237,28 @@ function usePotion(key=null,silent=false){
   if(!silent)toast(`${c.name} 사용`);
   return true;
 }
+function handlePlayerDeath(source=null){
+  normalizePlayer();
+  const curExp=Math.max(0,Math.floor(Number(player.exp)||0));
+  const nextExp=Math.max(1,Math.floor(Number(player.nextExp)||100));
+  const curGold=Math.max(0,Math.floor(Number(player.gold)||0));
+  const expLoss=Math.min(curExp,Math.max(3,Math.round(nextExp*.08)));
+  const goldLoss=Math.min(curGold,Math.max(20,Math.round(curGold*.08)));
+  player.exp=Math.max(0,curExp-expLoss);
+  player.gold=Math.max(0,curGold-goldLoss);
+  player.hp=player.maxHp;
+  player.shield=0;
+  player.dashTime=0;
+  player.hurt=0;
+  player.autoPathCache=null;
+  player.autoStuckTimer=0;
+  enterField('town');
+  updateHud();
+  const reason=source&&source.name?` · ${source.name}`:'';
+  msg(`사망 패널티${reason} · -${expLoss}XP -${goldLoss}G`, 'system');
+  toast(`쓰러짐 · 경험치 ${expLoss} / 골드 ${goldLoss} 감소`);
+  requestCloudSave('deathPenalty',true);
+}
 function playerHit(dmg,source){
   const st=computeStats();
   if(player.dashTime>0 || Math.random()<st.dodge){effects.push({type:'text',x:player.x,y:player.y-28,t:'회피',life:.65,vy:-22});return;}
@@ -4220,7 +4268,7 @@ function playerHit(dmg,source){
   player.hp-=final; player.hurt=.25;
   effects.push({type:'text',x:player.x,y:player.y-26,t:`-${final}`,life:.6,vy:-20});
   if(source && st.reflect>0){const rd=Math.max(1,Math.round(final*st.reflect));doDamage(source,rd,'reflect',false);effects.push({type:'text',x:source.x,y:source.y-40,t:`반사 ${rd}`,life:.7,vy:-22});}
-  if(player.hp<=0){player.hp=player.maxHp;player.gold=Math.max(0,player.gold-50);enterField('town');toast('쓰러졌습니다. 마을로 복귀');}
+  if(player.hp<=0)handlePlayerDeath(source);
 }
 
 function openGrowth(){
@@ -4542,6 +4590,7 @@ function update(dt){
   const mag=Math.hypot(joystick.dx,joystick.dy); if(mag>.05){const px=player.x,py=player.y;player.dir=Math.atan2(joystick.dy,joystick.dx);player.x=clamp(player.x+joystick.dx*st.speed*dt,28,fieldSize-28);player.y=clamp(player.y+joystick.dy*st.speed*dt,28,fieldSize-28);resolveDungeonEntity(player,px,py,22);}
   if(player.dashTime>0){const px=player.x,py=player.y,dashSpeed=420;player.x=clamp(player.x+Math.cos(player.dir)*dashSpeed*dt,28,fieldSize-28);player.y=clamp(player.y+Math.sin(player.dir)*dashSpeed*dt,28,fieldSize-28);resolveDungeonEntity(player,px,py,22);}
   resolveDungeonEntity(player,oldX,oldY,22);
+  autoEscapePlayerStuck(oldX,oldY,dt,mag>.05||player.autoMode||attackHeld||skillHeld.some(Boolean));
   player.movingAnim=Math.hypot(player.x-oldX,player.y-oldY)>0.05;
   updateMonsters(dt,st); updateProjectiles(dt); updateSummons(dt); updateEffects(dt); updateDrops(dt); updateCamera(); updateHud(); updateTalkPrompt(); updatePortalTrigger(); if(typeof updateOnline==='function')updateOnline(dt); autoCloudSaveTick(dt);
 }
@@ -4598,7 +4647,56 @@ function autoKeepInsideField(st,dt){
   if(dx||dy){autoMoveVector(dx,dy,st,dt,.85);return true;}
   return false;
 }
-function autoDodgeIncoming(st,dt){
+function findEscapePoint(o,rad=18,targetX=null,targetY=null){
+  if(!o)return null;
+  if(!dungeonActive())return {x:clamp(o.x,rad,fieldSize-rad),y:clamp(o.y,rad,fieldSize-rad)};
+  if(!dungeonPointWalkable(o.x,o.y,rad))return nearestDungeonPoint(o.x,o.y,rad);
+  const hasTarget=Number.isFinite(Number(targetX))&&Number.isFinite(Number(targetY));
+  const base=hasTarget?Math.atan2(Number(targetY)-o.y,Number(targetX)-o.x):Number(o.dir)||0;
+  const dirs=[base+Math.PI/2,base-Math.PI/2,base,base+Math.PI,base+Math.PI/4,base-Math.PI/4,base+Math.PI*.75,base-Math.PI*.75,0,Math.PI/2,Math.PI,Math.PI*1.5];
+  let best=null,score=Infinity;
+  for(const len of [rad+26,rad+48,rad+76,rad+110]){
+    for(const a of dirs){
+      const x=clamp(o.x+Math.cos(a)*len,rad,fieldSize-rad), y=clamp(o.y+Math.sin(a)*len,rad,fieldSize-rad);
+      if(!dungeonPointWalkable(x,y,rad))continue;
+      if(!dungeonLineWalkable(o.x,o.y,x,y,Math.max(6,rad*.55)))continue;
+      const toward=hasTarget?Math.hypot(x-Number(targetX),y-Number(targetY)):len;
+      const sidePenalty=Math.abs(Math.sin(a-base))<.18?18:0;
+      const sc=toward+sidePenalty+rnd(0,8);
+      if(sc<score){score=sc;best={x,y};}
+    }
+    if(best)return best;
+  }
+  return nearestDungeonPoint(o.x,o.y,rad);
+}
+function autoEscapePlayerStuck(ox,oy,dt,inputActive=false){
+  if(!dungeonActive())return;
+  if(!dungeonPointWalkable(player.x,player.y,22)){
+    const p=nearestDungeonPoint(Number.isFinite(ox)?ox:player.x,Number.isFinite(oy)?oy:player.y,22);
+    player.x=p.x;player.y=p.y;player.autoStuckTimer=0;return;
+  }
+  const moved=Math.hypot(player.x-ox,player.y-oy);
+  if(inputActive&&moved<0.18)player.autoStuckTimer=(player.autoStuckTimer||0)+dt;
+  else player.autoStuckTimer=Math.max(0,(player.autoStuckTimer||0)-dt*2.2);
+  if(player.autoStuckTimer>.26){
+    const goal=player.autoMode&&player.autoRoamPoint?player.autoRoamPoint:nearestMonster(760,true);
+    const p=findEscapePoint(player,22,goal&&goal.x,goal&&goal.y);
+    if(p){const ox2=player.x,oy2=player.y;player.x=p.x;player.y=p.y;resolveDungeonEntity(player,ox2,oy2,22);player.autoPathCache=null;}
+    player.autoStuckTimer=0;
+  }
+}
+function autoThreatDamageRatio(mon,st){
+  if(!mon)return 0;
+  const raw=Math.max(1,(Number(mon.atk)||1)-(Number(st.def)||0)*.65);
+  const scaled=raw*(mon.boss?1.35:(mon.elite?1.15:1));
+  return scaled/Math.max(1,Number(player.maxHp)||1);
+}
+function hasAutoRecoveryReady(){
+  if(player.potionTimer>0)return false;
+  const c=player.consumables||{};
+  return ['potionL','elixir','shield','haste','potion'].some(k=>(Number(c[k])||0)>0);
+}
+function autoDodgeIncoming(st,dt,force=false){
   let danger=null,bd=999;
   for(const p of projectiles){
     if(!p||!p.hostile)continue;
@@ -4606,10 +4704,13 @@ function autoDodgeIncoming(st,dt){
     if(d<bd&&d<150){bd=d;danger=p;}
   }
   if(!danger)return false;
+  const hpPct=player.maxHp>0?player.hp/player.maxHp:1;
+  const dmgRatio=Math.max(0,(Number(danger.damage)||1)/Math.max(1,player.maxHp));
+  if(!force && hpPct>.36 && dmgRatio<.035)return false;
   const a=Number.isFinite(danger.angle)?danger.angle:Math.atan2(player.y-danger.y,player.x-danger.x);
   const side=setAutoSide(a,.75);
   autoMoveVector(Math.cos(a+Math.PI/2*side),Math.sin(a+Math.PI/2*side),st,dt,1.05);
-  if(bd<72&&player.dodgeTimer<=0){player.dir=angleLerp(player.dir,a+Math.PI/2*side,.35);dodge();}
+  if((force||hpPct<.42||dmgRatio>.045)&&bd<72&&player.dodgeTimer<=0){player.dir=angleLerp(player.dir,a+Math.PI/2*side,.35);dodge();}
   return true;
 }
 function autoTryDefensiveSkill(){
@@ -4672,8 +4773,11 @@ function updateAuto(dt){
     const threat=autoThreatInfo(760);
     const close=threat.nearest, closeD=threat.d;
     const d=dist(player,target);
+    const damageRatio=autoThreatDamageRatio(close,st);
+    const potionReady=hasAutoRecoveryReady();
+    const mustRetreat=(hpPct<.23&&!potionReady)||(hpPct<.32&&damageRatio>.025)||(hpPct<.46&&close&&closeD<118&&damageRatio>.060);
 
-    if(hpPct<.34 || (hpPct<.50 && close && closeD<135)){
+    if(mustRetreat){
       if(player.potionTimer<=0){if(!usePotion(player.potionSlot,true))usePotion(null,true);}
       autoTryDefensiveSkill();
       const ax=threat.awayX||player.x-target.x, ay=threat.awayY||player.y-target.y;
@@ -4688,10 +4792,11 @@ function updateAuto(dt){
       const attackRange=Math.max(180,(profile.range||360)*.86);
       const ideal=clamp((profile.range||360)*.58,190,390);
       const tooClose=Math.max(105,ideal*.52);
+      const kiteNeeded=damageRatio>.045||hpPct<.42||(close&&closeD<78&&damageRatio>.022);
       if(d>attackRange){
         autoMoveToward(target.x,target.y,st,dt,1.02);
-      }else{
-        const dodgingProjectile=autoDodgeIncoming(st,dt);
+      }else if(kiteNeeded){
+        const dodgingProjectile=autoDodgeIncoming(st,dt,true);
         if(!dodgingProjectile){
           if(d<tooClose){autoMoveVector(player.x-target.x,player.y-target.y,st,dt,.62);}
           else if(d>ideal+80){autoMoveToward(target.x,target.y,st,dt,.62);}
@@ -4701,17 +4806,21 @@ function updateAuto(dt){
             autoMoveVector(Math.cos(a+Math.PI/2*side),Math.sin(a+Math.PI/2*side),st,dt,.24);
           }
         }
+      }else{
+        player.dir=angleLerp(player.dir,Math.atan2(target.y-player.y,target.x-player.x),.18);
+        if(d>ideal+105)autoMoveToward(target.x,target.y,st,dt,.55);
       }
     }else{
       const attackRange=Math.max(48,(st.range||82)*.72);
-      const dodgingProjectile=autoDodgeIncoming(st,dt);
+      const dodgingProjectile=autoDodgeIncoming(st,dt,hpPct<.42||damageRatio>.040);
       if(!dodgingProjectile){
         if(d>attackRange){autoMoveToward(target.x,target.y,st,dt,1.0);}
-        else if(d<34){autoMoveVector(player.x-target.x,player.y-target.y,st,dt,.55);}
+        else if(d<34&&damageRatio>.030){autoMoveVector(player.x-target.x,player.y-target.y,st,dt,.55);}
         else{
           const a=Math.atan2(target.y-player.y,target.x-player.x);
           const side=setAutoSide(a,1.05);
-          autoMoveVector(Math.cos(a+Math.PI/2*side),Math.sin(a+Math.PI/2*side),st,dt,.22);
+          if(damageRatio>.035||hpPct<.45)autoMoveVector(Math.cos(a+Math.PI/2*side),Math.sin(a+Math.PI/2*side),st,dt,.22);
+          else player.dir=angleLerp(player.dir,a,.18);
         }
       }
     }
@@ -4727,27 +4836,25 @@ function monsterAggroRange(m,los,d){
   return (m.boss?430:(m.ranged?300:240))*roomFactor;
 }
 function antiStuckMonster(m,ox,oy,d,aggroed,dt){
-  if(!m||!dungeonActive())return;
+  if(!m)return;
   const rad=m.boss?34:19;
+  if(!dungeonActive()){m.x=clamp(m.x,rad,fieldSize-rad);m.y=clamp(m.y,rad,fieldSize-rad);return;}
   if(!dungeonPointWalkable(m.x,m.y,rad)){
     const p=nearestDungeonPoint(Number.isFinite(ox)?ox:m.x,Number.isFinite(oy)?oy:m.y,rad);
     m.x=p.x; m.y=p.y; m.stuckTime=0; return;
   }
   const moved=Math.hypot(m.x-ox,m.y-oy);
-  if(aggroed && d>55 && moved<0.18)m.stuckTime=(m.stuckTime||0)+dt;
-  else m.stuckTime=Math.max(0,(m.stuckTime||0)-dt*1.6);
-  if(m.stuckTime>1.05){
-    let best=null,bd=Infinity;
-    for(const w of dungeonMap.waypoints||[]){
-      if(!dungeonLineWalkable(m.x,m.y,w.x,w.y,12))continue;
-      const score=(w.x-player.x)*(w.x-player.x)+(w.y-player.y)*(w.y-player.y);
-      if(score<bd){bd=score;best=w;}
-    }
-    const goal=best||dungeonSteerPoint(m,player.x,player.y);
-    const a=Math.atan2(goal.y-m.y,goal.x-m.x);
+  if((aggroed||m.ranged) && d>45 && moved<0.20)m.stuckTime=(m.stuckTime||0)+dt;
+  else m.stuckTime=Math.max(0,(m.stuckTime||0)-dt*1.8);
+  if(m.stuckTime>.42){
+    const steer=dungeonSteerPoint(m,player.x,player.y);
+    const sideGoal=findEscapePoint(m,rad,steer.x,steer.y);
+    const goal=sideGoal||steer;
     const px=m.x,py=m.y;
-    m.x+=Math.cos(a)*Math.max(18,(m.speed||70)*0.32);
-    m.y+=Math.sin(a)*Math.max(18,(m.speed||70)*0.32);
+    const a=Math.atan2(goal.y-m.y,goal.x-m.x);
+    const step=Math.max(22,Math.min(78,(m.speed||70)*0.55));
+    m.x=clamp(m.x+Math.cos(a)*step,rad,fieldSize-rad);
+    m.y=clamp(m.y+Math.sin(a)*step,rad,fieldSize-rad);
     resolveDungeonEntity(m,px,py,rad);
     if(!dungeonPointWalkable(m.x,m.y,rad)){
       const p=nearestDungeonPoint(px,py,rad);
@@ -4851,7 +4958,7 @@ function updateProjectiles(dt){
 }
 function updateSummons(dt){
   for(const s of summons){s.life-=dt;s.cd-=dt;if(s.kind==='spirit'){const a=Math.atan2(player.y-s.y,player.x-s.x);if(Math.hypot(player.x-s.x,player.y-s.y)>80){s.x+=Math.cos(a)*120*dt;s.y+=Math.sin(a)*120*dt;}}
-    if(s.cd<=0){const t=nearestFrom(s,220);if(t){s.cd=s.kind==='turret'?.55:.85;projectiles.push({x:s.x,y:s.y,target:t.id,speed:420,damage:s.atk,life:1.2,kind:'summon'});}}
+    if(s.cd<=0){const t=nearestFrom(s,220);if(t){s.cd=summonAttackCooldown(s);projectiles.push({x:s.x,y:s.y,target:t.id,speed:420,damage:s.atk,life:1.2,kind:'summon'});}}
   } summons=summons.filter(s=>s.life>0);
 }
 function nearestFrom(o,range){let b=null,bd=range;for(const m of monsters){if(m.dead)continue;const d=Math.hypot(m.x-o.x,m.y-o.y);if(d<bd){bd=d;b=m;}}return b;}
@@ -6353,7 +6460,7 @@ function safeConnectOnlineFromPanel(){
   return false;
 }
 
-window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 try{
   window.showPeerAction=(id)=>gameSafeCall('showPeerAction',id);
   globalThis.showPeerAction=window.showPeerAction;
