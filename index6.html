@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_077_online_identity_keepalive -->
+<!-- build: index6_079_peer_smooth_safe -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -2064,22 +2064,18 @@ function sanitizePeerPayload(p,seenAt=performance.now()){
   const x=Number(p.x),y=Number(p.y);
   if(!id||!Number.isFinite(x)||!Number.isFinite(y))return null;
   const prev=onlineState.peers&&onlineState.peers[id];
-  const prevField=prev?String(prev.field||'town'):String(p.field||'town');
   const field=String(p.field||'town');
+  const prevField=prev?String(prev.field||'town'):field;
   const oldDrawX=Number(prev&&Number.isFinite(Number(prev.drawX))?prev.drawX:x);
   const oldDrawY=Number(prev&&Number.isFinite(Number(prev.drawY))?prev.drawY:y);
-  const oldTargetX=Number(prev&&Number.isFinite(Number(prev.targetX))?prev.targetX:oldDrawX);
-  const oldTargetY=Number(prev&&Number.isFinite(Number(prev.targetY))?prev.targetY:oldDrawY);
-  const oldSeen=Number(prev&&Number.isFinite(Number(prev.seenAt))?prev.seenAt:seenAt);
-  const packetSec=clamp((seenAt-oldSeen)/1000,.28,1.15);
-  const moved=Math.hypot(x-oldTargetX,y-oldTargetY);
-  const snap=!prev||field!==prevField||moved>420||Math.hypot(x-oldDrawX,y-oldDrawY)>520;
-  const vx=snap?0:(x-oldTargetX)/Math.max(.18,packetSec);
-  const vy=snap?0:(y-oldTargetY)/Math.max(.18,packetSec);
-  const dirFromVel=Math.hypot(vx,vy)>4?Math.atan2(vy,vx):Number(p.dir)||0;
-  const interpMs=snap?0:clamp(packetSec*1180,360,1320);
+  const oldTargetX=Number(prev&&Number.isFinite(Number(prev.targetX))?prev.targetX:x);
+  const oldTargetY=Number(prev&&Number.isFinite(Number(prev.targetY))?prev.targetY:y);
+  const moved=prev?Math.hypot(x-oldTargetX,y-oldTargetY):0;
+  const snap=!prev||field!==prevField||moved>360||Math.hypot(x-oldDrawX,y-oldDrawY)>420;
   const drawX=snap?x:oldDrawX;
   const drawY=snap?y:oldDrawY;
+  const dirByMove=(!snap&&moved>3)?Math.atan2(y-oldTargetY,x-oldTargetX):(Number(prev&&prev.dir)||0);
+  const moving=!!p.moving||(!snap&&moved>1.5);
   return {
     id,
     userId:String(p.userId||''),
@@ -2094,20 +2090,14 @@ function sanitizePeerPayload(p,seenAt=performance.now()){
     targetY:y,
     drawX,
     drawY,
-    fromX:drawX,
-    fromY:drawY,
     prevTargetX:oldTargetX,
     prevTargetY:oldTargetY,
-    vx,
-    vy,
-    interpStart:seenAt,
-    interpEnd:seenAt+interpMs,
-    lastMoveAt:moved>1.2?seenAt:(prev&&prev.lastMoveAt)||seenAt,
-    dir:dirFromVel,
+    lastMoveAt:moving?seenAt:(prev&&prev.lastMoveAt)||seenAt,
+    dir:Number.isFinite(Number(p.dir))?Number(p.dir):dirByMove,
     hp:Math.max(0,Number(p.hp)||0),
     maxHp:Math.max(1,Number(p.maxHp)||1),
-    moving:!!p.moving||moved>2.5||Math.hypot(vx,vy)>8,
-    visualMoving:!!p.moving||moved>2.5||Math.hypot(vx,vy)>8,
+    moving,
+    visualMoving:moving,
     partyId:String(p.partyId||''),
     ts:Number(p.ts)||Date.now(),
     seenAt
@@ -2121,32 +2111,18 @@ function smoothPeerPosition(p,dt){
   let dx=Number.isFinite(Number(p.drawX))?Number(p.drawX):tx;
   let dy=Number.isFinite(Number(p.drawY))?Number(p.drawY):ty;
   const gap=Math.hypot(tx-dx,ty-dy);
-  if(!Number.isFinite(gap)||gap>520){
+  if(!Number.isFinite(gap)||gap>420){
     p.drawX=tx;
     p.drawY=ty;
     p.visualMoving=false;
     return;
   }
-  const start=Number(p.interpStart)||now;
-  const end=Math.max(start+1,Number(p.interpEnd)||now);
-  const raw=clamp((now-start)/(end-start),0,1);
-  const ease=raw*raw*(3-2*raw);
-  let baseX=Number.isFinite(Number(p.fromX))?Number(p.fromX):dx;
-  let baseY=Number.isFinite(Number(p.fromY))?Number(p.fromY):dy;
-  let targetX=baseX+(tx-baseX)*ease;
-  let targetY=baseY+(ty-baseY)*ease;
-  if(raw>=1&&now-end<360){
-    const extra=(now-end)/1000;
-    const vx=Number(p.vx)||0,vy=Number(p.vy)||0;
-    targetX=tx+vx*extra*.38;
-    targetY=ty+vy*extra*.38;
-    if(Math.hypot(targetX-tx,targetY-ty)>38){targetX=tx;targetY=ty;}
-  }
-  const follow=1-Math.exp(-Math.max(.001,dt||.016)*32);
-  p.drawX=dx+(targetX-dx)*follow;
-  p.drawY=dy+(targetY-dy)*follow;
-  const v=Math.hypot(Number(p.vx)||0,Number(p.vy)||0);
-  p.visualMoving=raw<1||gap>1.8||v>7||now-(Number(p.lastMoveAt)||0)<260;
+  const follow=1-Math.exp(-Math.max(0.001,dt||0.016)*12.5);
+  p.drawX=dx+(tx-dx)*follow;
+  p.drawY=dy+(ty-dy)*follow;
+  const left=Math.hypot(tx-p.drawX,ty-p.drawY);
+  p.visualMoving=left>1.2||now-(Number(p.lastMoveAt)||0)<320;
+  if(left<=1.2){p.drawX=tx;p.drawY=ty;}
 }
 function updateOnlinePeerSmoothing(dt){
   for(const id in onlineState.peers){
@@ -2638,31 +2614,19 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {
-    "ver": "현재 패치 078",
-    "text": "- 상대 유저 좌표 수신 시 순간이동하지 않고 보간 이동 처리
-- 패킷 간격 기준 ease 보간과 원격 이동 애니메이션 보강
-- 큰 거리/필드 이동은 텔레포트로 처리해 잔상 오류 방지"
-  },
-  {
-    "ver": "이전 패치 073",
-    "text": "- 온라인/파티 함수 참조 오류를 안전 정리
+  {"ver":"현재 패치 079","text":"- 상대 유저 부드러운 이동 패치를 안전형 보간으로 재정리
+- 예측 이동/추가 보간값을 제거해 게임 루프 충돌 가능성 차단
+- 큰 이동/필드 이동은 즉시 위치 보정, 일반 이동만 부드럽게 표시"},
+  {"ver":"이전 패치 073","text":"- 온라인/파티 함수 참조 오류를 안전 정리
 - showPeerAction/connectOnlineFromPanel/requestPartyToPeer 전역 호출 방어
 - 버튼 클릭은 Game.safeCall 경유로 실행되도록 보강
 - 온라인 재접속 호출이 누락되어도 게임이 멈추지 않게 처리
-- 렉 완화를 위해 온라인 재접속 재시도 간격 증가"
-  },
-  {
-    "ver": "이전 패치 072",
-    "text": "- connectOnlineFromPanel 미정의 오류 수정
+- 렉 완화를 위해 온라인 재접속 재시도 간격 증가"},
+  {"ver":"이전 패치 072","text":"- connectOnlineFromPanel 미정의 오류 수정
 - 온라인 재접속 관련 버튼 호출을 Game 경유로 통일
-- window/globalThis에 connectOnlineFromPanel 강제 등록"
-  },
-  {
-    "ver": "이전 패치 071",
-    "text": "- showPeerAction 전역 미등록으로 인한 ReferenceError 재수정
-- 필드 상호작용 호출부를 Game.showPeerAction 경유로 변경"
-  }
+- window/globalThis에 connectOnlineFromPanel 강제 등록"},
+  {"ver":"이전 패치 071","text":"- showPeerAction 전역 미등록으로 인한 ReferenceError 재수정
+- 필드 상호작용 호출부를 Game.showPeerAction 경유로 변경"}
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
