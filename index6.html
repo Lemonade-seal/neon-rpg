@@ -4,9 +4,9 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_099_graphics_full_theme_fix -->
+<!-- build: index6_110_skill_slot_select_popup -->
 <style>
-  :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
+  :root{--g:#00ff72;--obj-rgb:0,255,114;--gd:rgba(var(--obj-rgb),.55);--gf:rgba(var(--obj-rgb),.18);--gb:rgba(var(--obj-rgb),.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
   html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:var(--g);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Apple SD Gothic Neo","Noto Sans KR",monospace;touch-action:none;overscroll-behavior:none;}
   #wrap{position:fixed;inset:0;background:#000;overflow:hidden;}
@@ -15,48 +15,48 @@
   .panel{border:1px solid var(--gd);box-shadow:0 0 14px var(--gb), inset 0 0 14px var(--gb);background:rgba(0,0,0,.72);border-radius:12px;padding:8px;}
   .stats{font-size:11px;line-height:1.25;display:grid;gap:4px;width:min(280px,calc(100vw - 136px));min-height:82px;}
   .row{display:flex;gap:6px;align-items:center;justify-content:space-between;white-space:nowrap;}
-  .bar{height:6px;border:1px solid var(--gd);border-radius:999px;overflow:hidden;background:rgba(0,255,114,.06);}
-  .fill{height:100%;width:50%;background:linear-gradient(90deg,rgba(0,255,114,.55),rgba(0,255,114,.95));box-shadow:0 0 10px var(--g);}
+  .bar{height:6px;border:1px solid var(--gd);border-radius:999px;overflow:hidden;background:rgba(var(--obj-rgb),.06);}
+  .fill{height:100%;width:50%;background:linear-gradient(90deg,rgba(var(--obj-rgb),.55),rgba(var(--obj-rgb),.95));box-shadow:0 0 10px var(--g);}
   .topBtns{display:flex;gap:6px;pointer-events:auto;align-items:flex-start;}
   .menuBtns{display:grid;grid-template-columns:repeat(2,52px);gap:5px;align-self:stretch;}
   .menuBtns button{height:38px;padding:4px 3px;font-size:11px;border-radius:9px;}
-  button{background:#000;color:var(--g);border:1px solid var(--gd);border-radius:11px;padding:8px 9px;font-family:inherit;font-weight:800;box-shadow:0 0 10px var(--gb), inset 0 0 10px rgba(0,255,114,.05);touch-action:manipulation;}
-  button:active{transform:translateY(1px);background:rgba(0,255,114,.12);}
+  button{background:#000;color:var(--g);border:1px solid var(--gd);border-radius:11px;padding:8px 9px;font-family:inherit;font-weight:800;box-shadow:0 0 10px var(--gb), inset 0 0 10px rgba(var(--obj-rgb),.05);touch-action:manipulation;}
+  button:active{transform:translateY(1px);background:rgba(var(--obj-rgb),.12);}
   button:disabled{opacity:.32;}
   #zoneTag{position:absolute;left:50%;top:86px;transform:translateX(-50%);z-index:4;border:1px solid var(--gd);border-radius:999px;padding:5px 10px;background:rgba(0,0,0,.66);font-size:11px;box-shadow:0 0 12px var(--gb);pointer-events:none;}
-  #joy{position:absolute;left:18px;bottom:28px;width:116px;height:116px;border:1px solid var(--gd);border-radius:50%;z-index:6;background:rgba(0,255,114,.03);box-shadow:0 0 18px var(--gb), inset 0 0 18px rgba(0,255,114,.04);touch-action:none;}
+  #joy{position:absolute;left:18px;bottom:28px;width:116px;height:116px;border:1px solid var(--gd);border-radius:50%;z-index:6;background:rgba(var(--obj-rgb),.03);box-shadow:0 0 18px var(--gb), inset 0 0 18px rgba(var(--obj-rgb),.04);touch-action:none;}
   #stick{position:absolute;left:38px;top:38px;width:40px;height:40px;border:2px solid var(--g);border-radius:50%;box-shadow:0 0 16px var(--gd);background:rgba(0,0,0,.85);}
   #actions{position:absolute;right:14px;bottom:24px;z-index:6;display:grid;grid-template-columns:62px 62px;gap:8px;}
   #actions button{height:54px;font-size:12px;line-height:1.05;padding:4px;}
-  #talkPrompt{position:absolute;z-index:9;display:none;transform:translate(-50%,-100%);font-size:11px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.88);white-space:nowrap;box-shadow:0 0 14px var(--gb), inset 0 0 10px rgba(0,255,114,.06);}
+  #talkPrompt{position:absolute;z-index:9;display:none;transform:translate(-50%,-100%);font-size:11px;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.88);white-space:nowrap;box-shadow:0 0 14px var(--gb), inset 0 0 10px rgba(var(--obj-rgb),.06);}
   .cool{font-size:10px;opacity:.8;display:block;margin-top:2px;}
-  #mini{position:static;width:82px;height:82px;border:1px solid var(--gd);border-radius:12px;background:rgba(0,0,0,.72);z-index:5;box-shadow:0 0 13px var(--gb), inset 0 0 12px rgba(0,255,114,.04);}
+  #mini{position:static;width:82px;height:82px;border:1px solid var(--gd);border-radius:12px;background:rgba(0,0,0,.72);z-index:5;box-shadow:0 0 13px var(--gb), inset 0 0 12px rgba(var(--obj-rgb),.04);}
   #popupLayer{position:absolute;inset:0;z-index:20;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.74);padding:14px;}
-  #popup{position:relative;width:min(430px,100%);max-height:88vh;overflow:auto;border:1px solid var(--g);border-radius:18px;background:#000;box-shadow:0 0 28px rgba(0,255,114,.26), inset 0 0 22px rgba(0,255,114,.05);padding:14px;}
-  .popupCloseX{position:sticky;top:0;float:right;z-index:5;width:30px;height:30px;min-width:30px;padding:0;margin:-5px -5px 5px 8px;border-radius:9px;font-size:13px;line-height:1;background:#000;color:var(--g);border:1px solid var(--gd);box-shadow:0 0 10px var(--gb), inset 0 0 8px rgba(0,255,114,.06);}
+  #popup{position:relative;width:min(430px,100%);max-height:88vh;overflow:auto;border:1px solid var(--g);border-radius:18px;background:#000;box-shadow:0 0 28px rgba(var(--obj-rgb),.26), inset 0 0 22px rgba(var(--obj-rgb),.05);padding:14px;}
+  .popupCloseX{position:sticky;top:0;float:right;z-index:5;width:30px;height:30px;min-width:30px;padding:0;margin:-5px -5px 5px 8px;border-radius:9px;font-size:13px;line-height:1;background:#000;color:var(--g);border:1px solid var(--gd);box-shadow:0 0 10px var(--gb), inset 0 0 8px rgba(var(--obj-rgb),.06);}
   .codexHeader{width:100%;display:flex;align-items:center;justify-content:space-between;gap:8px;text-align:left;padding:8px 9px;margin:-2px 0 8px;border-radius:10px;}
   .codexHeader h3{margin:0;font-size:14px;}
   .codexRows{display:grid;gap:6px;}
-  .codexLine{border:1px solid rgba(0,255,114,.28);border-radius:10px;padding:7px;background:rgba(0,255,114,.035);font-size:11px;line-height:1.35;}
+  .codexLine{border:1px solid rgba(var(--obj-rgb),.28);border-radius:10px;padding:7px;background:rgba(var(--obj-rgb),.035);font-size:11px;line-height:1.35;}
   .codexLine b{font-size:12px;}
-  .neonStone{font-weight:900;text-shadow:0 0 8px rgba(0,255,114,.7);}
+  .neonStone{font-weight:900;text-shadow:0 0 8px rgba(var(--obj-rgb),.7);}
   .title{font-weight:900;font-size:18px;margin:0 0 8px;text-shadow:0 0 12px var(--gd);}
   .sub{font-size:12px;opacity:.85;line-height:1.45;margin-bottom:10px;}
   .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
   .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;}
-  .card{border:1px solid var(--gd);border-radius:14px;padding:10px;background:rgba(0,255,114,.045);box-shadow:inset 0 0 14px rgba(0,255,114,.045);font-size:12px;line-height:1.38;}
+  .card{border:1px solid var(--gd);border-radius:14px;padding:10px;background:rgba(var(--obj-rgb),.045);box-shadow:inset 0 0 14px rgba(var(--obj-rgb),.045);font-size:12px;line-height:1.38;}
   .card h3{margin:0 0 5px;font-size:14px;}
   .card .small{font-size:10px;opacity:.8;}
-  .selected{outline:2px solid var(--g);background:rgba(0,255,114,.13);}
-  .rare-일반{border-color:rgba(0,255,114,.38)}.rare-레어{border-color:rgba(0,255,114,.55)}.rare-희귀{border-color:rgba(0,255,114,.72)}.rare-에픽{border-color:rgba(0,255,114,.88)}.rare-전설{border-color:var(--g);box-shadow:0 0 18px rgba(0,255,114,.18), inset 0 0 16px rgba(0,255,114,.08)}.rare-신화{border-color:#9dffcb;box-shadow:0 0 25px rgba(0,255,114,.32), inset 0 0 20px rgba(0,255,114,.12)}
+  .selected{outline:2px solid var(--g);background:rgba(var(--obj-rgb),.13);}
+  .rare-일반{border-color:rgba(var(--obj-rgb),.38)}.rare-레어{border-color:rgba(var(--obj-rgb),.55)}.rare-희귀{border-color:rgba(var(--obj-rgb),.72)}.rare-에픽{border-color:rgba(var(--obj-rgb),.88)}.rare-전설{border-color:var(--g);box-shadow:0 0 18px rgba(var(--obj-rgb),.18), inset 0 0 16px rgba(var(--obj-rgb),.08)}.rare-신화{border-color:var(--g);box-shadow:0 0 25px rgba(var(--obj-rgb),.32), inset 0 0 20px rgba(var(--obj-rgb),.12)}
   .tabs{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px;}.tabs button{font-size:11px;padding:7px 8px;}
   .footerBtns{display:flex;gap:8px;margin-top:12px;}.footerBtns button{flex:1;}
-  .log{position:absolute;left:10px;right:10px;bottom:154px;z-index:4;min-height:28px;max-height:54px;overflow:hidden;font-size:11px;line-height:1.35;color:rgba(0,255,114,.9);pointer-events:none;text-shadow:0 0 6px rgba(0,255,114,.45);}
+  .log{position:absolute;left:10px;right:10px;bottom:154px;z-index:4;min-height:28px;max-height:54px;overflow:hidden;font-size:11px;line-height:1.35;color:rgba(var(--obj-rgb),.9);pointer-events:none;text-shadow:0 0 6px rgba(var(--obj-rgb),.45);}
   #toast{position:absolute;left:50%;bottom:154px;transform:translateX(-50%);z-index:30;border:1px solid var(--gd);border-radius:999px;background:rgba(0,0,0,.86);padding:7px 12px;font-size:12px;display:none;box-shadow:0 0 16px var(--gb);}
-  .rouletteWheel{position:relative;margin:8px auto 12px;width:210px;height:210px;border:2px solid var(--g);border-radius:50%;box-shadow:0 0 28px rgba(0,255,114,.28), inset 0 0 22px rgba(0,255,114,.08);transition:transform 2.1s cubic-bezier(.16,.84,.19,1);}
+  .rouletteWheel{position:relative;margin:8px auto 12px;width:210px;height:210px;border:2px solid var(--g);border-radius:50%;box-shadow:0 0 28px rgba(var(--obj-rgb),.28), inset 0 0 22px rgba(var(--obj-rgb),.08);transition:transform 2.1s cubic-bezier(.16,.84,.19,1);}
   .rouletteWheel:before,.rouletteWheel:after{content:"";position:absolute;inset:18px;border:1px dashed var(--gd);border-radius:50%;}.rouletteWheel:after{inset:58px;border-style:solid;}
   .pin{width:0;height:0;border-left:10px solid transparent;border-right:10px solid transparent;border-bottom:22px solid var(--g);margin:0 auto -8px;filter:drop-shadow(0 0 8px var(--g));}
-  .resultBox{text-align:center;border:1px solid var(--gd);border-radius:12px;padding:10px;margin-top:8px;background:rgba(0,255,114,.055);}
+  .resultBox{text-align:center;border:1px solid var(--gd);border-radius:12px;padding:10px;margin-top:8px;background:rgba(var(--obj-rgb),.055);}
   .hidden{display:none!important;}
   @media (orientation:landscape){
     .hud{left:10px;right:10px;top:8px;grid-template-columns:270px auto;gap:10px;align-items:start;}
@@ -203,23 +203,23 @@
   #actions{grid-template-columns:repeat(2,var(--action-w))!important;grid-template-rows:repeat(4,var(--action-h))!important;gap:var(--action-gap)!important;}
   .statusLine{display:flex;justify-content:space-between;gap:6px;margin-top:6px;font-size:.92em;white-space:nowrap;opacity:.95;}
   .statusLine span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
-  .questHudText{font-weight:900;text-shadow:0 0 8px rgba(0,255,114,.55);}
+  .questHudText{font-weight:900;text-shadow:0 0 8px rgba(var(--obj-rgb),.55);}
   .compactHud .statHeader{margin-bottom:4px;font-size:.98em;line-height:1.05;}
   .compactHud .statHeader b{min-width:0;overflow:hidden;text-overflow:ellipsis;}
   .compactMeter{display:grid;grid-template-columns:22px minmax(44px,1fr) auto;align-items:center;gap:5px;margin-top:3px;white-space:nowrap;}
-  .compactMeter .meterKey{font-weight:900;font-size:.95em;text-shadow:0 0 7px rgba(0,255,114,.55);}
+  .compactMeter .meterKey{font-weight:900;font-size:.95em;text-shadow:0 0 7px rgba(var(--obj-rgb),.55);}
   .compactMeter .bar{height:6px;min-width:0;}
   .compactMeter .meterValue{font-size:.88em;opacity:.94;text-align:right;min-width:47px;}
-  .currencyBox{display:flex;justify-content:space-between;gap:6px;margin-top:6px;padding:4px 7px;border:1px solid rgba(0,255,114,.38);border-radius:8px;background:rgba(0,255,114,.045);box-shadow:inset 0 0 9px rgba(0,255,114,.045);font-size:.9em;line-height:1.05;white-space:nowrap;}
+  .currencyBox{display:flex;justify-content:space-between;gap:6px;margin-top:6px;padding:4px 7px;border:1px solid rgba(var(--obj-rgb),.38);border-radius:8px;background:rgba(var(--obj-rgb),.045);box-shadow:inset 0 0 9px rgba(var(--obj-rgb),.045);font-size:.9em;line-height:1.05;white-space:nowrap;}
   .currencyBox span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
-  .currencyBox b{font-weight:900;text-shadow:0 0 7px rgba(0,255,114,.55);}
+  .currencyBox b{font-weight:900;text-shadow:0 0 7px rgba(var(--obj-rgb),.55);}
   .statStack{display:flex;flex-direction:column;gap:5px;flex:1 1 auto;min-width:0;width:auto!important;max-width:none!important;pointer-events:none;}
   .statStack #statPanel{width:100%!important;max-width:none!important;min-height:auto!important;}
   .currencyPanel{width:100%;min-height:0!important;padding:5px 8px!important;font-size:10px;line-height:1.05;}
   .currencyPanel .currencyRow{display:flex;align-items:center;justify-content:space-between;gap:8px;white-space:nowrap;}
   .currencyPanel span{min-width:0;overflow:hidden;text-overflow:ellipsis;}
-  .currencyPanel b{font-weight:900;text-shadow:0 0 7px rgba(0,255,114,.55);}
-  .autoOn{box-shadow:0 0 16px rgba(0,255,114,.32), inset 0 0 16px rgba(0,255,114,.16)!important;background:rgba(0,255,114,.12)!important;}
+  .currencyPanel b{font-weight:900;text-shadow:0 0 7px rgba(var(--obj-rgb),.55);}
+  .autoOn{box-shadow:0 0 16px rgba(var(--obj-rgb),.32), inset 0 0 16px rgba(var(--obj-rgb),.16)!important;background:rgba(var(--obj-rgb),.12)!important;}
   .rouletteOdds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0 10px;}
   .rouletteOdds .card{text-align:center;padding:8px 5px;}
   .townNote{font-size:10px;opacity:.75;margin-top:5px;line-height:1.3;}
@@ -277,8 +277,8 @@
   .neonRange::-webkit-slider-runnable-track{
     height:2px;
     border-radius:999px;
-    background:rgba(0,255,114,.9);
-    box-shadow:0 0 8px rgba(0,255,114,.45);
+    background:rgba(var(--obj-rgb),.9);
+    box-shadow:0 0 8px rgba(var(--obj-rgb),.45);
   }
   .neonRange::-webkit-slider-thumb{
     -webkit-appearance:none;
@@ -287,24 +287,24 @@
     height:16px;
     margin-top:-7px;
     border-radius:3px;
-    border:1px solid rgba(0,255,114,.95);
+    border:1px solid rgba(var(--obj-rgb),.95);
     background:#000;
-    box-shadow:0 0 8px rgba(0,255,114,.55);
+    box-shadow:0 0 8px rgba(var(--obj-rgb),.55);
   }
   .neonRange::-moz-range-track{
     height:2px;
     border:0;
     border-radius:999px;
-    background:rgba(0,255,114,.9);
-    box-shadow:0 0 8px rgba(0,255,114,.45);
+    background:rgba(var(--obj-rgb),.9);
+    box-shadow:0 0 8px rgba(var(--obj-rgb),.45);
   }
   .neonRange::-moz-range-thumb{
     width:12px;
     height:16px;
     border-radius:3px;
-    border:1px solid rgba(0,255,114,.95);
+    border:1px solid rgba(var(--obj-rgb),.95);
     background:#000;
-    box-shadow:0 0 8px rgba(0,255,114,.55);
+    box-shadow:0 0 8px rgba(var(--obj-rgb),.55);
   }
   .neonRangeWrap{
     position:relative;
@@ -325,24 +325,24 @@
     min-width:34px;
     height:18px;
     padding:2px 6px;
-    border:1px solid rgba(0,255,114,.55);
+    border:1px solid rgba(var(--obj-rgb),.55);
     border-radius:999px;
     background:rgba(0,0,0,.9);
     color:#00ff72;
     font-size:10px;
     line-height:12px;
     text-align:center;
-    box-shadow:0 0 8px rgba(0,255,114,.25), inset 0 0 6px rgba(0,255,114,.08);
+    box-shadow:0 0 8px rgba(var(--obj-rgb),.25), inset 0 0 6px rgba(var(--obj-rgb),.08);
     pointer-events:none;
     white-space:nowrap;
   }
   .neonRange:active::-webkit-slider-thumb{
     transform:scale(1.08);
-    box-shadow:0 0 12px rgba(0,255,114,.75);
+    box-shadow:0 0 12px rgba(var(--obj-rgb),.75);
   }
   .neonRange:active::-moz-range-thumb{
     transform:scale(1.08);
-    box-shadow:0 0 12px rgba(0,255,114,.75);
+    box-shadow:0 0 12px rgba(var(--obj-rgb),.75);
   }
 
   /* 룰렛 원판: 원판 안에 확률 구간 표시 + 상단 고정 눈금 */
@@ -356,7 +356,7 @@
     width:2px;
     height:32px;
     background:var(--g);
-    box-shadow:0 0 10px rgba(0,255,114,.8);
+    box-shadow:0 0 10px rgba(var(--obj-rgb),.8);
     border-radius:999px;
   }
   .topTick:before{
@@ -370,7 +370,7 @@
     border:1px solid var(--g);
     background:#000;
     border-radius:2px;
-    box-shadow:0 0 10px rgba(0,255,114,.55);
+    box-shadow:0 0 10px rgba(var(--obj-rgb),.55);
   }
   .rouletteWheel{
     position:relative;
@@ -381,10 +381,10 @@
     border-radius:50%;
     background:
       conic-gradient(from -90deg,
-        rgba(0,255,114,.10) 0deg 216deg,
-        rgba(0,255,114,.24) 216deg 342deg,
-        rgba(0,255,114,.46) 342deg 360deg);
-    box-shadow:0 0 24px rgba(0,255,114,.25), inset 0 0 20px rgba(0,255,114,.06);
+        rgba(var(--obj-rgb),.10) 0deg 216deg,
+        rgba(var(--obj-rgb),.24) 216deg 342deg,
+        rgba(var(--obj-rgb),.46) 342deg 360deg);
+    box-shadow:0 0 24px rgba(var(--obj-rgb),.25), inset 0 0 20px rgba(var(--obj-rgb),.06);
     transition:transform 2.1s cubic-bezier(.16,.84,.19,1);
     overflow:hidden;
   }
@@ -392,11 +392,11 @@
     content:"";
     position:absolute;
     inset:18px;
-    border:1px dashed rgba(0,255,114,.45);
+    border:1px dashed rgba(var(--obj-rgb),.45);
     border-radius:50%;
   }
   .rouletteWheel:after{inset:62px;border-style:solid;}
-  .wheelLine{position:absolute;left:50%;top:50%;width:1px;height:110px;background:rgba(0,255,114,.55);transform-origin:bottom center;}
+  .wheelLine{position:absolute;left:50%;top:50%;width:1px;height:110px;background:rgba(var(--obj-rgb),.55);transform-origin:bottom center;}
   .wheelLine.l60{transform:translate(-50%,-100%) rotate(216deg);}
   .wheelLine.l95{transform:translate(-50%,-100%) rotate(342deg);}
   .wheelText{
@@ -408,7 +408,7 @@
     line-height:1.25;
     text-align:center;
     color:var(--g);
-    text-shadow:0 0 8px rgba(0,255,114,.7);
+    text-shadow:0 0 8px rgba(var(--obj-rgb),.7);
     pointer-events:none;
   }
   .wheelText.fail{transform:translate(-50%,-50%) rotate(108deg) translateY(-70px) rotate(-108deg);}
@@ -426,8 +426,8 @@
     position:absolute;
     left:0;right:0;bottom:0;
     height:var(--cdp,0%);
-    background:rgba(0,255,114,.20);
-    box-shadow:inset 0 0 12px rgba(0,255,114,.18);
+    background:rgba(var(--obj-rgb),.20);
+    box-shadow:inset 0 0 12px rgba(var(--obj-rgb),.18);
     pointer-events:none;
     transition:height .12s linear;
     z-index:0;
@@ -459,19 +459,19 @@
   .rouletteWheel.multi{
     width:230px;height:230px;
     background:repeating-conic-gradient(from -90deg,
-      rgba(0,255,114,.10) 0deg 30deg,
-      rgba(0,255,114,.18) 30deg 60deg);
+      rgba(var(--obj-rgb),.10) 0deg 30deg,
+      rgba(var(--obj-rgb),.18) 30deg 60deg);
     overflow:hidden;
   }
-  .rouletteWheel.multi:before{inset:20px;border:1px dashed rgba(0,255,114,.38);}
-  .rouletteWheel.multi:after{inset:68px;border:1px solid rgba(0,255,114,.52);}
+  .rouletteWheel.multi:before{inset:20px;border:1px dashed rgba(var(--obj-rgb),.38);}
+  .rouletteWheel.multi:after{inset:68px;border:1px solid rgba(var(--obj-rgb),.52);}
   .wheelCut{
     position:absolute;
     left:50%;top:50%;
     width:1px;height:115px;
     transform-origin:bottom center;
-    background:rgba(0,255,114,.42);
-    box-shadow:0 0 5px rgba(0,255,114,.45);
+    background:rgba(var(--obj-rgb),.42);
+    box-shadow:0 0 5px rgba(var(--obj-rgb),.45);
   }
   .wheelSeg{
     position:absolute;
@@ -481,7 +481,7 @@
     line-height:1;
     text-align:center;
     color:var(--g);
-    text-shadow:0 0 7px rgba(0,255,114,.75);
+    text-shadow:0 0 7px rgba(var(--obj-rgb),.75);
     pointer-events:none;
   }
   .wheelHub{
@@ -492,7 +492,7 @@
     border:1px solid var(--g);
     border-radius:50%;
     background:#000;
-    box-shadow:0 0 12px rgba(0,255,114,.35), inset 0 0 10px rgba(0,255,114,.08);
+    box-shadow:0 0 12px rgba(var(--obj-rgb),.35), inset 0 0 10px rgba(var(--obj-rgb),.08);
     z-index:2;
   }
 
@@ -542,11 +542,11 @@
 
   /* 시작/업데이트 화면 */
   .bootScreen{text-align:center;padding:18px 8px;min-height:360px;display:flex;flex-direction:column;justify-content:center;gap:16px;}
-  .gameTitle{font-size:28px;font-weight:900;letter-spacing:2px;color:var(--g);text-shadow:0 0 12px rgba(0,255,114,.75),0 0 28px rgba(0,255,114,.35);}
-  .blinkStart{font-size:13px;color:var(--g);animation:blinkGlow 1.15s ease-in-out infinite;text-shadow:0 0 10px rgba(0,255,114,.8);}
+  .gameTitle{font-size:28px;font-weight:900;letter-spacing:2px;color:var(--g);text-shadow:0 0 12px rgba(var(--obj-rgb),.75),0 0 28px rgba(var(--obj-rgb),.35);}
+  .blinkStart{font-size:13px;color:var(--g);animation:blinkGlow 1.15s ease-in-out infinite;text-shadow:0 0 10px rgba(var(--obj-rgb),.8);}
   @keyframes blinkGlow{0%,100%{opacity:.45;filter:brightness(.8)}50%{opacity:1;filter:brightness(1.55)}}
-  .bootPanel{border:1px solid rgba(0,255,114,.48);border-radius:16px;padding:16px;background:rgba(0,255,114,.04);box-shadow:inset 0 0 14px rgba(0,255,114,.06),0 0 16px rgba(0,255,114,.12);}
-  .patchNoteBox{text-align:left;line-height:1.55;font-size:12px;border:1px solid rgba(0,255,114,.35);border-radius:12px;padding:12px;margin-top:10px;background:rgba(0,0,0,.55);}
+  .bootPanel{border:1px solid rgba(var(--obj-rgb),.48);border-radius:16px;padding:16px;background:rgba(var(--obj-rgb),.04);box-shadow:inset 0 0 14px rgba(var(--obj-rgb),.06),0 0 16px rgba(var(--obj-rgb),.12);}
+  .patchNoteBox{text-align:left;line-height:1.55;font-size:12px;border:1px solid rgba(var(--obj-rgb),.35);border-radius:12px;padding:12px;margin-top:10px;background:rgba(0,0,0,.55);}
 
   /* 업데이트 진행 게이지 */
   .updateProgressBox{
@@ -568,11 +568,11 @@
     position:relative;
     width:100%;
     height:9px;
-    border:1px solid rgba(0,255,114,.58);
+    border:1px solid rgba(var(--obj-rgb),.58);
     border-radius:999px;
     background:transparent;
     overflow:hidden;
-    box-shadow:0 0 10px rgba(0,255,114,.18);
+    box-shadow:0 0 10px rgba(var(--obj-rgb),.18);
   }
   .updateFill{
     position:absolute;
@@ -581,14 +581,14 @@
     height:100%;
     width:0%;
     border-radius:999px;
-    background:linear-gradient(90deg,rgba(0,255,114,.65),rgba(130,255,185,.95));
-    box-shadow:0 0 12px rgba(0,255,114,.65);
+    background:linear-gradient(90deg,rgba(var(--obj-rgb),.65),rgba(var(--obj-rgb),.95));
+    box-shadow:0 0 12px rgba(var(--obj-rgb),.65);
     transition:width .12s linear;
   }
   .updateStatus{
     margin-top:8px;
     font-size:11px;
-    color:rgba(0,255,114,.86);
+    color:rgba(var(--obj-rgb),.86);
     min-height:16px;
   }
 
@@ -638,7 +638,7 @@
     border:1px solid var(--gd)!important;
     border-radius:9px!important;
     background:rgba(0,0,0,.72)!important;
-    box-shadow:0 0 12px var(--gb), inset 0 0 10px rgba(0,255,114,.06)!important;
+    box-shadow:0 0 12px var(--gb), inset 0 0 10px rgba(var(--obj-rgb),.06)!important;
     padding:0 8px!important;
     font-size:10.5px!important;
     line-height:1!important;
@@ -686,8 +686,8 @@
     top:4px;
     bottom:4px;
     width:1px;
-    background:rgba(0,255,114,.48);
-    box-shadow:0 0 7px rgba(0,255,114,.35);
+    background:rgba(var(--obj-rgb),.48);
+    box-shadow:0 0 7px rgba(var(--obj-rgb),.35);
     pointer-events:none;
   }
   .currencyPanel .currencyRow span{
@@ -753,13 +753,13 @@
     background:#000!important;
     color:var(--g)!important;
     border:1px solid var(--g)!important;
-    box-shadow:0 0 18px rgba(0,255,114,.28), inset 0 0 18px rgba(0,255,114,.08)!important;
-    text-shadow:0 0 8px rgba(0,255,114,.8);
+    box-shadow:0 0 18px rgba(var(--obj-rgb),.28), inset 0 0 18px rgba(var(--obj-rgb),.08)!important;
+    text-shadow:0 0 8px rgba(var(--obj-rgb),.8);
     letter-spacing:.5px;
   }
   .partyMiniList{display:grid;gap:6px;margin-top:8px;}
-  .partyMiniLine{border:1px solid rgba(0,255,114,.32);border-radius:10px;padding:7px 8px;background:rgba(0,255,114,.035);font-size:11px;line-height:1.35;}
-  .partyChatBox{max-height:120px;overflow:auto;border:1px solid rgba(0,255,114,.32);border-radius:10px;padding:8px;background:rgba(0,255,114,.025);font-size:11px;line-height:1.35;margin-top:8px;}
+  .partyMiniLine{border:1px solid rgba(var(--obj-rgb),.32);border-radius:10px;padding:7px 8px;background:rgba(var(--obj-rgb),.035);font-size:11px;line-height:1.35;}
+  .partyChatBox{max-height:120px;overflow:auto;border:1px solid rgba(var(--obj-rgb),.32);border-radius:10px;padding:8px;background:rgba(var(--obj-rgb),.025);font-size:11px;line-height:1.35;margin-top:8px;}
   .neonInput{width:100%;font:inherit;padding:10px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:10px;user-select:text;-webkit-user-select:text;caret-color:var(--g);}
 
 
@@ -779,8 +779,8 @@
     font-size:10px!important;
     line-height:1.15!important;
     pointer-events:none!important;
-    color:rgba(0,255,114,.88)!important;
-    text-shadow:0 0 6px rgba(0,255,114,.35);
+    color:rgba(var(--obj-rgb),.88)!important;
+    text-shadow:0 0 6px rgba(var(--obj-rgb),.35);
   }
   .questPanel .questRow{
     width:100%;
@@ -798,7 +798,7 @@
     text-overflow:ellipsis;
     white-space:nowrap;
   }
-  .questPanel b{font-weight:900;text-shadow:0 0 7px rgba(0,255,114,.55);}
+  .questPanel b{font-weight:900;text-shadow:0 0 7px rgba(var(--obj-rgb),.55);}
   .remoteHpBar{
     display:none;
   }
@@ -858,11 +858,11 @@
 
   /* 062: 채팅창 경계선 + 우측 세로 로그 필터 버튼 */
   .log{
-    border:1px solid rgba(0,255,114,.48)!important;
+    border:1px solid rgba(var(--obj-rgb),.48)!important;
     border-radius:9px!important;
     background:rgba(0,0,0,.72)!important;
     padding:5px 7px!important;
-    box-shadow:0 0 10px rgba(0,255,114,.12), inset 0 0 8px rgba(0,255,114,.05)!important;
+    box-shadow:0 0 10px rgba(var(--obj-rgb),.12), inset 0 0 8px rgba(var(--obj-rgb),.05)!important;
     right:calc(58px + var(--safe-right))!important;
   }
   #logToggleBar{
@@ -926,11 +926,11 @@
     min-height:18px!important;
   }
   .onlineGroupBox{
-    border:1px solid rgba(0,255,114,.28);
+    border:1px solid rgba(var(--obj-rgb),.28);
     border-radius:12px;
     padding:8px;
     margin:6px 0 12px;
-    background:rgba(0,255,114,.025);
+    background:rgba(var(--obj-rgb),.025);
   }
   @media (orientation:landscape){
     .log{
@@ -968,7 +968,7 @@
     align-items:center;
     gap:8px;
     padding:7px 6px;
-    border-bottom:1px solid rgba(0,255,114,.12);
+    border-bottom:1px solid rgba(var(--obj-rgb),.12);
   }
   .onlineUserRow:last-child{border-bottom:0;}
   .onlineUserMain{min-width:0;}
@@ -997,11 +997,11 @@
     gap:8px!important;
     margin:5px 0!important;
     padding:8px!important;
-    border:1px solid rgba(0,255,114,.22)!important;
+    border:1px solid rgba(var(--obj-rgb),.22)!important;
     border-radius:10px!important;
-    background:rgba(0,255,114,.035)!important;
+    background:rgba(var(--obj-rgb),.035)!important;
   }
-  .onlineUserInBox.self{background:rgba(0,255,114,.055)!important;}
+  .onlineUserInBox.self{background:rgba(var(--obj-rgb),.055)!important;}
   .onlineUserText{min-width:0;overflow:hidden;}
   .onlineUserBoxBtns{
     display:flex;
@@ -1240,7 +1240,7 @@
   }
   .onlineUserLine .onlineIdentity .onlineNickText{
     font-weight:900;
-    text-shadow:0 0 7px rgba(0,255,114,.5);
+    text-shadow:0 0 7px rgba(var(--obj-rgb),.5);
   }
   .onlineUserLine .onlineIdentity .onlineLocText{
     opacity:.82;
@@ -1480,7 +1480,7 @@
     cursor:pointer;
   }
   .onlineUserInBox.oneLine.peerClickable:active{
-    background:rgba(0,255,114,.09)!important;
+    background:rgba(var(--obj-rgb),.09)!important;
   }
   .onlineUserInBox.oneLine.peerClickable .onlineUserLine{
     width:100%!important;
@@ -1540,7 +1540,7 @@
   .themePreview{height:42px;border:1px solid var(--gd);border-radius:12px;background:var(--bg);box-shadow:inset 0 0 14px var(--gb);display:flex;align-items:center;justify-content:center;color:var(--g);font-weight:900;text-shadow:0 0 8px var(--gd);}
 
 
-  /* 099: 그래픽 설정 전체 적용 - 배경색은 검은 배경 영역, 선색은 모든 네온 라인/글자 기준 */
+  /* 107: 그래픽 설정 - 배경화면 색깔 + 모든 오브젝트 색깔 2종만 적용 */
   html,body,#wrap,canvas,#popup,.panel,#mini,.popupCloseX,button,.neonInput,.themePreview,.updateTrack,#stick{
     background-color:var(--bg)!important;
     color:var(--g)!important;
@@ -1548,8 +1548,12 @@
   }
   .card,.codexLine,.resultBox,.partyMiniLine,.partyChatBox,.onlineGroupBox,.onlineUserInBox,.bootPanel,.patchNoteBox,.currencyBox{
     border-color:var(--gd)!important;
-    background:var(--gf)!important;
+    background:rgba(0,0,0,.38)!important;
     color:var(--g)!important;
+    box-shadow:inset 0 0 14px var(--gb)!important;
+  }
+  .selected,.autoOn,button:active{
+    background:var(--gb)!important;
   }
   .log,#toast,#talkPrompt,#zoneTag,.currencyPanel,.topBtns #zoneTag,.kakaoNeonBtn,.rangeBubble,.wheelHub,.topTick:before{
     background:var(--bg)!important;
@@ -1563,12 +1567,144 @@
     border-color:var(--gd)!important;
     background:var(--gb)!important;
   }
-  .selected,.autoOn,button:active{
-    background:var(--gf)!important;
-  }
   .title,.gameTitle,.blinkStart,.neonStone,.questHudText,.meterKey,.currencyBox b,.currencyPanel b,.questPanel b{
     color:var(--g)!important;
     text-shadow:0 0 8px var(--gd)!important;
+  }
+
+
+
+  /* 103: 카드/스킬/아이템 창 녹색 바탕 완전 제거 - 예전처럼 선만 강조 */
+  #popup .card,
+  #popup button.card,
+  #popup .codexLine,
+  #popup .resultBox,
+  #popup .partyMiniLine,
+  #popup .partyChatBox,
+  #popup .onlineGroupBox,
+  #popup .onlineUserInBox,
+  #popup .bootPanel,
+  #popup .patchNoteBox,
+  #popup .currencyBox{
+    background:var(--bg)!important;
+    background-color:var(--bg)!important;
+    border-color:var(--gd)!important;
+    box-shadow:0 0 10px var(--gb), inset 0 0 10px rgba(0,0,0,0)!important;
+  }
+  #popup .selected,
+  #popup button.selected,
+  #popup .card.selected,
+  #popup button.card.selected{
+    background:var(--bg)!important;
+    background-color:var(--bg)!important;
+    outline:2px solid var(--g)!important;
+    box-shadow:0 0 10px var(--gb)!important;
+  }
+  #popup button:active,
+  #popup button.card:active{
+    background:var(--bg)!important;
+    background-color:var(--bg)!important;
+  }
+
+
+
+  /* 107: 그래픽 색상은 배경화면/오브젝트 2종만 사용 */
+  html,body,#wrap,#game,#mini,#popup,.panel,button,.neonInput,.themePreview,.updateTrack,#stick,
+  .card,.codexLine,.resultBox,.partyMiniLine,.partyChatBox,.onlineGroupBox,.onlineUserInBox,.bootPanel,.patchNoteBox,.currencyBox,
+  .log,#toast,#talkPrompt,#zoneTag,.currencyPanel,.topBtns #zoneTag,.kakaoNeonBtn,.rangeBubble,.wheelHub,.topTick:before{
+    background-color:var(--bg)!important;
+    color:var(--g)!important;
+    border-color:var(--gd)!important;
+  }
+  .card,.codexLine,.resultBox,.partyMiniLine,.partyChatBox,.onlineGroupBox,.onlineUserInBox,.bootPanel,.patchNoteBox,.currencyBox{
+    background:var(--bg)!important;
+    box-shadow:0 0 10px var(--gb), inset 0 0 10px rgba(0,0,0,0)!important;
+  }
+  #popup .selected,#popup button.selected,#popup .card.selected,#popup button.card.selected{
+    background:var(--bg)!important;
+    background-color:var(--bg)!important;
+    outline:2px solid var(--g)!important;
+    box-shadow:0 0 10px var(--gb)!important;
+  }
+  .bar,.updateTrack,.neonRange::-webkit-slider-runnable-track,.neonRange::-moz-range-track{
+    border-color:var(--gd)!important;
+    background:rgba(var(--obj-rgb),.06)!important;
+  }
+  .fill,.updateFill{
+    background:linear-gradient(90deg,rgba(var(--obj-rgb),.55),var(--g))!important;
+    box-shadow:0 0 10px var(--g)!important;
+  }
+  .title,.gameTitle,.blinkStart,.neonStone,.questHudText,.meterKey,.currencyBox b,.currencyPanel b,.questPanel b,
+  .wheelText,.themePreview,.rangeBubble{
+    color:var(--g)!important;
+    text-shadow:0 0 8px var(--gd)!important;
+  }
+  #joy,#stick,#actions button,#leftQuick button,#talkPrompt,#mini,#popup,.panel,.log,#logToggleBar button{
+    box-shadow:0 0 12px var(--gb), inset 0 0 10px rgba(var(--obj-rgb),.05)!important;
+  }
+  .rare-일반,.rare-레어,.rare-희귀,.rare-에픽,.rare-전설,.rare-신화{border-color:var(--gd)!important;}
+
+
+  /* 108: 스킬정보 팝업 + 드래그 슬롯 설정 */
+  .skillInfoDeck{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    margin:8px 0 12px;
+  }
+  .skillDragCard{
+    cursor:grab;
+    touch-action:none;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  .skillDragCard:active{cursor:grabbing;}
+  .skillDragGhost{
+    position:fixed;
+    z-index:9999;
+    pointer-events:none;
+    width:min(190px,48vw);
+    transform:translate(-50%,-50%);
+    opacity:.92;
+  }
+  .skillSlotGrid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:7px;
+    margin-top:8px;
+  }
+  .skillDropSlot{
+    min-height:82px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    gap:6px;
+  }
+  .skillDropSlot.dragOver{
+    outline:2px solid var(--g);
+    outline-offset:2px;
+  }
+  .skillSlotNo{font-weight:900;text-shadow:0 0 7px var(--gd);}
+  .skillSlotName{font-size:11px;line-height:1.3;min-height:30px;}
+  .skillSlotHelp{font-size:10px;opacity:.72;line-height:1.25;}
+  .skillPickCard{
+    cursor:pointer;
+    touch-action:manipulation;
+  }
+  .skillPickCard .small{line-height:1.35;}
+  .skillSlotChoiceGrid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:8px;
+    margin-top:8px;
+  }
+  .skillSlotPick{
+    text-align:left;
+    min-height:74px;
+  }
+  @media (max-width:420px){
+    .skillInfoDeck{grid-template-columns:1fr;}
+    .skillSlotGrid,.skillSlotChoiceGrid{grid-template-columns:repeat(2,minmax(0,1fr));}
   }
 
 </style>
@@ -2216,9 +2352,17 @@ function useNextStagePortal(){
   requestCloudSave('discoverStage',true);
 }
 
+const AUTO_BATTLE_TYPES={attack:'공격형',defense:'방어형',active:'능동형',smart:'지능형'};
+const AUTO_BATTLE_DESCS={
+  attack:'접근과 공격을 우선합니다.',
+  defense:'생존과 후퇴를 우선합니다.',
+  active:'탐색과 추격을 적극적으로 합니다.',
+  smart:'상황에 맞춰 공격/회피를 판단합니다.'
+};
+
 const basePlayer = () => ({
   x:900,y:900,vx:0,vy:0,dir:-Math.PI/2,hp:100,maxHp:100,level:1,exp:0,nextExp:32,gold:160,potions:5,nickname:'플레이어',
-  job:'adventurer', baseClass:'adventurer', jobTier:0, classChosen:true, firstJobUnlocked:false, firstJobChosen:false, adventurerQuest:{accepted:false,done:false,dummyHits:0,completed:false}, jobHistory:['adventurer'], unlockedHidden:{}, atkTimer:0, atkTimerMax:0, skillTimer:0, skillTimers:[0,0,0,0], skillTimerMax:[0,0,0,0], potionTimer:0, dodgeTimer:0, dashTime:0, attackAnim:0, hurt:0, shield:0, autoMode:false, activeBuffs:[], activeDebuffs:[], consumables:{potion:5,potionL:0,elixir:0,shield:0,haste:0,bomb:0}, potionSlot:'potion', autoPotionPct:.42, skillSlots:[1,2,3,4],
+  job:'adventurer', baseClass:'adventurer', jobTier:0, classChosen:true, firstJobUnlocked:false, firstJobChosen:false, adventurerQuest:{accepted:false,done:false,dummyHits:0,completed:false}, jobHistory:['adventurer'], unlockedHidden:{}, atkTimer:0, atkTimerMax:0, skillTimer:0, skillTimers:[0,0,0,0], skillTimerMax:[0,0,0,0], potionTimer:0, dodgeTimer:0, dashTime:0, attackAnim:0, hurt:0, shield:0, autoMode:false, autoBattleType:'smart', activeBuffs:[], activeDebuffs:[], consumables:{potion:5,potionL:0,elixir:0,shield:0,haste:0,bomb:0}, potionSlot:'potion', autoPotionPct:.42, skillSlots:[1,2,3,4],
   growths:[], inventory:[], equip:{weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},
   quest:0, questKills:0, guildRank:'신입', guildTokens:0, neonStone:0, skillStars:{}, codex:makeMonsterBook(), discoveredItems:{}, totalKills:0, logSettings:{system:true,combat:true,chat:true}
 });
@@ -2360,21 +2504,78 @@ async function startKakaoLogin(){
 async function showKakaoLoginPage(){
   mode='login';popupMode='kakaoLogin';zoneTag.textContent='로그인';
   if(!supabaseConfigured()){
-    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>Supabase Kakao 로그인을 설정해야 게임에 접속할 수 있습니다.</div><div class="card"><h3>Supabase 설정 필요</h3>파일 안의 <b>SUPABASE_CONFIG.url</b>, <b>SUPABASE_CONFIG.anonKey</b>를 실제 값으로 교체하고, Supabase Auth Kakao Provider와 <b>${escapeHtml(SUPABASE_CONFIG.table)}</b> 테이블/RLS 정책을 설정하십시오.</div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
+    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>Supabase Kakao 로그인을 설정해야 게임에 접속할 수 있습니다.</div><div class="card"><h3>Supabase 설정 필요</h3>파일 안의 <b>SUPABASE_CONFIG.url</b>, <b>SUPABASE_CONFIG.anonKey</b>를 실제 값으로 교체하고, Supabase Auth Kakao Provider와 <b>${escapeHtml(SUPABASE_CONFIG.table)}</b> 테이블/RLS 정책을 설정하십시오.</div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 바로시작</button><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
     return;
   }
   const client=await ensureSupabaseClient(false);
   if(!client){
-    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">Supabase SDK를 불러오지 못했습니다.<br>네트워크 또는 CDN 차단 상태를 확인하십시오.</div><div class="card"><h3>다시 시도</h3>SDK 주소를 3개 CDN으로 순차 시도하도록 보수했습니다.<br><span class="small">계속 실패하면 새로고침 후 다시 확인하십시오.</span></div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
+    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">Supabase SDK를 불러오지 못했습니다.<br>네트워크 또는 CDN 차단 상태를 확인하십시오.</div><div class="card"><h3>다시 시도</h3>SDK 주소를 3개 CDN으로 순차 시도하도록 보수했습니다.<br><span class="small">계속 실패하면 새로고침 후 다시 확인하십시오.</span></div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 바로시작</button><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
     return;
   }
-  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="kakaoLoginCenter"><button class="kakaoNeonBtn" onclick="Game.startKakaoLogin()">카카오톡 로그인</button></div><div class="townNote">게임 내 저장/불러오기 없이 계정 기준 서버 자동 저장 방식으로 동작합니다.</div></div>`);
+  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="kakaoLoginCenter"><button class="kakaoNeonBtn" onclick="Game.startKakaoLogin()">카카오톡 로그인</button></div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 바로시작</button></div><div class="townNote">개발자 바로시작은 테스트/미리보기용입니다. 서버 저장과 온라인 접속자는 비활성입니다.</div></div>`);
   try{const {data}=await client.auth.getSession();if(data&&data.session){showCloudLoadingPage();await loadCloudStateAndEnter();}}catch(e){console.error(e);}
 }
 async function kakaoLogout(){
   leaveOnline(false);const client=await ensureSupabaseClient(false);try{if(client)await client.auth.signOut();}catch(e){console.error(e);}cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='로그아웃';toast('로그아웃');showKakaoLoginPage();
 }
-function devKakaoLogin(){toast('개발용 로그인은 제거되었습니다');showKakaoLoginPage();}
+
+function applyDevWarriorSkillPreset(){
+  normalizePlayer();
+  player.nickname=sanitizeNickname(player.nickname||'DEV');
+  player.job='warrior';
+  player.baseClass='warrior';
+  player.jobTier=1;
+  player.classChosen=true;
+  player.firstJobUnlocked=true;
+  player.firstJobChosen=true;
+  player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];
+  if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');
+  if(!player.jobHistory.includes('warrior'))player.jobHistory.push('warrior');
+  player.level=Math.max(Number(player.level)||1,8);
+  player.exp=Math.max(Number(player.exp)||0,0);
+  player.gold=Math.max(Number(player.gold)||0,5000);
+  player.skillStars=player.skillStars&&typeof player.skillStars==='object'?player.skillStars:{};
+  player.skillStars.warrior=Math.max(Number(player.skillStars.warrior)||0,4);
+  player.skillSlots=[1,2,3,4];
+  syncHp();
+}
+function devKakaoLogin(){
+  try{
+    leaveOnline(false);
+    cloudState.ready=false;
+    cloudState.loading=false;
+    cloudState.user=null;
+    cloudState.session=null;
+    cloudState.status='개발자 미리보기';
+    onlineState.enabled=false;
+    onlineState.status='개발자 모드';
+    const saved=storageGet(saveKey);
+    if(saved){
+      try{
+        const data=JSON.parse(saved);
+        if(data&&data.player){
+          player=Object.assign(basePlayer(),data.player);
+          normalizePlayer();syncHp();
+          applyDevWarriorSkillPreset();
+          currentField=data.currentField||data.field||'town';
+          mode=currentField==='town'?'town':'field';
+          enterField(currentField||'town');
+          closePopup();
+          msg('개발자 미리보기로 접속했습니다. 서버 저장/온라인은 비활성입니다.');
+          return;
+        }
+      }catch(e){console.warn('dev local load skipped',e);}
+    }
+    player=basePlayer();
+    player.nickname=sanitizeNickname(player.nickname||'DEV');
+    applyDevWarriorSkillPreset();
+    mode='town';
+    enterField('town');
+    giveStarterItems();
+    closePopup();
+    msg('개발자 미리보기로 접속했습니다. 서버 저장/온라인은 비활성입니다.');
+  }catch(e){console.error(e);toast('개발자 로그인 오류');showKakaoLoginPage();}
+}
 function requestCloudSave(reason='auto',immediate=false){
   if(cloudState.deleting||cloudState.accountResetting)return false;
   try{storageSet(saveKey,JSON.stringify(serializeCloudState(reason)));}catch(e){}
@@ -2994,7 +3195,7 @@ function showPeerInfo(id){
 }
 function connectOnline(url,key,room){return connectOnlineFromPanel();}
 function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
-function normalizePlayer(){player.weaponFace=Number.isFinite(player.weaponFace)?player.weaponFace:(Number.isFinite(player.dir)?player.dir:-Math.PI/2);const b=basePlayer();player=Object.assign(b,player||{});player.logSettings=Object.assign({system:true,combat:true,chat:true},player.logSettings||{});if(!player.job)player.job='adventurer';const jb=jobById(player.job||'adventurer');player.baseClass=player.baseClass||jb.baseClass||'adventurer';player.jobTier=player.job?jb.tier||0:0;player.classChosen=true;player.firstJobUnlocked=!!player.firstJobUnlocked;player.firstJobChosen=!!player.firstJobChosen;player.adventurerQuest=(player.adventurerQuest&&typeof player.adventurerQuest==='object')?Object.assign({accepted:false,done:false,dummyHits:0,completed:false},player.adventurerQuest):{accepted:false,done:false,dummyHits:0,completed:false};player.adventurerQuest.dummyHits=clamp(Math.floor(Number(player.adventurerQuest.dummyHits)||0),0,50);if(player.adventurerQuest.done||player.adventurerQuest.completed)player.firstJobUnlocked=true;if(player.job&&player.job!=='adventurer')player.firstJobChosen=true;player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');if(player.job&&!player.jobHistory.includes(player.job))player.jobHistory.push(player.job);player.unlockedHidden=(player.unlockedHidden&&typeof player.unlockedHidden==='object')?player.unlockedHidden:{};player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.atkTimerMax=Number(player.atkTimerMax)||0;player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,MAX_SKILL_STAR));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign({},player.codex[fid][i]||{},fresh[fid][i],{seen:(player.codex[fid][i]&&player.codex[fid][i].seen)||0,kills:(player.codex[fid][i]&&player.codex[fid][i].kills)||0});}player.neonStone=Math.max(0,Math.floor(Number(player.neonStone)||0));for(const fid in player.codex){if(Array.isArray(player.codex[fid])){for(const e of player.codex[fid]){if(e&&typeof e==='object'&&(!e.neonRewards||typeof e.neonRewards!=='object'))e.neonRewards={};}}}normalizeStageProgress();player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
+function normalizePlayer(){player.weaponFace=Number.isFinite(player.weaponFace)?player.weaponFace:(Number.isFinite(player.dir)?player.dir:-Math.PI/2);const b=basePlayer();player=Object.assign(b,player||{});player.logSettings=Object.assign({system:true,combat:true,chat:true},player.logSettings||{});if(!player.job)player.job='adventurer';const jb=jobById(player.job||'adventurer');player.baseClass=player.baseClass||jb.baseClass||'adventurer';player.jobTier=player.job?jb.tier||0:0;player.classChosen=true;player.firstJobUnlocked=!!player.firstJobUnlocked;player.firstJobChosen=!!player.firstJobChosen;player.adventurerQuest=(player.adventurerQuest&&typeof player.adventurerQuest==='object')?Object.assign({accepted:false,done:false,dummyHits:0,completed:false},player.adventurerQuest):{accepted:false,done:false,dummyHits:0,completed:false};player.adventurerQuest.dummyHits=clamp(Math.floor(Number(player.adventurerQuest.dummyHits)||0),0,50);if(player.adventurerQuest.done||player.adventurerQuest.completed)player.firstJobUnlocked=true;if(player.job&&player.job!=='adventurer')player.firstJobChosen=true;player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');if(player.job&&!player.jobHistory.includes(player.job))player.jobHistory.push(player.job);player.unlockedHidden=(player.unlockedHidden&&typeof player.unlockedHidden==='object')?player.unlockedHidden:{};player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.atkTimerMax=Number(player.atkTimerMax)||0;player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,MAX_SKILL_STAR));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);if(!AUTO_BATTLE_TYPES[player.autoBattleType])player.autoBattleType='smart';const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign({},player.codex[fid][i]||{},fresh[fid][i],{seen:(player.codex[fid][i]&&player.codex[fid][i].seen)||0,kills:(player.codex[fid][i]&&player.codex[fid][i].kills)||0});}player.neonStone=Math.max(0,Math.floor(Number(player.neonStone)||0));for(const fid in player.codex){if(Array.isArray(player.codex[fid])){for(const e of player.codex[fid]){if(e&&typeof e==='object'&&(!e.neonRewards||typeof e.neonRewards!=='object'))e.neonRewards={};}}}normalizeStageProgress();player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
 function addBuff(name,duration=2,mods={}){const old=player.activeBuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);Object.assign(old,mods);return;}player.activeBuffs.push(Object.assign({name,time:duration},mods));}
 function addDebuff(name,duration=2){const old=player.activeDebuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);return;}player.activeDebuffs.push({name,time:duration});}
 function updateStatusTimers(dt){for(const b of player.activeBuffs||[]){b.time-=dt;if(b.hpRegen)player.hp=clamp(player.hp+b.hpRegen*dt,0,player.maxHp);}for(const d of player.activeDebuffs||[])d.time-=dt;player.activeBuffs=(player.activeBuffs||[]).filter(b=>b.time>0);player.activeDebuffs=(player.activeDebuffs||[]).filter(d=>d.time>0);}
@@ -3063,7 +3264,8 @@ function toast(t){toastBox.textContent=t;toastBox.style.display='block';clearTim
 function popupAllowsCloseX(){return !['boot','title','nickname','class','update','kakaoLogin','growth','roulette','guide'].includes(String(popupMode||''));}
 function openPopup(html){const raw=String(html||'');popup.innerHTML=(popupAllowsCloseX()&&!raw.includes('popupCloseX'))?`<button class="popupCloseX" onclick="Game.safeCall('closePopup')">X</button>${raw}`:raw;popupLayer.style.display='flex';gamePaused=false;}
 function closePopup(){popupLayer.style.display='none';popup.innerHTML='';popup.style.width='';popup.style.height='';popup.style.maxWidth='';popup.style.maxHeight='';popup.style.padding='';popup.style.overflow='';gamePaused=false;popupMode='';}
-function themeLine(alpha=1){const c=hexToRgb(themeHex('gl_theme_line','#00ff72'));return `rgba(${c.r},${c.g},${c.b},${alpha})`;}
+function themeObjectHex(){return themeHex('gl_theme_object','#00ff72');}
+function themeLine(alpha=1){const c=hexToRgb(themeObjectHex());return `rgba(${c.r},${c.g},${c.b},${alpha})`;}
 function themeBg(){return themeHex('gl_theme_bg','#000000');}
 function lineStyle(alpha=1,width=2){ctx.strokeStyle=themeLine(alpha);ctx.lineWidth=width;ctx.shadowColor=themeLine(.72);ctx.shadowBlur=8;ctx.lineCap='round';ctx.lineJoin='round';}
 function fillStyle(alpha=.12){ctx.fillStyle=themeLine(alpha);ctx.shadowColor=themeLine(.5);ctx.shadowBlur=8;}
@@ -3703,12 +3905,12 @@ function segmentVisibleMini(s,tr){
 function drawDungeonBoundarySegments(target,segments,alpha,width,tx,ty,visibleFn,glow=true){
   if(!segments||!segments.length)return;
   target.save();
-  target.strokeStyle=`rgba(0,255,114,${alpha})`;
+  target.strokeStyle=themeLine(alpha);
   target.lineWidth=width;
   target.lineCap='round';
   target.lineJoin='round';
   target.miterLimit=1;
-  if(glow){target.shadowColor='rgba(0,255,114,.72)';target.shadowBlur=8;}else{target.shadowBlur=0;}
+  if(glow){target.shadowColor=themeLine(.72);target.shadowBlur=8;}else{target.shadowBlur=0;}
   target.beginPath();
   let has=false;
   for(const s of segments){
@@ -3763,11 +3965,11 @@ function wallOpenIntervals(start,end,blocked){
   return out;
 }
 function applyWallLineStyle(target,alpha,width,glow=true){
-  target.strokeStyle=`rgba(0,255,114,${alpha})`;
+  target.strokeStyle=themeLine(alpha);
   target.lineWidth=width;
   target.lineCap='butt';
   target.lineJoin='miter';
-  if(glow){target.shadowColor='rgba(0,255,114,.72)';target.shadowBlur=8;}else{target.shadowBlur=0;}
+  if(glow){target.shadowColor=themeLine(.72);target.shadowBlur=8;}else{target.shadowBlur=0;}
 }
 function drawExternalRectWalls(target,rects,r,alpha,width,tx,ty,visibleFn,glow=true){
   if(visibleFn&&!visibleFn(r))return;
@@ -4550,7 +4752,7 @@ function showTown(){
   closePopup();
 }
 function adventurerQuestState(){normalizePlayer();return player.adventurerQuest;}
-function showElderGuide(){popupMode='guide';openPopup(`<div class="title">장로의 안내</div><div class="card"><h3>정식 직업 등록 전 안내</h3>처음에는 <b>모험가</b>로 시작합니다.<br>마을 북쪽 <b>장로</b>에게 모험가 퀘스트를 받고, 훈련소 허수아비를 50대 때리면 직업소개소에서 1차 직업을 선택할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.showSkillSlotSettings()">스킬</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
+function showElderGuide(){popupMode='guide';openPopup(`<div class="title">장로의 안내</div><div class="card"><h3>정식 직업 등록 전 안내</h3>처음에는 <b>모험가</b>로 시작합니다.<br>마을 북쪽 <b>장로</b>에게 모험가 퀘스트를 받고, 훈련소 허수아비를 50대 때리면 직업소개소에서 1차 직업을 선택할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.showSkillInfoPanel()">스킬정보</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
 function showAdventurerQuest(){
   const q=adventurerQuestState();
   const hits=clamp(Math.floor(Number(q.dummyHits)||0),0,50);
@@ -4938,6 +5140,8 @@ function updateAuto(dt){
     normalizePlayer();
     const st=computeStats();
     const hpPct=player.maxHp>0?player.hp/player.maxHp:1;
+    const autoType=AUTO_BATTLE_TYPES[player.autoBattleType]?player.autoBattleType:'smart';
+    const attackAuto=autoType==='attack', defenseAuto=autoType==='defense', activeAuto=autoType==='active';
     if(hpPct<player.autoPotionPct&&player.potionTimer<=0){
       if(!usePotion(player.potionSlot,true))usePotion(null,true);
     }
@@ -4953,7 +5157,13 @@ function updateAuto(dt){
     const d=dist(player,target);
     const damageRatio=autoThreatDamageRatio(close,st);
     const potionReady=hasAutoRecoveryReady();
-    const mustRetreat=(hpPct<.23&&!potionReady)||(hpPct<.32&&damageRatio>.025)||(hpPct<.46&&close&&closeD<118&&damageRatio>.060);
+    const hardHp=attackAuto?.16:(defenseAuto?.34:(activeAuto?.24:.23));
+    const midHp=attackAuto?.24:(defenseAuto?.48:(activeAuto?.34:.32));
+    const midDmg=attackAuto?.045:(defenseAuto?.016:(activeAuto?.026:.025));
+    const nearHp=attackAuto?.34:(defenseAuto?.62:(activeAuto?.46:.46));
+    const nearDist=defenseAuto?150:118;
+    const nearDmg=attackAuto?.085:(defenseAuto?.038:(activeAuto?.060:.060));
+    const mustRetreat=(hpPct<hardHp&&!potionReady)||(hpPct<midHp&&damageRatio>midDmg)||(hpPct<nearHp&&close&&closeD<nearDist&&damageRatio>nearDmg);
 
     if(mustRetreat){
       if(player.potionTimer<=0){if(!usePotion(player.potionSlot,true))usePotion(null,true);}
@@ -4967,12 +5177,13 @@ function updateAuto(dt){
     }
 
     if(profile){
-      const attackRange=Math.max(180,(profile.range||360)*.86);
-      const ideal=clamp((profile.range||360)*.58,190,390);
-      const tooClose=Math.max(105,ideal*.52);
-      const kiteNeeded=damageRatio>.045||hpPct<.42||(close&&closeD<78&&damageRatio>.022);
+      const rangeBias=attackAuto?.94:(defenseAuto?1.04:1);
+      const attackRange=Math.max(180,(profile.range||360)*.86*rangeBias);
+      const ideal=clamp((profile.range||360)*(attackAuto?.48:(defenseAuto?.68:.58)),attackAuto?150:190,defenseAuto?430:390);
+      const tooClose=Math.max(attackAuto?82:105,ideal*(defenseAuto?.70:.52));
+      const kiteNeeded=defenseAuto?(damageRatio>.026||hpPct<.62||(close&&closeD<118&&damageRatio>.014)):(attackAuto?(damageRatio>.075||hpPct<.30):(activeAuto?(damageRatio>.050||hpPct<.38||(close&&closeD<78&&damageRatio>.022)):(damageRatio>.045||hpPct<.42||(close&&closeD<78&&damageRatio>.022))));
       if(d>attackRange){
-        autoMoveToward(target.x,target.y,st,dt,1.02);
+        autoMoveToward(target.x,target.y,st,dt,activeAuto?1.16:(attackAuto?1.10:1.02));
       }else if(kiteNeeded){
         const dodgingProjectile=autoDodgeIncoming(st,dt,true);
         if(!dodgingProjectile){
@@ -4990,9 +5201,10 @@ function updateAuto(dt){
       }
     }else{
       const attackRange=Math.max(48,(st.range||82)*.72);
-      const dodgingProjectile=autoDodgeIncoming(st,dt,hpPct<.42||damageRatio>.040);
+      const dodgeForce=defenseAuto?(hpPct<.62||damageRatio>.024):(attackAuto?(hpPct<.30||damageRatio>.065):(hpPct<.42||damageRatio>.040));
+      const dodgingProjectile=autoDodgeIncoming(st,dt,dodgeForce);
       if(!dodgingProjectile){
-        if(d>attackRange){autoMoveToward(target.x,target.y,st,dt,1.0);}
+        if(d>attackRange){autoMoveToward(target.x,target.y,st,dt,activeAuto?1.13:(attackAuto?1.08:1.0));}
         else if(d<34&&damageRatio>.030){autoMoveVector(player.x-target.x,player.y-target.y,st,dt,.55);}
         else{
           const a=Math.atan2(target.y-player.y,target.x-player.x);
@@ -5248,10 +5460,10 @@ function spriteParallaxX(layout, drift){
   return W*layout.px - camera.x*layout.depth + drift;
 }
 function baseSpriteLine(alpha=1,w=1.4){
-  ctx.strokeStyle=`rgba(0,255,114,${alpha})`;
+  ctx.strokeStyle=themeLine(alpha);
   ctx.lineWidth=w;
   ctx.shadowBlur=8;
-  ctx.shadowColor='rgba(0,255,114,.35)';
+  ctx.shadowColor=themeLine(.35);
 }
 function drawThemeSprite(theme,slot,x,y,scale){
   ctx.save();
@@ -6013,7 +6225,7 @@ function drawProjectiles(){
 }
 function drawSummons(){for(const s of summons){lineStyle(.8,2);if(s.kind==='turret'){ctx.strokeRect(s.x-14,s.y-14,28,28);ctx.beginPath();ctx.moveTo(s.x,s.y-22);ctx.lineTo(s.x,s.y+22);ctx.moveTo(s.x-22,s.y);ctx.lineTo(s.x+22,s.y);ctx.stroke();}else{ctx.beginPath();ctx.arc(s.x,s.y,14,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-8,s.y);ctx.lineTo(s.x+8,s.y);ctx.moveTo(s.x,s.y-8);ctx.lineTo(s.x,s.y+8);ctx.stroke();}}}
 function drawDrops(){const st=computeStats(),range=pickupRange(st);for(const d of drops){const pulling=Math.hypot(player.x-d.x,player.y-d.y)<range;lineStyle(pulling?.95:.8,pulling?2.4:2);ctx.strokeRect(d.x-8,d.y-8,16,16);ctx.beginPath();ctx.moveTo(d.x,d.y-13);ctx.lineTo(d.x+13,d.y);ctx.lineTo(d.x,d.y+13);ctx.lineTo(d.x-13,d.y);ctx.closePath();ctx.stroke();if(pulling){lineStyle(.28,1);ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(player.x,player.y);ctx.stroke();}}}
-function drawEffects(){for(const e of effects){if(e.type==='text'){ctx.save();ctx.globalAlpha=clamp(e.life/.7,0,1);ctx.fillStyle=e.heal?'rgba(150,255,200,.95)':'rgba(0,255,114,.95)';ctx.shadowColor=themeLine(.9);ctx.shadowBlur=8;ctx.font=`${e.big?17:12}px monospace`;ctx.textAlign='center';ctx.fillText(e.t,e.x,e.y);ctx.restore();}else if(e.type==='spark'){lineStyle(.8,2);for(let i=0;i<6;i++){const a=i*Math.PI/3+e.life*8;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(a)*e.r,e.y+Math.sin(a)*e.r);ctx.stroke();}}else if(e.type==='ring'||e.type==='hex'){lineStyle(.6,2);ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1-e.life*.45),0,Math.PI*2);ctx.stroke();}else if(e.type==='linepop'){lineStyle(.75,2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();}else if(e.type==='bomb'){lineStyle(.8,2);ctx.beginPath();ctx.arc(e.x,e.y,Math.max(8,e.r),0,Math.PI*2);ctx.stroke();}}
+function drawEffects(){for(const e of effects){if(e.type==='text'){ctx.save();ctx.globalAlpha=clamp(e.life/.7,0,1);ctx.fillStyle=themeLine(.95);ctx.shadowColor=themeLine(.9);ctx.shadowBlur=8;ctx.font=`${e.big?17:12}px monospace`;ctx.textAlign='center';ctx.fillText(e.t,e.x,e.y);ctx.restore();}else if(e.type==='spark'){lineStyle(.8,2);for(let i=0;i<6;i++){const a=i*Math.PI/3+e.life*8;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(a)*e.r,e.y+Math.sin(a)*e.r);ctx.stroke();}}else if(e.type==='ring'||e.type==='hex'){lineStyle(.6,2);ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1-e.life*.45),0,Math.PI*2);ctx.stroke();}else if(e.type==='linepop'){lineStyle(.75,2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();}else if(e.type==='bomb'){lineStyle(.8,2);ctx.beginPath();ctx.arc(e.x,e.y,Math.max(8,e.r),0,Math.PI*2);ctx.stroke();}}
 }
 function drawMiniMap(){
   const mw=Math.max(56,mini.clientWidth||80), mh=Math.max(56,mini.clientHeight||mw), pad=4;
@@ -6085,7 +6297,7 @@ function prepareFullMapCanvasSize(){
   cv.style.height='100%';
   cv.style.display='block';
 }
-function fullMapDot(c,x,y,r,stroke='rgba(0,255,114,.88)',fill=null){
+function fullMapDot(c,x,y,r,stroke=null,fill=null){stroke=stroke||themeLine(.88);
   c.beginPath();c.arc(x,y,r,0,Math.PI*2);if(fill){c.fillStyle=fill;c.fill();}c.strokeStyle=stroke;c.stroke();
 }
 function drawTownFullMap(c,tr){
@@ -6115,10 +6327,10 @@ function renderFullMapCanvas(){
     drawDungeonBoundarySegments(c,dungeonMap.wallSegments,.82,1.8,v=>tr.x(v),v=>tr.y(v),null,false);
   }else drawTownFullMap(c,tr);
   c.strokeStyle=themeLine(.44);c.lineWidth=1;
-  for(const m of monsters)if(!m.dead)fullMapDot(c,tr.x(m.x),tr.y(m.y),m.boss?5.5:3.1,m.boss?'rgba(0,255,114,.95)':'rgba(0,255,114,.46)');
-  for(const n of npcs)fullMapDot(c,tr.x(n.x),tr.y(n.y),n.kind==='portal'?5:3.4,'rgba(0,255,114,.70)');
-  fullMapDot(c,tr.x(player.x),tr.y(player.y),6.2,'rgba(0,255,114,.98)','rgba(0,255,114,.22)');
-  if(onlineState.enabled){for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&p.field===currentField&&performance.now()-(p.seenAt||0)<6500)fullMapDot(c,tr.x(Number(p.x)||0),tr.y(Number(p.y)||0),4.6,'rgba(0,255,114,.72)','rgba(0,255,114,.12)');}}
+  for(const m of monsters)if(!m.dead)fullMapDot(c,tr.x(m.x),tr.y(m.y),m.boss?5.5:3.1,m.boss?themeLine(.95):themeLine(.46));
+  for(const n of npcs)fullMapDot(c,tr.x(n.x),tr.y(n.y),n.kind==='portal'?5:3.4,themeLine(.70));
+  fullMapDot(c,tr.x(player.x),tr.y(player.y),6.2,themeLine(.98),themeLine(.22));
+  if(onlineState.enabled){for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&p.field===currentField&&performance.now()-(p.seenAt||0)<6500)fullMapDot(c,tr.x(Number(p.x)||0),tr.y(Number(p.y)||0),4.6,themeLine(.72),themeLine(.12));}}
   c.restore();
   c.strokeStyle=themeLine(.82);c.lineWidth=1.4;c.strokeRect(tr.pad+.5,tr.pad+.5,w-tr.pad*2-1,h-tr.pad*2-1);
 }
@@ -6407,15 +6619,18 @@ function showLogSettings(){
   openPopup(`<div class="title">로그 / 채팅 설정</div><div class="sub">하단 시스템로그창에 채팅, 시스템, 전투로그를 통합 표시합니다.</div><div class="grid">${row('system','시스템 로그')}${row('combat','전투 로그')}${row('chat','채팅')}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function toggleLogSetting(k){normalizePlayer();player.logSettings[k]=player.logSettings[k]===false;updateLogBox();updateLogToggleButtons();requestCloudSave('logSetting');showLogSettings();}
-function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}<br><br><button onclick="Game.showSkillSlotSettings()">스킬</button></div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.showSkillSlotSettings()">스킬</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
+function showStats(){
+  const st=computeStats();
+  openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.showSkillInfoPanel()">스킬정보</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+}
 function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드, 그래픽, 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showGraphicSettings()">그래픽</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
 function themeHex(key,fallback){try{return localStorage.getItem(key)||fallback;}catch(e){return fallback;}}
 function hexToRgb(hex){const h=String(hex||'').replace('#','');if(!/^[0-9a-fA-F]{6}$/.test(h))return {r:0,g:255,b:114};return {r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
 function setAlpha(hex,a){const c=hexToRgb(hex);return `rgba(${c.r},${c.g},${c.b},${a})`;}
-function applyThemeColors(){const bg=themeHex('gl_theme_bg','#000000'), line=themeHex('gl_theme_line','#00ff72');const root=document.documentElement;root.style.setProperty('--bg',bg);root.style.setProperty('--g',line);root.style.setProperty('--gd',setAlpha(line,.55));root.style.setProperty('--gf',setAlpha(line,.18));root.style.setProperty('--gb',setAlpha(line,.075));document.body.style.background=bg;document.body.style.color=line;const wrap=$('wrap');if(wrap)wrap.style.background=bg;const gameCanvas=$('game');if(gameCanvas)gameCanvas.style.background=bg;const miniCanvas=$('mini');if(miniCanvas)miniCanvas.style.background=bg;}
-function showGraphicSettings(){const bg=themeHex('gl_theme_bg','#000000'), line=themeHex('gl_theme_line','#00ff72');openPopup(`<div class="title">그래픽 설정</div><div class="sub">배경색은 기존 검은 화면 영역, 선색은 기존 녹색 네온 선/글자 영역 전체에 적용합니다. 설정은 이 기기에 저장됩니다.</div><div class="card"><h3>미리보기</h3><div class="themePreview">GREEN LINE</div></div><div class="grid"><div class="card"><h3>배경색</h3><input class="neonInput" type="color" value="${bg}" oninput="Game.setThemeColor('bg',this.value)"></div><div class="card"><h3>라인색</h3><input class="neonInput" type="color" value="${line}" oninput="Game.setThemeColor('line',this.value)"></div></div><div class="footerBtns"><button onclick="Game.resetThemeColors()">기본값</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
-function setThemeColor(kind,val){try{localStorage.setItem(kind==='bg'?'gl_theme_bg':'gl_theme_line',val);}catch(e){}applyThemeColors();}
-function resetThemeColors(){try{localStorage.removeItem('gl_theme_bg');localStorage.removeItem('gl_theme_line');}catch(e){}applyThemeColors();showGraphicSettings();}
+function applyThemeColors(){const bg=themeHex('gl_theme_bg','#000000'), obj=themeHex('gl_theme_object','#00ff72');const c=hexToRgb(obj);const root=document.documentElement;root.style.setProperty('--bg',bg);root.style.setProperty('--g',obj);root.style.setProperty('--obj-rgb',`${c.r},${c.g},${c.b}`);root.style.setProperty('--gd',setAlpha(obj,.55));root.style.setProperty('--gf',setAlpha(obj,.18));root.style.setProperty('--gb',setAlpha(obj,.075));document.body.style.background=bg;document.body.style.color=obj;const wrap=$('wrap');if(wrap)wrap.style.background=bg;const gameCanvas=$('game');if(gameCanvas)gameCanvas.style.background=bg;const miniCanvas=$('mini');if(miniCanvas)miniCanvas.style.background=bg;}
+function showGraphicSettings(){const bg=themeHex('gl_theme_bg','#000000'), obj=themeHex('gl_theme_object','#00ff72');openPopup(`<div class="title">그래픽 설정</div><div class="sub">설정은 딱 두 가지입니다.<br>1) 까만색 배경화면 색깔<br>2) 모든 오브젝트 색깔</div><div class="card"><h3>미리보기</h3><div class="themePreview">OBJECT COLOR</div></div><div class="grid"><div class="card"><h3>배경화면 색깔</h3><input class="neonInput" type="color" value="${bg}" oninput="Game.setThemeColor('bg',this.value)"></div><div class="card"><h3>오브젝트 색깔</h3><input class="neonInput" type="color" value="${obj}" oninput="Game.setThemeColor('object',this.value)"></div></div><div class="footerBtns"><button onclick="Game.resetThemeColors()">기본값</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
+function setThemeColor(kind,val){try{localStorage.setItem(kind==='bg'?'gl_theme_bg':'gl_theme_object',val);}catch(e){}applyThemeColors();}
+function resetThemeColors(){try{localStorage.removeItem('gl_theme_bg');localStorage.removeItem('gl_theme_object');localStorage.removeItem('gl_theme_line');}catch(e){}applyThemeColors();showGraphicSettings();}
 function quickToggleAuto(){
   try{
     normalizePlayer();
@@ -6426,36 +6641,129 @@ function quickToggleAuto(){
   }catch(e){console.error(e);player.autoMode=false;toast('오토 오류 복구');try{updateHud();}catch(_){} }
 }
 function toggleAuto(){quickToggleAuto();try{showAutoPanel();}catch(e){console.error(e);toast('오토 설정 오류 복구');}}
+function setAutoBattleType(type){
+  normalizePlayer();
+  if(!AUTO_BATTLE_TYPES[type])type='smart';
+  player.autoBattleType=type;
+  toast(`오토모드: ${AUTO_BATTLE_TYPES[type]}`);
+  requestCloudSave('autoType');
+  showAutoPanel();
+}
 function showAutoPanel(){
   normalizePlayer();
+  popupMode='auto';
   const job=jobById(player.job||'blade');
-  const style=rangedAttackProfile(player.job,computeStats())?'원거리 추적/거리 유지':'근접 접근/회피 돌진';
-  const slots=player.skillSlots.slice(0,4).map((r,i)=>{const ok=r>0&&r<=skillStar();const name=ok?skillByRank(player.job,r).name:'비움';return `스킬${i+1}: ${ok?`${r}성 ${name}`:'비움'}`;}).join('<br>');
+  const cur=AUTO_BATTLE_TYPES[player.autoBattleType]?player.autoBattleType:'smart';
+  const modes=Object.keys(AUTO_BATTLE_TYPES).map(k=>`<button class="card ${cur===k?'selected':''}" onclick="Game.setAutoBattleType('${k}')"><h3>${AUTO_BATTLE_TYPES[k]}</h3>${AUTO_BATTLE_DESCS[k]}</button>`).join('');
+  const pct=Math.round(player.autoPotionPct*100);
   const pot=CONSUMABLES[player.potionSlot]||CONSUMABLES.potion;
-  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${job.name}</b> · ${job.type}<br>자동 전투 방식: ${style}</div><div class="card"><h3>현재 슬롯</h3>${slots}<br>물약 슬롯: ${pot.name} · HP ${Math.round(player.autoPotionPct*100)}% 이하 자동 사용</div><div class="grid"><button onclick="Game.toggleAuto()" class="${player.autoMode?'autoOn':''}">오토 ${player.autoMode?'ON':'OFF'}</button><button onclick="Game.showPotionSettings()">물약 설정</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">오토 중 오류가 나면 자동으로 오토를 끄고 게임은 계속 진행됩니다.</div>`);
+  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${escapeHtml(job.name)}</b> · ${escapeHtml(job.type||'')}<br>현재 방식: <b>${AUTO_BATTLE_TYPES[cur]}</b></div><h3>전투 방식</h3><div class="grid">${modes}</div><h3>물약 자동사용 체력%</h3><div class="card"><div class="sub">현재 물약: ${escapeHtml(pot.name)} · HP <b id="autoPctVal">${pct}%</b> 이하 자동 사용</div><div class="neonRangeWrap"><div id="rangeBubble" class="rangeBubble" style="left:${pct}%">${pct}%</div><input class="neonRange" type="range" min="0" max="100" step="1" value="${pct}" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" oninput="Game.updatePotionRangeLabel(this.value)" onchange="Game.setAutoPotionPct(this.value)"><div class="neonRangeText"><span>0%</span><span>자동 사용 기준</span><span>100%</span></div></div></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">오토 ON/OFF는 하단 오토 버튼 또는 E키로 전환합니다.</div>`);
 }
 
-function showSkillSlotSettings(){
+let skillDragState=null;
+function skillCardHtml(rank,owned=true){
+  const sk=skillByRank(player.job,rank)||{name:'스킬',desc:''};
+  const req=typeof skillRequiredLevel==='function'?skillRequiredLevel(rank):1;
+  const usedSlot=(player.skillSlots||[]).findIndex(v=>Number(v)===rank)+1;
+  const usedText=usedSlot>0?` · 슬롯${usedSlot} 장착중`:'';
+  return `<button class="card skillPickCard" type="button" onclick="Game.showSkillSlotSelectPopup(${rank})"><h3>${rank}성 ${escapeHtml(sk.name)}</h3>${escapeHtml(sk.desc)}<br><span class="small">Lv.${req} 필요${usedText}<br>누르면 슬롯 1~4 선택</span></button>`;
+}
+function skillSlotBoxHtml(slot){
   normalizePlayer();
+  const cur=skillRankForSlot(slot);
+  const sk=cur?skillByRank(player.job,cur):null;
+  const name=sk?`${cur}성 ${escapeHtml(sk.name)}`:'비움';
+  const desc=sk?escapeHtml(sk.desc):'스킬 카드를 이 칸으로 드래그';
+  return `<div class="card skillDropSlot" data-slot="${slot}" ondragover="Game.skillSlotDragOver(event)" ondragleave="Game.skillSlotDragLeave(event)" ondrop="Game.dropSkillOnSlot(event,${slot})"><div><div class="skillSlotNo">슬롯 ${slot}</div><div class="skillSlotName">${name}</div><div class="skillSlotHelp">${desc}</div></div><button onclick="Game.setSkillSlot(${slot},0)">비우기</button></div>`;
+}
+function showSkillSlotSelectPopup(rank){
+  normalizePlayer();
+  popupMode='skillSlotSelect';
+  rank=clamp(Number(rank)||0,0,MAX_SKILL_STAR);
+  const learned=skillStar();
+  if(rank<=0||rank>learned){toast('아직 배우지 않은 스킬');showSkillInfoPanel();return;}
+  const sk=skillByRank(player.job,rank)||{name:'스킬',desc:''};
+  const req=typeof skillRequiredLevel==='function'?skillRequiredLevel(rank):1;
+  const buttons=[1,2,3,4].map(slot=>{
+    const curRank=Number((player.skillSlots||[])[slot-1])||0;
+    const curSkill=curRank?skillByRank(player.job,curRank):null;
+    const curText=curSkill?`${curRank}성 ${escapeHtml(curSkill.name)}`:'비움';
+    const same=curRank===rank;
+    return `<button class="card skillSlotPick ${same?'selected':''}" onclick="Game.setSkillSlot(${slot},${rank})"><h3>슬롯 ${slot}</h3>${same?'현재 장착중':curText}<br><span class="small">${same?'다시 선택해 유지':'이 슬롯에 장착'}</span></button>`;
+  }).join('');
+  openPopup(`<div class="title">스킬 슬롯 선택</div><div class="card"><h3>${rank}성 ${escapeHtml(sk.name)}</h3>${escapeHtml(sk.desc)}<br><span class="small">Lv.${req} 필요</span></div><div class="sub">장착할 슬롯을 선택하세요. 이미 다른 슬롯에 장착된 스킬은 선택한 슬롯으로 이동합니다.</div><div class="skillSlotChoiceGrid">${buttons}</div><div class="footerBtns"><button onclick="Game.clearSkillSlots()">슬롯 모두 비우기</button><button onclick="Game.showSkillInfoPanel()">스킬정보</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+}
+function showSkillInfoPanel(){
+  normalizePlayer();
+  popupMode='skillInfo';
   const isAdventurer=(player.job||'adventurer')==='adventurer';
   const learned=isAdventurer?0:skillStar();
-  const job=jobById(player.job||'blade');
-  const makeAssign=(slot)=>{
-    if(isAdventurer)return `<div class="card"><h3>스킬${slot}</h3>모험가는 스킬 상점을 이용할 수 없습니다.<br><span class="small">직업소개소에서 1차 직업을 선택하면 스킬을 배울 수 있습니다.</span></div>`;
-    if(learned<=0)return `<div class="card"><h3>스킬${slot}</h3>습득한 스킬이 없습니다.<br><button onclick="Game.showSkillShop()">스킬 상점 이동</button></div>`;
-    const cur=skillRankForSlot(slot);
-    const buttons=[];
-    buttons.push(`<button onclick="Game.setSkillSlot(${slot},0)" ${cur===0?'class="selected"':''}>비움</button>`);
-    for(let r=1;r<=learned;r++){
-      const s=skillByRank(player.job,r);
-      const used=player.skillSlots.some((v,i)=>i!==slot-1&&Number(v)===r);
-      buttons.push(`<button onclick="Game.setSkillSlot(${slot},${r})" ${cur===r?'class="selected"':''} ${used?'disabled':''}>${r}성 ${s.name}${used?' · 장착중':''}</button>`);
-    }
-    return `<div class="card"><h3>스킬${slot} 슬롯</h3>현재: ${cur?`${cur}성 ${skillByRank(player.job,cur).name}`:'비움'}<div class="grid">${buttons.join('')}</div></div>`;
-  };
-  openPopup(`<div class="title">스킬 슬롯 설정</div><div class="sub">${job.name} · 보유 스킬 ${learned}/${MAX_SKILL_STAR}<br>각 슬롯에 사용할 스킬을 지정합니다. 오토모드는 이 슬롯 순서대로 자동 사용합니다.</div>${makeAssign(1)}${makeAssign(2)}${makeAssign(3)}${makeAssign(4)}<div class="footerBtns"><button onclick="Game.showAutoPanel()">오토 설정</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+  const job=jobById(player.job||'adventurer');
+  let skillCards='';
+  if(isAdventurer){
+    skillCards=`<div class="card"><h3>보유 스킬 없음</h3>모험가는 스킬 상점을 이용할 수 없습니다.<br><span class="small">직업소개소에서 1차 직업을 선택하면 스킬을 배울 수 있습니다.</span></div>`;
+  }else if(learned<=0){
+    skillCards=`<div class="card"><h3>보유 스킬 없음</h3>아직 배운 스킬이 없습니다.<br><button onclick="Game.showSkillShop()">스킬 상점 이동</button></div>`;
+  }else{
+    const list=[];
+    for(let r=1;r<=learned;r++)list.push(skillCardHtml(r,true));
+    skillCards=list.join('');
+  }
+  openPopup(`<div class="title">스킬정보</div><div class="sub">${escapeHtml(job.name)} · 보유 스킬 ${learned}/${MAX_SKILL_STAR}<br>보유 스킬 설명을 확인하고, 카드를 누르면 슬롯 1~4 선택 팝업이 열립니다.</div><h3>보유 스킬</h3><div class="skillInfoDeck">${skillCards}</div><div class="footerBtns"><button onclick="Game.showStats()">스텟</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
-function setSkillSlot(slot,rank){normalizePlayer();slot=clamp(Number(slot)||1,1,4);rank=clamp(Number(rank)||0,0,MAX_SKILL_STAR);const learned=skillStar();if(rank>learned){toast('아직 배우지 않은 스킬');return;}if(rank>0){const used=player.skillSlots.findIndex((v,i)=>i!==slot-1&&Number(v)===rank);if(used>=0){toast(`${rank}성 스킬은 이미 스킬${used+1}에 장착됨`);return;}}player.skillSlots[slot-1]=rank;toast(`스킬${slot} 슬롯 변경`);showSkillSlotSettings();updateHud();}
+function showSkillSlotSettings(){showSkillInfoPanel();}
+function beginSkillDrag(ev,rank){
+  try{ev.dataTransfer.setData('text/plain',String(rank));ev.dataTransfer.effectAllowed='move';}catch(e){}
+}
+function skillSlotDragOver(ev){
+  try{ev.preventDefault();ev.currentTarget.classList.add('dragOver');ev.dataTransfer.dropEffect='move';}catch(e){}
+}
+function skillSlotDragLeave(ev){try{ev.currentTarget.classList.remove('dragOver');}catch(e){}}
+function dropSkillOnSlot(ev,slot){
+  try{ev.preventDefault();ev.currentTarget.classList.remove('dragOver');const rank=Number(ev.dataTransfer.getData('text/plain'))||0;if(rank>0)setSkillSlot(slot,rank);}catch(e){console.error(e);}
+}
+function beginSkillPointerDrag(ev,rank){
+  try{
+    if(ev.pointerType==='mouse')return;
+    ev.preventDefault();ev.stopPropagation();
+    const src=ev.currentTarget;
+    const ghost=src.cloneNode(true);
+    ghost.classList.add('skillDragGhost');
+    ghost.removeAttribute('draggable');
+    document.body.appendChild(ghost);
+    const move=(x,y)=>{ghost.style.left=x+'px';ghost.style.top=y+'px';};
+    move(ev.clientX,ev.clientY);
+    skillDragState={rank:Number(rank),ghost,pointerId:ev.pointerId};
+    try{src.setPointerCapture(ev.pointerId);}catch(_){ }
+    const onMove=(e)=>{if(!skillDragState||e.pointerId!==skillDragState.pointerId)return;e.preventDefault();move(e.clientX,e.clientY);highlightSkillDropSlot(e.clientX,e.clientY);};
+    const onUp=(e)=>{
+      if(!skillDragState||e.pointerId!==skillDragState.pointerId)return;
+      e.preventDefault();
+      const el=document.elementFromPoint(e.clientX,e.clientY);
+      const slotEl=el&&el.closest?el.closest('.skillDropSlot'):null;
+      const targetSlot=slotEl?Number(slotEl.dataset.slot):0;
+      clearSkillDropHighlights();
+      cleanupSkillPointerDrag();
+      if(targetSlot)setSkillSlot(targetSlot,rank);
+      document.removeEventListener('pointermove',onMove,true);
+      document.removeEventListener('pointerup',onUp,true);
+      document.removeEventListener('pointercancel',onUp,true);
+    };
+    document.addEventListener('pointermove',onMove,true);
+    document.addEventListener('pointerup',onUp,true);
+    document.addEventListener('pointercancel',onUp,true);
+  }catch(e){console.error(e);cleanupSkillPointerDrag();}
+}
+function highlightSkillDropSlot(x,y){
+  clearSkillDropHighlights();
+  const el=document.elementFromPoint(x,y);
+  const slotEl=el&&el.closest?el.closest('.skillDropSlot'):null;
+  if(slotEl)slotEl.classList.add('dragOver');
+}
+function clearSkillDropHighlights(){document.querySelectorAll('.skillDropSlot.dragOver').forEach(el=>el.classList.remove('dragOver'));}
+function cleanupSkillPointerDrag(){try{if(skillDragState&&skillDragState.ghost)skillDragState.ghost.remove();}catch(e){}skillDragState=null;}
+function setSkillSlot(slot,rank){normalizePlayer();slot=clamp(Number(slot)||1,1,4);rank=clamp(Number(rank)||0,0,MAX_SKILL_STAR);const learned=skillStar();if(rank>learned){toast('아직 배우지 않은 스킬');return;}if(rank>0){const used=player.skillSlots.findIndex((v,i)=>i!==slot-1&&Number(v)===rank);if(used>=0)player.skillSlots[used]=0;}player.skillSlots[slot-1]=rank;toast(rank?`슬롯${slot}: ${rank}성 ${skillByRank(player.job,rank).name}`:`슬롯${slot} 비움`);if(popupMode==='skillInfo'||popupMode==='skillSlotSelect')showSkillInfoPanel();else showSkillSlotSettings();updateHud();}
+function clearSkillSlots(){normalizePlayer();player.skillSlots=[0,0,0,0];toast('스킬 슬롯 모두 비움');requestCloudSave('skillSlots');showSkillInfoPanel();updateHud();}
 function showPotionSettings(){
   normalizePlayer();
   const itemRows=Object.entries(CONSUMABLES).map(([k,c])=>`<button class="card ${player.potionSlot===k?'selected':''}" onclick="Game.setPotionSlot('${k}')"><h3>${c.name}</h3>${c.desc}<br><span class="small">보유 ${player.consumables[k]||0}개</span></button>`).join('');
@@ -6475,7 +6783,7 @@ function updatePotionRangeLabel(v){
     bubble.style.left=val+'%';
   }
 }
-function setAutoPotionPct(v){normalizePlayer();const n=Number(v);player.autoPotionPct=clamp((Number.isFinite(n)?n:42)/100,0,1);toast(`자동 물약 HP ${Math.round(player.autoPotionPct*100)}%`);showPotionSettings();updateHud();}
+function setAutoPotionPct(v){normalizePlayer();const n=Number(v);player.autoPotionPct=clamp((Number.isFinite(n)?n:42)/100,0,1);toast(`자동 물약 HP ${Math.round(player.autoPotionPct*100)}%`);requestCloudSave('autoPotion');if(popupMode==='auto')showAutoPanel();else showPotionSettings();updateHud();}
 function enterTownFromSettings(){closePopup();enterField('town');toast('마을로 귀환');}
 function nearestNpc(){let b=null,bd=85;for(const n of npcs){if(n.kind==='portal')continue;const d=Math.hypot(player.x-n.x,player.y-n.y);if(d<bd){bd=d;b=n;}}return b;}
 function talkToNpc(n){if(!n)return; if(n.kind==='quest')showQuest();else if(n.kind==='shop')showShop();else if(n.kind==='guild')showGuild();else if(n.kind==='jobAgency')showJobAgency();else if(n.kind==='dummy')showTrainingDummy();}
@@ -6540,10 +6848,10 @@ function bind(){
     if(isTextEditingTarget(e.target)||e.repeat)return;
     const code=e.code;
     if(['KeyW','KeyA','KeyS','KeyD'].includes(code)){pcInput.keys[code]=true;e.preventDefault();return;}
-    if(code==='Digit1'){e.preventDefault();safeUseSkill(1);return;}
-    if(code==='Digit2'){e.preventDefault();safeUseSkill(2);return;}
-    if(code==='Digit3'){e.preventDefault();safeUseSkill(3);return;}
-    if(code==='Digit4'){e.preventDefault();safeUseSkill(4);return;}
+    if(code==='Digit1'||code==='Numpad1'){e.preventDefault();safeUseSkill(1);return;}
+    if(code==='Digit2'||code==='Numpad2'){e.preventDefault();safeUseSkill(2);return;}
+    if(code==='Digit3'||code==='Numpad3'){e.preventDefault();safeUseSkill(3);return;}
+    if(code==='Digit4'||code==='Numpad4'){e.preventDefault();safeUseSkill(4);return;}
     if(code==='KeyE'){e.preventDefault();quickToggleAuto();return;}
     if(code==='KeyQ'){e.preventDefault();usePotion();return;}
   }, {passive:false});
@@ -6667,7 +6975,7 @@ function safeConnectOnlineFromPanel(){
 }
 
 applyThemeColors();
-window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSkillInfoPanel,showSkillSlotSelectPopup,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,setAutoBattleType,showSkillInfoPanel,showSkillSlotSettings,clearSkillSlots,beginSkillDrag,beginSkillPointerDrag,skillSlotDragOver,skillSlotDragLeave,dropSkillOnSlot,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 try{
   window.showPeerAction=(id)=>gameSafeCall('showPeerAction',id);
   globalThis.showPeerAction=window.showPeerAction;
