@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_072_connect_online_global_fix -->
+<!-- build: index6_073_online_reference_cleanup_safe -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1204,6 +1204,26 @@
     }
   }
 
+
+  /* 073: 접속자 버튼 안정화 */
+  .onlineUserInBox.oneLine.self.noBtns{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  .onlineUserInBox.oneLine.self.noBtns .onlineUserBoxBtns{display:none!important;}
+  .onlineUserInBox.oneLine.self.noBtns em{font-style:normal;opacity:.85;}
+  .onlineUserInBox.oneLine:not(.self){
+    grid-template-columns:minmax(0,1fr) 104px!important;
+  }
+  .onlineUserInBox.oneLine:not(.self) .onlineUserBoxBtns{
+    width:104px!important;min-width:104px!important;max-width:104px!important;
+    display:flex!important;justify-content:flex-end!important;gap:4px!important;overflow:visible!important;
+  }
+  .onlineUserInBox.oneLine:not(.self) .onlineUserBoxBtns button{
+    width:50px!important;min-width:50px!important;max-width:50px!important;flex:0 0 50px!important;
+    height:22px!important;font-size:8.5px!important;padding:0!important;
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1931,7 +1951,7 @@ async function initPartyPresence(force=false){
           onlineState.drawBlocked=false;
           onlineState.lastConnectTry=performance.now();
           await trackOnlinePresence(true);
-          if(popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),120);
+          if(popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),800);
         }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
           onlineState.enabled=false;
           onlineState.status=status;
@@ -2096,7 +2116,7 @@ function handlePartyAccept(p){
     msg(`${p.fromName||'유저'}님이 파티 신청을 수락했습니다.`, 'system');
     toast('파티 신청 수락');
     trackOnlinePresence(true);
-    openPopup(`<div class="title">파티 수락</div><div class="card"><h3>${escapeHtml(p.fromName||'유저')}</h3>파티 신청을 수락했습니다.</div><div class="footerBtns"><button onclick="Game.showOnlineHub()">온라인</button><button onclick="Game.closePopup()">닫기</button></div>`);
+    openPopup(`<div class="title">파티 수락</div><div class="card"><h3>${escapeHtml(p.fromName||'유저')}</h3>파티 신청을 수락했습니다.</div><div class="footerBtns"><button onclick="Game.showOnlineHub()">온라인</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
   }else if(p.partyId===onlineState.partyId){
     msg(`${p.fromName||'유저'}님이 파티에 참가`, 'system');
     trackOnlinePresence(true);
@@ -2106,7 +2126,7 @@ function handlePartyDecline(p){
   if(!p||p.to!==myOnlineId())return;
   msg(`${p.fromName||'유저'}님이 파티 신청을 거절했습니다.`, 'system');
   toast('파티 신청 거절됨');
-  openPopup(`<div class="title">파티 거절</div><div class="card"><h3>${escapeHtml(p.fromName||'유저')}</h3>파티 신청을 거절했습니다.</div><div class="footerBtns"><button onclick="Game.showOnlineHub()">온라인</button><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">파티 거절</div><div class="card"><h3>${escapeHtml(p.fromName||'유저')}</h3>파티 신청을 거절했습니다.</div><div class="footerBtns"><button onclick="Game.showOnlineHub()">온라인</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function handlePartyLeave(p){if(!p)return;if(p.partyId&&p.partyId===onlineState.partyId)msg(`${p.fromName||'유저'}님이 파티를 나감`, 'system');}
 function handlePartyChat(p){if(!p||!p.text)return;if(p.partyId&&onlineState.partyId&&p.partyId!==onlineState.partyId)return;const line={name:p.fromName||'유저',text:String(p.text).slice(0,80),t:p.t||Date.now()};onlineState.chat.push(line);while(onlineState.chat.length>30)onlineState.chat.shift();msg(`[파티] ${line.name}: ${line.text}`,'chat');}
@@ -2156,7 +2176,7 @@ function declinePartyInvite(from){
 }
 function createParty(){
   ensureParty();
-  if(!onlineState.enabled){connectOnlineFromPanel();return;}
+  if(!onlineState.enabled){gameSafeCall('connectOnlineFromPanel');return;}
   trackOnlinePresence(true);
   toast('파티 생성');
   showOnlineHub();
@@ -2248,7 +2268,7 @@ function showPeerAction(id){
     return;
   }
   const loc=typeof peerDisplayLocation==='function'?peerDisplayLocation(p):((FIELDS.find(f=>f.id===p.field)||{}).name||p.field||'');
-  openPopup(`<div class="title">유저 상호작용</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>레벨: ${p.level||1}<br>직업: ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>위치: ${escapeHtml(loc)}</div><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티신청</button><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">유저 상호작용</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>레벨: ${p.level||1}<br>직업: ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>위치: ${escapeHtml(loc)}</div><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티신청</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 try{window.showPeerAction=showPeerAction;globalThis.showPeerAction=showPeerAction;}catch(e){}
 function showPeerInfo(id){
@@ -2259,7 +2279,7 @@ function showPeerInfo(id){
     return;
   }
   const loc=peerDisplayLocation(p);
-  openPopup(`<div class="title">유저 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>레벨: ${p.level||1}<br>직업: ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>위치: ${escapeHtml(loc)}<br>HP: ${Math.round(p.hp||0)}/${Math.round(p.maxHp||0)}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.showOnlineHub(false)">온라인</button><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">유저 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>레벨: ${p.level||1}<br>직업: ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>위치: ${escapeHtml(loc)}<br>HP: ${Math.round(p.hp||0)}/${Math.round(p.maxHp||0)}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.safeCall('showOnlineHub','false')">온라인</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function connectOnline(url,key,room){return connectOnlineFromPanel();}
 function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
@@ -2330,7 +2350,7 @@ function msg(t,type='system'){
 }
 function toast(t){toastBox.textContent=t;toastBox.style.display='block';clearTimeout(toastBox._t);toastBox._t=setTimeout(()=>toastBox.style.display='none',1400);}
 function popupAllowsCloseX(){return !['boot','title','nickname','class','update','kakaoLogin','growth','roulette','guide'].includes(String(popupMode||''));}
-function openPopup(html){const raw=String(html||'');popup.innerHTML=(popupAllowsCloseX()&&!raw.includes('popupCloseX'))?`<button class="popupCloseX" onclick="Game.closePopup()">X</button>${raw}`:raw;popupLayer.style.display='flex';gamePaused=true;}
+function openPopup(html){const raw=String(html||'');popup.innerHTML=(popupAllowsCloseX()&&!raw.includes('popupCloseX'))?`<button class="popupCloseX" onclick="Game.safeCall('closePopup')">X</button>${raw}`:raw;popupLayer.style.display='flex';gamePaused=true;}
 function closePopup(){popupLayer.style.display='none';popup.innerHTML='';popup.style.width='';popup.style.height='';popup.style.maxWidth='';popup.style.maxHeight='';popup.style.padding='';popup.style.overflow='';gamePaused=false;popupMode='';}
 function lineStyle(alpha=1,width=2){ctx.strokeStyle=`rgba(0,255,114,${alpha})`;ctx.lineWidth=width;ctx.shadowColor='rgba(0,255,114,.72)';ctx.shadowBlur=8;ctx.lineCap='round';ctx.lineJoin='round';}
 function fillStyle(alpha=.12){ctx.fillStyle=`rgba(0,255,114,${alpha})`;ctx.shadowColor='rgba(0,255,114,.5)';ctx.shadowBlur=8;}
@@ -2354,7 +2374,7 @@ function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(
 
 function startClassSelect(){showJobAgency();}
 let updateBootTimer=null;
-const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_072';
+const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_073';
 function repairSkillSlotDuplicates(){
   normalizePlayer();
   const used=new Set();
@@ -2479,17 +2499,16 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 072","text":"- connectOnlineFromPanel 미정의 오류 수정\\n- 온라인 재접속 관련 버튼 호출을 Game 경유로 통일\\n- window/globalThis에 connectOnlineFromPanel 강제 등록\\n- 온라인 버튼 오류 방어 추가"},
-  {"ver":"이전 패치 071","text":"- showPeerAction 전역 미등록으로 인한 ReferenceError 재수정\\n- 필드 상호작용 호출부를 Game.showPeerAction 경유로 변경\\n- window/globalThis에 showPeerAction 강제 등록"},
-  {"ver":"이전 패치 070","text":"- showPeerAction 미정의 오류 수정\\n- 필드에서 근처 유저 상호작용 메뉴 정상 표시"},
-  {"ver":"이전 패치 069","text":"- 접속자 아이디 박스에서 자기 자신은 닉네임 뒤에 (나) 표시\\n- 상대 유저에게만 정보/파티신청 버튼 표시\\n- 온라인 인원 표시 중복 제거"}
+  {"ver":"현재 패치 073","text":"- 온라인/파티 함수 참조 오류를 안전 정리\\n- showPeerAction/connectOnlineFromPanel/requestPartyToPeer 전역 호출 방어\\n- 버튼 클릭은 Game.safeCall 경유로 실행되도록 보강\\n- 온라인 재접속 호출이 누락되어도 게임이 멈추지 않게 처리\\n- 렉 완화를 위해 온라인 재접속 재시도 간격 증가"},
+  {"ver":"이전 패치 072","text":"- connectOnlineFromPanel 미정의 오류 수정\\n- 온라인 재접속 관련 버튼 호출을 Game 경유로 통일\\n- window/globalThis에 connectOnlineFromPanel 강제 등록"},
+  {"ver":"이전 패치 071","text":"- showPeerAction 전역 미등록으로 인한 ReferenceError 재수정\\n- 필드 상호작용 호출부를 Game.showPeerAction 경유로 변경"}
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
 }
 function showPatchNotes(){
   popupMode='patch';
-  openPopup(`<div class="title">패치노트</div><div class="sub">최근 패치 기준으로 이전 3회까지 기록합니다.</div><div class="patchNoteBox">${patchNoteHtml()}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">패치노트</div><div class="sub">최근 패치 기준으로 이전 3회까지 기록합니다.</div><div class="patchNoteBox">${patchNoteHtml()}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 
 function pickJob(id){
@@ -3672,7 +3691,7 @@ function showAdvancement(){
   const nextCards=(info.next||[]).filter(Boolean).map(j=>{const locked=!canLevel;const b=j.base||{};return `<button class="card" ${locked?'disabled':''} onclick="Game.advanceJob('${j.id}')"><h3>${locked?'[잠김] ':''}${j.name}</h3><b>${jobBadge(j)}</b><br>${j.desc}<br><span class="small">필요: Lv.${info.need||'-'} · 공격 ${b.atk||0} · HP ${b.hp||0} · 방어 ${b.def||0}<br>${jobPartyLine(j)}</span></button>`;}).join('') || `<div class="card"><h3>일반 전직 완료</h3>현재 단계에서 일반 전직 후보가 없습니다.<br><span class="small">히든 조건 달성 시 아래에 전직 후보가 열립니다.</span></div>`;
   const levelNote=info.need&&player.level<info.need?`<div class="card"><h3>전직 조건 부족</h3>${info.title} 필요 레벨은 ${info.need}입니다. 현재 레벨은 ${player.level}입니다.</div>`:'';
   const advLock=(cur.id==='adventurer'&&!player.firstJobUnlocked)?`<div class="card"><h3>직업 선택 잠김</h3>장로에게 모험가 퀘스트를 받고 훈련소 허수아비를 50대 때리면 직업소개소에서 1차 직업을 선택할 수 있습니다.<br><span class="small">현재 허수아비 타격: ${player.adventurerQuest?.dummyHits||0}/50</span></div>`:'';
-  openPopup(`<div class="title">직업소개소 / 전직 관리</div><div class="sub">모험가 퀘스트 완료 후 1차 직업을 고르고, 이후 2차(Lv.20)·3차(Lv.50) 전직을 진행합니다. 히든 직업은 조건을 만족해야 이름과 전직 버튼이 열립니다.</div>${currentCard}${advLock}${levelNote}<h3>${info.title}</h3><div class="grid">${nextCards}</div><h3>히든 전직</h3><div class="grid">${hiddenJobCards()}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">직업소개소 / 전직 관리</div><div class="sub">모험가 퀘스트 완료 후 1차 직업을 고르고, 이후 2차(Lv.20)·3차(Lv.50) 전직을 진행합니다. 히든 직업은 조건을 만족해야 이름과 전직 버튼이 열립니다.</div>${currentCard}${advLock}${levelNote}<h3>${info.title}</h3><div class="grid">${nextCards}</div><h3>히든 전직</h3><div class="grid">${hiddenJobCards()}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function advanceJob(id){
   normalizePlayer();const next=jobById(id), cur=jobById(player.job||'warrior');
@@ -3693,7 +3712,7 @@ function showTown(){
   closePopup();
 }
 function adventurerQuestState(){normalizePlayer();return player.adventurerQuest;}
-function showElderGuide(){popupMode='guide';openPopup(`<div class="title">장로의 안내</div><div class="card"><h3>정식 직업 등록 전 안내</h3>처음에는 <b>모험가</b>로 시작합니다.<br>마을 북쪽 <b>장로</b>에게 모험가 퀘스트를 받고, 훈련소 허수아비를 50대 때리면 직업소개소에서 1차 직업을 선택할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
+function showElderGuide(){popupMode='guide';openPopup(`<div class="title">장로의 안내</div><div class="card"><h3>정식 직업 등록 전 안내</h3>처음에는 <b>모험가</b>로 시작합니다.<br>마을 북쪽 <b>장로</b>에게 모험가 퀘스트를 받고, 훈련소 허수아비를 50대 때리면 직업소개소에서 1차 직업을 선택할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
 function showAdventurerQuest(){
   const q=adventurerQuestState();
   const hits=clamp(Math.floor(Number(q.dummyHits)||0),0,50);
@@ -3701,12 +3720,12 @@ function showAdventurerQuest(){
   if(done){q.done=true;player.firstJobUnlocked=true;}
   const body=completed?`<h3>모험가 퀘스트 완료</h3>직업소개소에서 1차 직업을 선택할 수 있습니다.<br><span class="small">직업 선택창을 닫아도 장로에게 다시 말하면 이 버튼이 다시 표시됩니다.</span>`:accepted?`<h3>허수아비 실전 테스트</h3>훈련소 허수아비를 50대 때리십시오.<br>진행도: ${hits}/50<br><span class="small">허수아비 근처에서 공격 버튼을 누르면 카운트됩니다.</span>`:`<h3>모험가 등록 시험</h3>정식 직업을 갖기 전 기초 전투 테스트가 필요합니다.<br>목표: 훈련소 허수아비 50대 타격<br>보상: 직업소개소 이용 허가`;
   const btn=completed?`<button onclick="Game.showJobAgency()">직업소개소</button>`:done?`<button onclick="Game.completeAdventurerQuest()">완료 보고</button>`:accepted?`<button onclick="Game.showTrainingDummy()">훈련소 보기</button>`:`<button onclick="Game.acceptAdventurerQuest()">퀘스트 받기</button>`;
-  openPopup(`<div class="title">장로 / 모험가 퀘스트</div><div class="card">${body}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button>${btn}</div>`);
+  openPopup(`<div class="title">장로 / 모험가 퀘스트</div><div class="card">${body}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button>${btn}</div>`);
 }
 function acceptAdventurerQuest(){const q=adventurerQuestState();q.accepted=true;q.done=false;q.completed=false;q.dummyHits=0;player.firstJobUnlocked=false;toast('모험가 퀘스트 수락');showAdventurerQuest();}
 function completeAdventurerQuest(){const q=adventurerQuestState();if((q.dummyHits||0)<50&&!q.done){toast('허수아비 50타가 필요합니다');showAdventurerQuest();return;}q.accepted=true;q.done=true;q.completed=true;q.dummyHits=50;player.firstJobUnlocked=true;player.gold+=120;player.consumables.potion=(player.consumables.potion||0)+2;player.potions=player.consumables.potion;toast('직업소개소 이용 허가 획득');msg('장로가 직업소개소 이용을 허가했습니다.');saveGame();showJobAgency();}
 function showJobAgency(){normalizePlayer();popupMode='jobAgency';zoneTag.textContent='직업소개소';if((player.job||'adventurer')==='adventurer'&&!player.firstJobUnlocked){openPopup(`<div class="title">직업소개소</div><div class="card"><h3>이용 조건 미달</h3>장로의 모험가 퀘스트를 완료해야 1차 직업을 선택할 수 있습니다.<br><span class="small">허수아비 타격: ${player.adventurerQuest?.dummyHits||0}/50</span></div><div class="footerBtns"><button onclick="Game.showQuest()">장로에게 가기</button><button onclick="Game.showTrainingDummy()">훈련소</button></div>`);return;}showAdvancement();}
-function showTrainingDummy(){normalizePlayer();const q=player.adventurerQuest||{};const hits=clamp(Math.floor(Number(q.dummyHits)||0),0,50);openPopup(`<div class="title">훈련소</div><div class="card"><h3>허수아비</h3>직업 선택 테스트용 훈련 허수아비입니다.<br>모험가 퀘스트 진행도: ${hits}/50<br><span class="small">마을 오른쪽 아래 훈련소의 허수아비 옆에서 공격 버튼을 누르면 타격 수가 증가합니다.</span></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button><button onclick="Game.showQuest()">장로 퀘스트</button></div>`);}
+function showTrainingDummy(){normalizePlayer();const q=player.adventurerQuest||{};const hits=clamp(Math.floor(Number(q.dummyHits)||0),0,50);openPopup(`<div class="title">훈련소</div><div class="card"><h3>허수아비</h3>직업 선택 테스트용 훈련 허수아비입니다.<br>모험가 퀘스트 진행도: ${hits}/50<br><span class="small">마을 오른쪽 아래 훈련소의 허수아비 옆에서 공격 버튼을 누르면 타격 수가 증가합니다.</span></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button><button onclick="Game.showQuest()">장로 퀘스트</button></div>`);}
 function trainingDummyNpc(){return currentField==='town'?(npcs||[]).find(n=>n.kind==='dummy'):null;}
 function hitTrainingDummy(fromAuto=false){const n=trainingDummyNpc();if(!n)return false;const st=computeStats();if(player.atkTimer>0)return false;const d=Math.hypot(player.x-n.x,player.y-n.y);if(d>96){if(!fromAuto)toast('허수아비 가까이에서 공격');return false;}player.dir=Math.atan2(n.y-player.y,n.x-player.x);player.atkTimer=Math.max(.16,.58/(st.aspd||1));player.atkTimerMax=player.atkTimer;player.attackAnim=.22;effects.push({type:'spark',x:n.x+rnd(-10,10),y:n.y+rnd(-20,10),life:.25,r:14});const q=adventurerQuestState();if(q.accepted&&!q.done&&!q.completed){q.dummyHits=clamp((Math.floor(Number(q.dummyHits)||0)+1),0,50);effects.push({type:'text',x:n.x,y:n.y-48,t:`허수아비 ${q.dummyHits}/50`,life:.7,vy:-18});if(q.dummyHits>=50){q.done=true;player.firstJobUnlocked=true;toast('모험가 테스트 완료. 장로에게 보고');msg('허수아비 50타 완료. 직업소개소 이용 조건을 달성했습니다.');saveGame();}else if(q.dummyHits%10===0){toast(`허수아비 ${q.dummyHits}/50`);} }else if(!q.accepted&&!q.completed&&!fromAuto){toast('장로에게 모험가 퀘스트를 먼저 받으십시오');}return true;}
 
@@ -3724,7 +3743,7 @@ const QUESTS=[
   {title:'실험 구역 기록',need:230,text:'누적 몬스터 230마리 처치',reward:{gold:6000,tokens:15,item:true}},
   {title:'최종 성채 진입',need:6,text:'보스 총 6마리 처치',reward:{gold:8500,tokens:20,item:true}}
 ];
-function showQuest(){popupMode='quest';normalizePlayer();if((player.job||'adventurer')==='adventurer'){showAdventurerQuest();return;}const q=QUESTS[player.quest]||null;if(!q){openPopup(`<div class="title">장로 / 스토리 완료</div><div class="sub">현재 공개된 스토리 퀘스트를 모두 완료했습니다.</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);return;} const progress=player.quest===1?bossKillsTotal():player.questKills; const done=progress>=q.need; openPopup(`<div class="title">장로 / 스토리 퀘스트</div><div class="card"><h3>${q.title}</h3>${q.text}<br>진행도: ${progress}/${q.need}<br>보상: ${q.reward.gold||0}G ${q.reward.potions?`/ 물약 ${q.reward.potions}`:''} ${q.reward.item?'/ 장비 상자':''}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button><button ${done?'':'disabled'} onclick="Game.claimQuest()">보상 받기</button></div>`);}
+function showQuest(){popupMode='quest';normalizePlayer();if((player.job||'adventurer')==='adventurer'){showAdventurerQuest();return;}const q=QUESTS[player.quest]||null;if(!q){openPopup(`<div class="title">장로 / 스토리 완료</div><div class="sub">현재 공개된 스토리 퀘스트를 모두 완료했습니다.</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);return;} const progress=player.quest===1?bossKillsTotal():player.questKills; const done=progress>=q.need; openPopup(`<div class="title">장로 / 스토리 퀘스트</div><div class="card"><h3>${q.title}</h3>${q.text}<br>진행도: ${progress}/${q.need}<br>보상: ${q.reward.gold||0}G ${q.reward.potions?`/ 물약 ${q.reward.potions}`:''} ${q.reward.item?'/ 장비 상자':''}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button><button ${done?'':'disabled'} onclick="Game.claimQuest()">보상 받기</button></div>`);}
 function bossKillsTotal(){let n=0;for(const fid in player.codex){const boss=player.codex[fid][10];if(boss)n+=boss.kills;}return n;}
 function claimQuest(){const q=QUESTS[player.quest]; if(!q)return; player.gold+=q.reward.gold||0; player.potions+=q.reward.potions||0; player.guildTokens+=q.reward.tokens||0; if(q.reward.item)player.inventory.push(makeItem(player.level,'희귀',null)); player.quest++; player.questKills=0; toast('퀘스트 보상 획득'); showQuest();}
 function showShop(){
@@ -3735,7 +3754,7 @@ function showShop(){
   const skillShopCard=isAdventurer
     ? `<button class="card" disabled><h3>스킬 상점</h3>정식 직업 선택 후 이용 가능<br><span class="small">장로 퀘스트 완료 → 직업소개소에서 1차 직업 선택</span></button>`
     : `<button class="card" onclick="Game.showSkillShop()"><h3>스킬 상점</h3>직업별 스킬 구매</button>`;
-  openPopup(`<div class="title">잡화점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G</div><h3>소모품 구매</h3><div class="grid">${cards}</div><h3>장비 구매</h3><div class="grid"><button class="card" onclick="Game.buy('weapon')"><h3>직업 무기 상자</h3>현재 직업에 맞는 무기 위주 · 260G</button><button class="card" onclick="Game.buy('armor')"><h3>직업 방어구 상자</h3>현재 직업에 맞는 방어구 위주 · 240G</button><button class="card" onclick="Game.buy('relic')"><h3>유물 상자</h3>500G</button></div><h3>스킬</h3><div class="grid">${skillShopCard}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">잡화점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G</div><h3>소모품 구매</h3><div class="grid">${cards}</div><h3>장비 구매</h3><div class="grid"><button class="card" onclick="Game.buy('weapon')"><h3>직업 무기 상자</h3>현재 직업에 맞는 무기 위주 · 260G</button><button class="card" onclick="Game.buy('armor')"><h3>직업 방어구 상자</h3>현재 직업에 맞는 방어구 위주 · 240G</button><button class="card" onclick="Game.buy('relic')"><h3>유물 상자</h3>500G</button></div><h3>스킬</h3><div class="grid">${skillShopCard}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function showShopSell(){
   popupMode='shopSell';
@@ -3769,7 +3788,7 @@ function showSkillShop(){
   const current=learned>0?`현재 사용 스킬: ${learned}성 ${skillByRank(j,learned).name}`:'현재 사용 스킬: 미습득';
   const nextText=learned>=MAX_SKILL_STAR?'모든 스킬 습득 완료':`다음 구매: ${next}성 ${skillByRank(j,next).name} · ${cost}G`;
   const rows=list.map((s,i)=>{const lv=i+1, owned=learned>=lv, nextSkill=learned+1===lv;return `<div class="card ${owned?'selected':''} ${nextSkill?'rare-희귀':''}"><h3>${lv}성 ${s.name} ${owned?'[보유]':''}</h3>${s.desc}<br><span class="small">${owned?'습득 완료':(nextSkill?'다음 구매 · ':'잠김 · ')+(SKILL_COSTS[i]||0)+'G'}</span></div>`;}).join('');
-  openPopup(`<div class="title">스킬 상점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G · 직업마다 서로 다른 ${MAX_SKILL_STAR}종 스킬을 1성부터 순서대로 구매합니다. 11성/12성은 초월 스킬입니다.</div><div class="card"><h3>${job.name} 스킬 트리</h3>${current}<br>${nextText}</div><div class="footerBtns"><button ${learned>=MAX_SKILL_STAR?'disabled':''} onclick="Game.buySkill()">${learned>=MAX_SKILL_STAR?'전체 습득 완료':`${next}성 스킬 구매`}</button><button onclick="Game.closePopup()">닫기</button></div><h3>직업 스킬 ${MAX_SKILL_STAR}종</h3><div class="grid3">${rows}</div>`);
+  openPopup(`<div class="title">스킬 상점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G · 직업마다 서로 다른 ${MAX_SKILL_STAR}종 스킬을 1성부터 순서대로 구매합니다. 11성/12성은 초월 스킬입니다.</div><div class="card"><h3>${job.name} 스킬 트리</h3>${current}<br>${nextText}</div><div class="footerBtns"><button ${learned>=MAX_SKILL_STAR?'disabled':''} onclick="Game.buySkill()">${learned>=MAX_SKILL_STAR?'전체 습득 완료':`${next}성 스킬 구매`}</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><h3>직업 스킬 ${MAX_SKILL_STAR}종</h3><div class="grid3">${rows}</div>`);
 }
 function buySkill(){
   normalizePlayer();
@@ -3786,13 +3805,13 @@ function buySkill(){
 function showGuild(){
   popupMode='guild';
   const rank = player.guildTokens>=20?'마스터':player.guildTokens>=10?'정예':player.guildTokens>=4?'단원':'신입'; player.guildRank=rank;
-  openPopup(`<div class="title">길드</div><div class="card"><h3>길드 계급: ${rank}</h3>토큰: ${player.guildTokens}<br>효과: 계급에 따라 장비 드랍률과 골드 획득이 소폭 증가합니다.</div><div class="grid"><button onclick="Game.guildMission()">길드 의뢰 받기</button><button onclick="Game.guildReward()">토큰 장비 교환</button></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">길드</div><div class="card"><h3>길드 계급: ${rank}</h3>토큰: ${player.guildTokens}<br>효과: 계급에 따라 장비 드랍률과 골드 획득이 소폭 증가합니다.</div><div class="grid"><button onclick="Game.guildMission()">길드 의뢰 받기</button><button onclick="Game.guildReward()">토큰 장비 교환</button></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function guildMission(){player.guildTokens+=1;player.questKills=0;toast('길드 의뢰 등록: 필드 사냥으로 토큰 누적');showGuild();}
 function guildReward(){if(player.guildTokens<3){toast('토큰 부족');return;}player.guildTokens-=3;player.inventory.push(makeItem(player.level,'레어',null));toast('길드 장비 획득');showGuild();}
 function showFieldSelect(){
   popupMode='fieldSelect';
-  openPopup(`<div class="title">포털 이동</div><div class="sub">각 필드는 몬스터 10종류와 보스 1종류로 구성되며, 맵마다 던전 형태가 다르게 생성됩니다.</div><div class="grid">${FIELDS.filter(f=>f.id!=='town').map(f=>`<button class="card" onclick="Game.goField('${f.id}')"><h3>${f.name}</h3>권장 Lv.${f.level}+<br>일반 몬스터 10종 / 보스 1종</button>`).join('')}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">포털 이동</div><div class="sub">각 필드는 몬스터 10종류와 보스 1종류로 구성되며, 맵마다 던전 형태가 다르게 생성됩니다.</div><div class="grid">${FIELDS.filter(f=>f.id!=='town').map(f=>`<button class="card" onclick="Game.goField('${f.id}')"><h3>${f.name}</h3>권장 Lv.${f.level}+<br>일반 몬스터 10종 / 보스 1종</button>`).join('')}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function goField(id){
   const target=(FIELDS.find(f=>f.id===id&&f.id!=='town')||FIELDS.find(f=>f.id==='plain')||FIELDS[1]||FIELDS[0]).id;
@@ -3820,7 +3839,7 @@ function goField(id){
 function renderBag(){
   popupMode='bag'; const eq=Object.entries(player.equip).map(([slot,it])=>`<div class="card"><h3>${SLOT_LABEL[slot]}</h3>${it?`${it.rarity} ${it.name}<br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))}</span>`:'비어있음'}</div>`).join('');
   const inv=player.inventory.map(it=>`<div class="card rare-${it.rarity}"><h3>${it.equipped?'[E] ':''}${it.name}</h3>${SLOT_LABEL[it.slot]} · Lv.${it.level} · ${it.rarity}<br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))} · 판매가 ${itemValue(it)}G</span><div class="footerBtns"><button onclick="Game.equipItem('${it.id}')">장착</button><button ${it.equipped?'disabled':''} onclick="Game.sellItem('${it.id}')">판매</button></div></div>`).join('')||'<div class="sub">아이템 없음</div>';
-  openPopup(`<div class="title">장비 / 가방</div><div class="sub">직업에 맞는 장비 점수를 기준으로 자동장착할 수 있습니다.</div><h3>착용 장비</h3><div class="grid">${eq}</div><div class="footerBtns"><button onclick="Game.autoEquipBest()">자동장착</button><button onclick="Game.sellAllUnequipped()">미장착 전체판매</button></div><h3>보유 아이템</h3><div class="grid">${inv}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">장비 / 가방</div><div class="sub">직업에 맞는 장비 점수를 기준으로 자동장착할 수 있습니다.</div><h3>착용 장비</h3><div class="grid">${eq}</div><div class="footerBtns"><button onclick="Game.autoEquipBest()">자동장착</button><button onclick="Game.sellAllUnequipped()">미장착 전체판매</button></div><h3>보유 아이템</h3><div class="grid">${inv}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 const CODEX_REWARD_NORMAL=[{need:10,reward:1},{need:30,reward:2},{need:100,reward:5}];
 const CODEX_REWARD_BOSS=[{need:1,reward:2},{need:3,reward:4},{need:10,reward:10}];
@@ -3834,7 +3853,7 @@ function renderCodex(reset){
   repairPortalRuntimeState();
   if(reset===true)codexOpenFields={};
   const content=FIELDS.filter(f=>f.id!=='town').map(f=>{ensureCodexForField(f);const opened=!!codexOpenFields[f.id];const entries=Array.isArray(player.codex[f.id])?player.codex[f.id]:[];const found=entries.filter(e=>(Number(e.seen)||0)>0).length;const rows=entries.map((e,i)=>{e.neonRewards=e.neonRewards&&typeof e.neonRewards==='object'?e.neonRewards:{};const seen=Number(e.seen)||0,kills=Number(e.kills)||0;const name=seen>0?escapeHtml(e.name):'???';const claim=codexClaimable(e);const reward=claim.length?`<button onclick="Game.claimCodexReward('${f.id}',${i})">네온석 ${claim.reduce((s,r)=>s+r.reward,0)} 받기</button>`:`<span class="small">${nextCodexRewardText(e)}</span>`;return `<div class="codexLine"><b>${e.boss?'[보스] ':'· '}${name}</b><br>${seen>0?`발견 ${seen}`:'미발견'} · 처치 ${kills}<br>${reward}</div>`;}).join('');return `<div class="card codexZone"><button class="codexHeader" onclick="Game.toggleCodexField('${f.id}')"><h3>${f.name}</h3><span>${opened?'접기':'열기'} · ${found}/${entries.length}</span></button>${opened?`<div class="codexRows">${rows}</div>`:`<div class="small">접힌 상태입니다. 구역 이름을 터치하면 열립니다.</div>`}</div>`;}).join('');
-  openPopup(`<div class="title">몬스터 도감</div><div class="sub">구역별 기본값은 접힘입니다. 발견 전 몬스터는 ???로 표시됩니다.<br><span class="neonStone">보유 네온석: ${Math.floor(Number(player.neonStone)||0)}</span></div>${content}<div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">몬스터 도감</div><div class="sub">구역별 기본값은 접힘입니다. 발견 전 몬스터는 ???로 표시됩니다.<br><span class="neonStone">보유 네온석: ${Math.floor(Number(player.neonStone)||0)}</span></div>${content}<div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 
 function saveGame(){requestCloudSave('event',true);}
@@ -5114,7 +5133,7 @@ function renderFullMapCanvas(){
 function showFullMap(){
   const f=FIELDS.find(x=>x.id===currentField)||{name:zoneTag.textContent||'현재 위치'};
   popupMode='fullMap';
-  openPopup(`<div class="popupCloseX" style="position:absolute;right:8px;top:8px;float:none;margin:0;display:flex;align-items:center;justify-content:center;" onclick="Game.closePopup()">X</div><div style="position:absolute;left:10px;top:8px;z-index:4;padding:5px 9px;border:1px solid rgba(0,255,114,.45);border-radius:999px;background:rgba(0,0,0,.72);font-size:11px;line-height:1;pointer-events:none;">전체맵 / ${escapeHtml(f.name||'현재 위치')}</div><canvas id="fullMapCanvas" style="display:block;width:100%;height:100%;border:0;border-radius:17px;background:#000;box-shadow:inset 0 0 16px rgba(0,255,114,.08);"></canvas>`);
+  openPopup(`<div class="popupCloseX" style="position:absolute;right:8px;top:8px;float:none;margin:0;display:flex;align-items:center;justify-content:center;" onclick="Game.safeCall('closePopup')">X</div><div style="position:absolute;left:10px;top:8px;z-index:4;padding:5px 9px;border:1px solid rgba(0,255,114,.45);border-radius:999px;background:rgba(0,0,0,.72);font-size:11px;line-height:1;pointer-events:none;">전체맵 / ${escapeHtml(f.name||'현재 위치')}</div><canvas id="fullMapCanvas" style="display:block;width:100%;height:100%;border:0;border-radius:17px;background:#000;box-shadow:inset 0 0 16px rgba(0,255,114,.08);"></canvas>`);
   setTimeout(()=>{prepareFullMapCanvasSize();renderFullMapCanvas();},0);
 }
 
@@ -5146,7 +5165,7 @@ function dodge(){
 
 function showOnlinePanel(){
   const last=cloudState.lastSave?new Date(cloudState.lastSave).toLocaleTimeString():'아직 없음';
-  openPopup(`<div class="title">계정</div><div class="sub">로그인 방식: Supabase Kakao OAuth<br>${cloudStatusText()}<br>마지막 서버 저장: ${escapeHtml(last)}</div><div class="grid"><button onclick="Game.showKakaoLoginPage()">로그인 화면</button><button onclick="Game.kakaoLogout()">로그아웃</button><button onclick="Game.showDeleteAccount()">계정 탈퇴</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">계정 탈퇴는 게임 서버 기록을 삭제하고 로그아웃합니다. 같은 카카오 계정으로 다시 로그인하면 신규 기록이 생성됩니다.</div>`);
+  openPopup(`<div class="title">계정</div><div class="sub">로그인 방식: Supabase Kakao OAuth<br>${cloudStatusText()}<br>마지막 서버 저장: ${escapeHtml(last)}</div><div class="grid"><button onclick="Game.showKakaoLoginPage()">로그인 화면</button><button onclick="Game.kakaoLogout()">로그아웃</button><button onclick="Game.showDeleteAccount()">계정 탈퇴</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">계정 탈퇴는 게임 서버 기록을 삭제하고 로그아웃합니다. 같은 카카오 계정으로 다시 로그인하면 신규 기록이 생성됩니다.</div>`);
 }
 function showDeleteAccount(){
   normalizePlayer();
@@ -5271,7 +5290,7 @@ function ensureOnlineHubConnection(refresh=false,force=false){
   onlineState.status='접속 중';
   initPartyPresence(force).then(ok=>{
     if(ok)trackOnlinePresence(true);
-    if(refresh&&popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),260);
+    if(refresh&&popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),800);
   });
 }
 function forceOnlineKeepAlive(){
@@ -5281,7 +5300,7 @@ function forceOnlineKeepAlive(){
     return;
   }
   const now=performance.now();
-  if(!onlineState.connecting&&(!onlineState.lastConnectTry||now-onlineState.lastConnectTry>2200)){
+  if(!onlineState.connecting&&(!onlineState.lastConnectTry||now-onlineState.lastConnectTry>5000)){
     onlineState.lastConnectTry=now;
     ensureOnlineHubConnection(popupMode==='onlineHub',true);
   }
@@ -5306,6 +5325,7 @@ function connectOnlineFromPanel(){
   }
 }
 function showOnlineHub(autoConnect=true){
+  if(autoConnect==='false')autoConnect=false;
   popupMode='onlineHub';
   normalizePlayer();
   if(autoConnect)ensureOnlineHubConnection(true,true);
@@ -5318,7 +5338,7 @@ function showOnlineHub(autoConnect=true){
   const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>Lv.${p.level||1} ${escapeHtml(p.name||'플레이어')}</b><br><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
   const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자 아이디</h3></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
   const partyGroup=`<h3>파티</h3><div class="onlineGroupBox"><div class="footerBtns"><button onclick="Game.createParty()">파티 생성</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>${onlineState.partyId?`<div class="sub">파티 ID: ${escapeHtml(onlineState.partyId)}</div>`:''}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 파티 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
-  openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function showParty(){showOnlineHub();}
 function updateLogToggleButtons(){
@@ -5342,7 +5362,7 @@ function toggleHudLogSetting(k){
   requestCloudSave('logSetting');
 }
 function showQuickChat(){
-  openPopup(`<div class="title">채팅 입력</div><div class="sub">로그창을 터치해서 연 입력창입니다.</div><input id="quickChatInput" class="neonInput" maxlength="80" placeholder="채팅 내용" style="width:100%;font:inherit;padding:11px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:12px;user-select:text;-webkit-user-select:text;caret-color:var(--g)"><div class="footerBtns"><button onclick="Game.sendQuickChat()">전송</button><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">채팅 입력</div><div class="sub">로그창을 터치해서 연 입력창입니다.</div><input id="quickChatInput" class="neonInput" maxlength="80" placeholder="채팅 내용" style="width:100%;font:inherit;padding:11px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:12px;user-select:text;-webkit-user-select:text;caret-color:var(--g)"><div class="footerBtns"><button onclick="Game.sendQuickChat()">전송</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
   setTimeout(()=>$('quickChatInput')?.focus(),60);
 }
 function sendQuickChat(){
@@ -5356,11 +5376,11 @@ function showLogSettings(){
   normalizePlayer();
   const s=player.logSettings||{};
   const row=(k,label)=>`<button class="card" onclick="Game.toggleLogSetting('${k}')"><h3>${label}</h3>${s[k]!==false?'ON':'OFF'}</button>`;
-  openPopup(`<div class="title">로그 / 채팅 설정</div><div class="sub">하단 시스템로그창에 채팅, 시스템, 전투로그를 통합 표시합니다.</div><div class="grid">${row('system','시스템 로그')}${row('combat','전투 로그')}${row('chat','채팅')}</div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">로그 / 채팅 설정</div><div class="sub">하단 시스템로그창에 채팅, 시스템, 전투로그를 통합 표시합니다.</div><div class="grid">${row('system','시스템 로그')}${row('combat','전투 로그')}${row('chat','채팅')}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function toggleLogSetting(k){normalizePlayer();player.logSettings[k]=player.logSettings[k]===false;updateLogBox();updateLogToggleButtons();requestCloudSave('logSetting');showLogSettings();}
-function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
-function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드, 파티, 로그, 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showOnlineHub()">온라인</button><button onclick="Game.showLogSettings()">로그/채팅</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
+function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
+function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드, 파티, 로그, 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showOnlineHub()">온라인</button><button onclick="Game.showLogSettings()">로그/채팅</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
 function quickToggleAuto(){
   try{
     normalizePlayer();
@@ -5377,7 +5397,7 @@ function showAutoPanel(){
   const style=rangedAttackProfile(player.job,computeStats())?'원거리 추적/거리 유지':'근접 접근/회피 돌진';
   const slots=player.skillSlots.slice(0,4).map((r,i)=>{const ok=r>0&&r<=skillStar();const name=ok?skillByRank(player.job,r).name:'비움';return `스킬${i+1}: ${ok?`${r}성 ${name}`:'비움'}`;}).join('<br>');
   const pot=CONSUMABLES[player.potionSlot]||CONSUMABLES.potion;
-  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${job.name}</b> · ${job.type}<br>자동 전투 방식: ${style}</div><div class="card"><h3>현재 슬롯</h3>${slots}<br>물약 슬롯: ${pot.name} · HP ${Math.round(player.autoPotionPct*100)}% 이하 자동 사용</div><div class="grid"><button onclick="Game.toggleAuto()" class="${player.autoMode?'autoOn':''}">오토 ${player.autoMode?'ON':'OFF'}</button><button onclick="Game.showSkillSlotSettings()">스킬 설정</button><button onclick="Game.showPotionSettings()">물약 설정</button><button onclick="Game.closePopup()">닫기</button></div><div class="townNote">오토 중 오류가 나면 자동으로 오토를 끄고 게임은 계속 진행됩니다.</div>`);
+  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${job.name}</b> · ${job.type}<br>자동 전투 방식: ${style}</div><div class="card"><h3>현재 슬롯</h3>${slots}<br>물약 슬롯: ${pot.name} · HP ${Math.round(player.autoPotionPct*100)}% 이하 자동 사용</div><div class="grid"><button onclick="Game.toggleAuto()" class="${player.autoMode?'autoOn':''}">오토 ${player.autoMode?'ON':'OFF'}</button><button onclick="Game.showSkillSlotSettings()">스킬 설정</button><button onclick="Game.showPotionSettings()">물약 설정</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">오토 중 오류가 나면 자동으로 오토를 끄고 게임은 계속 진행됩니다.</div>`);
 }
 
 function showSkillSlotSettings(){
@@ -5398,14 +5418,14 @@ function showSkillSlotSettings(){
     }
     return `<div class="card"><h3>스킬${slot} 슬롯</h3>현재: ${cur?`${cur}성 ${skillByRank(player.job,cur).name}`:'비움'}<div class="grid">${buttons.join('')}</div></div>`;
   };
-  openPopup(`<div class="title">스킬 슬롯 설정</div><div class="sub">${job.name} · 보유 스킬 ${learned}/${MAX_SKILL_STAR}<br>각 슬롯에 사용할 스킬을 지정합니다. 오토모드는 이 슬롯 순서대로 자동 사용합니다.</div>${makeAssign(1)}${makeAssign(2)}${makeAssign(3)}${makeAssign(4)}<div class="footerBtns"><button onclick="Game.showAutoPanel()">오토 설정</button><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">스킬 슬롯 설정</div><div class="sub">${job.name} · 보유 스킬 ${learned}/${MAX_SKILL_STAR}<br>각 슬롯에 사용할 스킬을 지정합니다. 오토모드는 이 슬롯 순서대로 자동 사용합니다.</div>${makeAssign(1)}${makeAssign(2)}${makeAssign(3)}${makeAssign(4)}<div class="footerBtns"><button onclick="Game.showAutoPanel()">오토 설정</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function setSkillSlot(slot,rank){normalizePlayer();slot=clamp(Number(slot)||1,1,4);rank=clamp(Number(rank)||0,0,MAX_SKILL_STAR);const learned=skillStar();if(rank>learned){toast('아직 배우지 않은 스킬');return;}if(rank>0){const used=player.skillSlots.findIndex((v,i)=>i!==slot-1&&Number(v)===rank);if(used>=0){toast(`${rank}성 스킬은 이미 스킬${used+1}에 장착됨`);return;}}player.skillSlots[slot-1]=rank;toast(`스킬${slot} 슬롯 변경`);showSkillSlotSettings();updateHud();}
 function showPotionSettings(){
   normalizePlayer();
   const itemRows=Object.entries(CONSUMABLES).map(([k,c])=>`<button class="card ${player.potionSlot===k?'selected':''}" onclick="Game.setPotionSlot('${k}')"><h3>${c.name}</h3>${c.desc}<br><span class="small">보유 ${player.consumables[k]||0}개</span></button>`).join('');
   const pct=Math.round(player.autoPotionPct*100);
-  openPopup(`<div class="title">물약 설정</div><div class="sub">물약 슬롯과 오토모드 자동 사용 체력 퍼센트를 지정합니다. 수동 물약 버튼도 현재 슬롯을 우선 사용합니다.</div><div class="card"><h3>현재 설정</h3>슬롯: ${CONSUMABLES[player.potionSlot].name}<br>자동 사용: HP <b id="autoPctVal">${pct}%</b> 이하</div><h3>물약 슬롯</h3><div class="grid">${itemRows}</div><h3>자동 사용 퍼센트</h3><div class="card"><div class="neonRangeWrap"><div id="rangeBubble" class="rangeBubble" style="left:${pct}%">${pct}%</div><input class="neonRange" type="range" min="0" max="100" step="1" value="${pct}" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" oninput="Game.updatePotionRangeLabel(this.value)" onchange="Game.setAutoPotionPct(this.value)"><div class="neonRangeText"><span>0%</span><span>자동 사용 기준</span><span>100%</span></div></div></div><div class="footerBtns"><button onclick="Game.showAutoPanel()">오토 설정</button><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">물약 설정</div><div class="sub">물약 슬롯과 오토모드 자동 사용 체력 퍼센트를 지정합니다. 수동 물약 버튼도 현재 슬롯을 우선 사용합니다.</div><div class="card"><h3>현재 설정</h3>슬롯: ${CONSUMABLES[player.potionSlot].name}<br>자동 사용: HP <b id="autoPctVal">${pct}%</b> 이하</div><h3>물약 슬롯</h3><div class="grid">${itemRows}</div><h3>자동 사용 퍼센트</h3><div class="card"><div class="neonRangeWrap"><div id="rangeBubble" class="rangeBubble" style="left:${pct}%">${pct}%</div><input class="neonRange" type="range" min="0" max="100" step="1" value="${pct}" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" oninput="Game.updatePotionRangeLabel(this.value)" onchange="Game.setAutoPotionPct(this.value)"><div class="neonRangeText"><span>0%</span><span>자동 사용 기준</span><span>100%</span></div></div></div><div class="footerBtns"><button onclick="Game.showAutoPanel()">오토 설정</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function setPotionSlot(key){normalizePlayer();if(!CONSUMABLES[key])return;player.potionSlot=key;toast(`${CONSUMABLES[key].name} 슬롯 지정`);showPotionSettings();updateHud();}
 
@@ -5448,7 +5468,7 @@ function updateTalkPrompt(){
   }
   talkTarget=null;btn.style.display='none';
 }
-function handleTalkPrompt(){if(talkTarget&&talkTarget.kind==='peer'){const fn=(window.Game&&Game.showPeerAction)||window.showPeerAction;if(typeof fn==='function')fn(talkTarget.peerId);else toast('유저 상호작용 준비 중');return;}talkToNpc(talkTarget);}
+function handleTalkPrompt(){if(talkTarget&&talkTarget.kind==='peer'){gameSafeCall('showPeerAction',talkTarget.peerId);return;}talkToNpc(talkTarget);}
 function updatePortalTrigger(){
   if(currentField!=='town')return;
   const portal=npcs.find(n=>n.kind==='portal'); if(!portal)return;
@@ -5520,7 +5540,61 @@ function startQuickGame(id='adventurer'){
   saveGame();
   setTimeout(showPatchNotes,80);
 }
-window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,ensureOnlineHubConnection,forceOnlineKeepAlive,showPeerAction,showParty,toggleOnlineUserList,showPeerInfo,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+
+function gameSafeCall(name,...args){
+  try{
+    const fn=window.Game&&window.Game[name];
+    if(typeof fn==='function')return fn(...args);
+    const g=window[name]||globalThis[name];
+    if(typeof g==='function')return g(...args);
+    console.warn('missing Game action',name,args);
+    if(typeof toast==='function')toast('기능 준비 중');
+    return null;
+  }catch(e){
+    console.error(e);
+    if(typeof toast==='function')toast('기능 오류 차단');
+    return null;
+  }
+}
+function safeShowPeerAction(id){
+  const fn=(window.Game&&window.Game.showPeerAction)||window.showPeerAction||globalThis.showPeerAction;
+  if(typeof fn==='function'&&fn!==safeShowPeerAction)return fn(id);
+  if(typeof showPeerInfo==='function')return showPeerInfo(id);
+  if(typeof toast==='function')toast('유저 상호작용 준비 중');
+}
+function safeConnectOnlineFromPanel(){
+  const fn=(window.Game&&window.Game.connectOnlineFromPanel)||window.connectOnlineFromPanel||globalThis.connectOnlineFromPanel;
+  if(typeof fn==='function'&&fn!==safeConnectOnlineFromPanel)return fn();
+  if(typeof initPartyPresence==='function'){
+    try{
+      onlineState.blocked=false;
+      onlineState.drawBlocked=false;
+      onlineState.enabled=false;
+      onlineState.connecting=false;
+      onlineState.status='재접속 중';
+      initPartyPresence(true).then(ok=>{
+        if(ok&&typeof trackOnlinePresence==='function')trackOnlinePresence(true);
+        if(typeof toast==='function')toast(ok?'온라인 접속 확인':'온라인 접속 실패');
+      });
+      return true;
+    }catch(e){console.error(e);}
+  }
+  if(typeof toast==='function')toast('온라인 접속 준비 중');
+  return false;
+}
+
+window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+try{
+  window.showPeerAction=(id)=>gameSafeCall('showPeerAction',id);
+  globalThis.showPeerAction=window.showPeerAction;
+  window.connectOnlineFromPanel=()=>gameSafeCall('connectOnlineFromPanel');
+  globalThis.connectOnlineFromPanel=window.connectOnlineFromPanel;
+  window.showPeerInfo=(id)=>gameSafeCall('showPeerInfo',id);
+  globalThis.showPeerInfo=window.showPeerInfo;
+  window.requestPartyToPeer=(id)=>gameSafeCall('requestPartyToPeer',id);
+  globalThis.requestPartyToPeer=window.requestPartyToPeer;
+}catch(e){}
+
 try{
   window.connectOnlineFromPanel=window.Game.connectOnlineFromPanel;
   globalThis.connectOnlineFromPanel=window.Game.connectOnlineFromPanel;
