@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_066_online_user_one_line -->
+<!-- build: index6_067_online_force_buttons_fix -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1061,6 +1061,69 @@
     border-radius:7px!important;
   }
 
+
+  /* 067: 접속자 버튼 강제 표시 + 온라인 상시 연결 */
+  .onlineUserInBox.oneLine{
+    grid-template-columns:minmax(0,1fr) 92px!important;
+  }
+  .onlineUserLine{
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  .onlineUserLine .onlineNick{
+    flex:0 0 auto;
+    max-width:72px;
+  }
+  .onlineUserLine .onlineLoc{
+    flex:1 1 auto;
+    min-width:0;
+  }
+  .onlineUserBoxBtns{
+    width:92px!important;
+    min-width:92px!important;
+    max-width:92px!important;
+    display:flex!important;
+    justify-content:flex-end!important;
+    align-items:center!important;
+    gap:3px!important;
+    overflow:visible!important;
+  }
+  .onlineUserBoxBtns button{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:43px!important;
+    min-width:43px!important;
+    max-width:43px!important;
+    height:22px!important;
+    padding:0!important;
+    font-size:9px!important;
+    line-height:1!important;
+    flex:0 0 43px!important;
+    opacity:1!important;
+    visibility:visible!important;
+  }
+  @media (max-width:380px){
+    .onlineUserInBox.oneLine{
+      grid-template-columns:minmax(0,1fr) 84px!important;
+      gap:5px!important;
+    }
+    .onlineUserBoxBtns{
+      width:84px!important;
+      min-width:84px!important;
+      max-width:84px!important;
+    }
+    .onlineUserBoxBtns button{
+      width:40px!important;
+      min-width:40px!important;
+      max-width:40px!important;
+      flex-basis:40px!important;
+      font-size:8px!important;
+    }
+    .onlineUserLine{gap:4px!important;font-size:10px!important;}
+    .onlineUserLine .onlineNick{max-width:54px;}
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1755,20 +1818,21 @@ function buildOnlinePayload(){
   return {id:myOnlineId(),userId:(cloudState.user&&cloudState.user.id)||'',name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,partyId:onlineState.partyId||'',ts:Date.now()};
 }
 async function initPartyPresence(force=false){
-  if(force){onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.status='재접속 중';}
-  if(onlineState.blocked)return false;
+  if(force){onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.enabled=false;onlineState.connecting=false;}
+  if(onlineState.blocked&&!force)return false;
   const client=await ensureSupabaseClient(false);
-  if(!client||!cloudState.user){onlineState.status='로그인 필요';return false;}
-  if(onlineState.channel&&onlineState.enabled)return true;
-  if(onlineState.connecting)return false;
+  if(!client||!cloudState.user){onlineState.status='로그인 필요';onlineState.enabled=false;return false;}
+  if(onlineState.channel&&onlineState.enabled&&!force)return true;
+  if(onlineState.connecting&&!force)return false;
   onlineState.connecting=true;
+  onlineState.status='접속 중';
   onlineState.client=client;
   try{
-    if(onlineState.channel&&!onlineState.enabled){
+    if(onlineState.channel){
       try{onlineState.channel.unsubscribe();}catch(_){}
       onlineState.channel=null;
     }
-    const channel=client.channel('neon-rpg-world-v3',{config:{presence:{key:myOnlineId()}}});
+    const channel=client.channel('neon-rpg-world-v4',{config:{presence:{key:myOnlineId()}}});
     onlineState.channel=channel;
     channel
       .on('presence',{event:'sync'},syncOnlinePresence)
@@ -1784,13 +1848,17 @@ async function initPartyPresence(force=false){
         if(status==='SUBSCRIBED'){
           onlineState.enabled=true;
           onlineState.blocked=false;
+          onlineState.drawBlocked=false;
+          onlineState.lastConnectTry=performance.now();
           await trackOnlinePresence(true);
-          /* 실시간 유저 접속 로그 숨김 */
+          if(popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),120);
         }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
           onlineState.enabled=false;
           onlineState.status=status;
           try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
           onlineState.channel=null;
+          onlineState.lastConnectTry=0;
+          if(popupMode==='onlineHub')setTimeout(()=>ensureOnlineHubConnection(true,true),650);
         }
       });
     return true;
@@ -1801,6 +1869,7 @@ async function initPartyPresence(force=false){
     onlineState.status='접속 실패';
     try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
     onlineState.channel=null;
+    onlineState.lastConnectTry=0;
     return false;
   }
 }
@@ -1909,27 +1978,19 @@ function pruneOnlinePeers(){
 }
 function updateOnline(dt){
   updateOnlinePeerSmoothing(dt);
-  if(onlineState.blocked)return;
   try{
-    if(cloudState.user&&!onlineState.connecting&&(!onlineState.channel||!onlineState.enabled)){
-      const t=performance.now();
-      if(!onlineState.lastConnectTry||t-onlineState.lastConnectTry>2600){
-        onlineState.lastConnectTry=t;
-        initPartyPresence();
-      }
-    }
+    if(cloudState.user)forceOnlineKeepAlive();
+    if(!onlineState.enabled)return;
     trackOnlinePresence(false);
     pruneOnlinePeers();
   }catch(e){
     console.error(e);
-    onlineState.blocked=true;
-    onlineState.drawBlocked=true;
     onlineState.enabled=false;
-    onlineState.status='온라인 기능 오류 차단';
-    onlineState.peers={};
+    onlineState.connecting=false;
+    onlineState.status='온라인 오류 재접속 대기';
     try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
     onlineState.channel=null;
-    msg('실시간 유저 오류를 차단했습니다.', 'system');
+    onlineState.lastConnectTry=0;
   }
 }
 async function sendPartyBroadcast(event,payload){
@@ -2096,8 +2157,10 @@ function connectOnlineFromPanel(){
   if(!cloudState.user){toast('로그인 필요');showKakaoLoginPage();return;}
   onlineState.blocked=false;
   onlineState.drawBlocked=false;
+  onlineState.enabled=false;
+  onlineState.connecting=false;
   onlineState.status='재접속 중';
-  try{if(onlineState.channel&&!onlineState.enabled){onlineState.channel.unsubscribe();onlineState.channel=null;}}catch(_){}
+  try{if(onlineState.channel){onlineState.channel.unsubscribe();onlineState.channel=null;}}catch(_){}
   initPartyPresence(true).then(ok=>{
     if(ok){trackOnlinePresence(true);toast('온라인 접속 확인');}
     else toast('온라인 접속 실패');
@@ -2197,7 +2260,7 @@ function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(
 
 function startClassSelect(){showJobAgency();}
 let updateBootTimer=null;
-const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_066';
+const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_067';
 function repairSkillSlotDuplicates(){
   normalizePlayer();
   const used=new Set();
@@ -2322,9 +2385,10 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 066","text":"- 접속자 아이디 박스 안의 유저 정보를 한 줄로 표시\\n- 한 줄 안에 레벨/닉네임/위치를 함께 표시\\n- 오른쪽 끝에 정보/파티신청 버튼을 고정 배치"},
-  {"ver":"이전 패치 065","text":"- 접속 유저 정보를 기존 온라인 박스 안쪽 행으로 재배치\\n- 접속자 아이디 박스 안에 레벨/닉네임/위치/정보/파티신청 버튼을 함께 표시\\n- 064에서 분리되어 보이던 접속 유저 행 스타일을 기존 박스형 UI로 복구"},
-  {"ver":"이전 패치 064","text":"- 회원탈퇴 후 기존 데이터가 다시 돌아오는 현상 차단\\n- 탈퇴 중 자동저장 차단 및 서버 데이터 리셋 후 삭제 처리\\n- 온라인창 진입 시 오프라인이면 자동 재접속\\n- 접속 유저 목록을 레벨/닉네임/위치 + 우측 정보/파티신청 버튼 구조로 정리"}
+  {"ver":"현재 패치 067","text":"- 온라인 상태가 오프라인으로 고정되는 문제 수정\\n- 로그인 중이면 온라인 연결을 주기적으로 재시도하고 유지\\n- 접속자 목록의 정보/파티신청 버튼이 오른쪽 끝에 보이도록 강제 표시\\n- 접속자 행이 좁아도 버튼 영역이 사라지지 않게 수정"},
+  {"ver":"이전 패치 066","text":"- 접속자 아이디 박스 안의 유저 정보를 한 줄로 표시\\n- 한 줄 안에 레벨/닉네임/위치를 함께 표시\\n- 오른쪽 끝에 정보/파티신청 버튼을 고정 배치"},
+  {"ver":"이전 패치 065","text":"- 접속 유저 정보를 기존 온라인 박스 안쪽 행으로 재배치\\n- 접속자 아이디 박스 안에 레벨/닉네임/위치/정보/파티신청 버튼을 함께 표시"},
+  {"ver":"이전 패치 064","text":"- 회원탈퇴 후 기존 데이터가 다시 돌아오는 현상 차단\\n- 온라인창 진입 시 오프라인이면 자동 재접속"}
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
@@ -5092,8 +5156,11 @@ function peerDisplayLocation(p){
 function onlineUserListRows(){
   const peers=activePeers(99999,false);
   const selfField=(FIELDS.find(f=>f.id===currentField)||{}).name||currentField;
-  const self=`<div class="partyMiniLine onlineUserInBox oneLine self"><div class="onlineUserLine"><b>Lv.${player.level||1}</b><span>${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))}</span><span class="small">위치: ${escapeHtml(selfField)}</span><span class="small">나</span></div><div class="onlineUserBoxBtns"><span class="small">내 캐릭터</span></div></div>`;
-  const peerRows=peers.map(p=>`<div class="partyMiniLine onlineUserInBox oneLine"><div class="onlineUserLine"><b>Lv.${p.level||1}</b><span>${escapeHtml(p.name||'플레이어')}</span><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span></div><div class="onlineUserBoxBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티신청</button></div></div>`).join('');
+  const self=`<div class="partyMiniLine onlineUserInBox oneLine self"><div class="onlineUserLine"><b>Lv.${player.level||1}</b><span class="onlineNick">${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))}</span><span class="small onlineLoc">위치: ${escapeHtml(selfField)}</span><span class="small">나</span></div><div class="onlineUserBoxBtns"><span class="small">내 캐릭터</span></div></div>`;
+  const peerRows=peers.map(p=>{
+    const id=escapeHtml(p.id||'');
+    return `<div class="partyMiniLine onlineUserInBox oneLine"><div class="onlineUserLine"><b>Lv.${p.level||1}</b><span class="onlineNick">${escapeHtml(p.name||'플레이어')}</span><span class="small onlineLoc">위치: ${escapeHtml(peerDisplayLocation(p))}</span></div><div class="onlineUserBoxBtns"><button type="button" onclick="Game.showPeerInfo('${id}')">정보</button><button type="button" onclick="Game.requestPartyToPeer('${id}')">파티신청</button></div></div>`;
+  }).join('');
   return {count:1+peers.length,html:self+(peerRows||'<div class="partyMiniLine">다른 접속 유저 없음</div>'),peers};
 }
 function onlineRankingRows(){
@@ -5101,19 +5168,34 @@ function onlineRankingRows(){
   all.sort((a,b)=>(Number(b.level)||1)-(Number(a.level)||1)||String(a.name||'').localeCompare(String(b.name||'')));
   return all.slice(0,20).map((p,i)=>`<div class="partyMiniLine onlineRankLine"><b>#${i+1}</b><span>${escapeHtml(p.name||'플레이어')}${p.self?' <span class="small">(나)</span>':''}</span><span>Lv.${p.level||1}</span></div>`).join('');
 }
-function ensureOnlineHubConnection(refresh=false){
-  if(!cloudState.user){onlineState.status='로그인 필요';return;}
-  if(onlineState.enabled||onlineState.connecting)return;
-  onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.status='접속 중';
-  initPartyPresence(true).then(ok=>{
+function ensureOnlineHubConnection(refresh=false,force=false){
+  if(!cloudState.user){onlineState.status='로그인 필요';onlineState.enabled=false;return;}
+  if(onlineState.enabled&&!force)return;
+  if(onlineState.connecting&&!force)return;
+  onlineState.blocked=false;
+  onlineState.drawBlocked=false;
+  onlineState.status='접속 중';
+  initPartyPresence(force).then(ok=>{
     if(ok)trackOnlinePresence(true);
     if(refresh&&popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),260);
   });
 }
+function forceOnlineKeepAlive(){
+  if(!cloudState.user)return;
+  if(onlineState.enabled&&onlineState.channel){
+    trackOnlinePresence(false);
+    return;
+  }
+  const now=performance.now();
+  if(!onlineState.connecting&&(!onlineState.lastConnectTry||now-onlineState.lastConnectTry>2200)){
+    onlineState.lastConnectTry=now;
+    ensureOnlineHubConnection(popupMode==='onlineHub',true);
+  }
+}
 function showOnlineHub(autoConnect=true){
   popupMode='onlineHub';
   normalizePlayer();
-  if(autoConnect)ensureOnlineHubConnection(true);
+  if(autoConnect)ensureOnlineHubConnection(true,true);
   const invites=Object.values(onlineState.invites||{});
   const allOnline=onlineUserListRows();
   const near=activePeers(220,true);
@@ -5325,7 +5407,7 @@ function startQuickGame(id='adventurer'){
   saveGame();
   setTimeout(showPatchNotes,80);
 }
-window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,ensureOnlineHubConnection,showParty,toggleOnlineUserList,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 
 // 시작 흐름: 버전별 최초 접속은 업데이트 점검 → 같은 버전 새로고침은 생략 → Supabase Kakao 로그인 → 서버 자동 로드 → 게임 진입
 player=basePlayer();
