@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_068_online_self_buttons_fix -->
+<!-- build: index6_069_online_self_label_buttons_action_fix -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1159,6 +1159,51 @@
     }
   }
 
+
+  /* 069: 자기 자신은 (나) 표시만, 버튼 없음. 상대만 버튼 표시 */
+  .onlineUserInBox.oneLine.self.noBtns{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  .onlineUserInBox.oneLine.self.noBtns .onlineUserLine{
+    width:100%!important;
+  }
+  .onlineUserInBox.oneLine.self.noBtns em{
+    font-style:normal;
+    opacity:.82;
+  }
+  .onlineUserInBox.oneLine:not(.self){
+    grid-template-columns:minmax(0,1fr) 104px!important;
+  }
+  .onlineUserInBox.oneLine:not(.self) .onlineUserBoxBtns{
+    width:104px!important;
+    min-width:104px!important;
+    max-width:104px!important;
+  }
+  .onlineUserInBox.oneLine:not(.self) .onlineUserBoxBtns button{
+    width:50px!important;
+    min-width:50px!important;
+    max-width:50px!important;
+    flex:0 0 50px!important;
+    font-size:8.5px!important;
+  }
+  @media (max-width:380px){
+    .onlineUserInBox.oneLine:not(.self){
+      grid-template-columns:minmax(0,1fr) 96px!important;
+    }
+    .onlineUserInBox.oneLine:not(.self) .onlineUserBoxBtns{
+      width:96px!important;
+      min-width:96px!important;
+      max-width:96px!important;
+    }
+    .onlineUserInBox.oneLine:not(.self) .onlineUserBoxBtns button{
+      width:46px!important;
+      min-width:46px!important;
+      max-width:46px!important;
+      flex-basis:46px!important;
+      font-size:8px!important;
+    }
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -2073,13 +2118,23 @@ function activePeers(range=99999,fieldOnly=false){
 }
 function nearOnlinePeer(range=128){return activePeers(range,true)[0]||null;}
 async function requestPartyToPeer(id){
-  const p=onlineState.peers[id];
-  if(!p){toast('대상 없음');return;}
-  if(!onlineState.enabled)await initPartyPresence(true);
+  if(!id||id===myOnlineId()){toast('자기 자신에게는 신청할 수 없습니다');return;}
+  const p=onlineState.peers&&onlineState.peers[id];
+  if(!p){toast('대상 유저 없음');showOnlineHub(false);return;}
+  if(!onlineState.enabled){
+    onlineState.blocked=false;
+    onlineState.drawBlocked=false;
+    await initPartyPresence(true);
+  }
   const partyId=ensureParty();
   const ok=await sendPartyBroadcast('party_invite',{to:id,partyId});
-  if(ok){toast('파티 신청 전송');msg(`${p.name||'유저'}님에게 파티 신청`, 'system');trackOnlinePresence(true);}
-  else toast('파티 신청 실패');
+  if(ok){
+    toast('파티 신청 전송');
+    msg(`${p.name||'유저'}님에게 파티 신청`, 'system');
+    showOnlineHub(false);
+  }else{
+    toast('파티 신청 실패');
+  }
 }
 function acceptPartyInvite(from){
   const inv=onlineState.invites[from];
@@ -2185,22 +2240,15 @@ function drawOnlinePlayers(){
     msg('실시간 유저 표시 오류를 차단했습니다.', 'system');
   }
 }
-function showPeerInfo(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">캐릭터 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>Lv.${p.level||1} · ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>HP ${p.hp||0}/${p.maxHp||0}<br>위치: ${escapeHtml(p.field||'')}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.closePopup()">닫기</button></div>`);}
-function showPeerAction(id){const p=onlineState.peers[id];if(!p){toast('대상 없음');return;}openPopup(`<div class="title">${escapeHtml(p.name||'플레이어')}</div><div class="grid"><button class="card" onclick="Game.showPeerInfo('${escapeHtml(id)}')"><h3>정보</h3>캐릭터 정보 보기</button><button class="card" onclick="Game.requestPartyToPeer('${escapeHtml(id)}')"><h3>파티</h3>파티 신청 보내기</button></div><div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);}
-function leaveOnline(showToast=true){try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(e){}onlineState.enabled=false;onlineState.connecting=false;onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.status='OFFLINE';onlineState.channel=null;onlineState.peers={};onlineState.partyId=null;onlineState.invites={};if(showToast)toast('온라인 연결 해제');}
-function connectOnlineFromPanel(){
-  if(!cloudState.user){toast('로그인 필요');showKakaoLoginPage();return;}
-  onlineState.blocked=false;
-  onlineState.drawBlocked=false;
-  onlineState.enabled=false;
-  onlineState.connecting=false;
-  onlineState.status='재접속 중';
-  try{if(onlineState.channel){onlineState.channel.unsubscribe();onlineState.channel=null;}}catch(_){}
-  initPartyPresence(true).then(ok=>{
-    if(ok){trackOnlinePresence(true);toast('온라인 접속 확인');}
-    else toast('온라인 접속 실패');
-    if(popupMode==='onlineHub')showOnlineHub(false);
-  });
+function showPeerInfo(id){
+  const p=onlineState.peers&&onlineState.peers[id];
+  if(!p){
+    toast('유저 정보를 찾을 수 없습니다');
+    showOnlineHub(false);
+    return;
+  }
+  const loc=peerDisplayLocation(p);
+  openPopup(`<div class="title">유저 정보</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>레벨: ${p.level||1}<br>직업: ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>위치: ${escapeHtml(loc)}<br>HP: ${Math.round(p.hp||0)}/${Math.round(p.maxHp||0)}</div><div class="footerBtns"><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티 신청</button><button onclick="Game.showOnlineHub(false)">온라인</button><button onclick="Game.closePopup()">닫기</button></div>`);
 }
 function connectOnline(url,key,room){return connectOnlineFromPanel();}
 function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
@@ -2295,7 +2343,7 @@ function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(
 
 function startClassSelect(){showJobAgency();}
 let updateBootTimer=null;
-const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_068';
+const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_069';
 function repairSkillSlotDuplicates(){
   normalizePlayer();
   const used=new Set();
@@ -2420,9 +2468,9 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 068","text":"- 접속자 아이디 목록에서 내 행의 '나' / '내 캐릭터' 문구 제거\\n- 내 행 오른쪽에도 버튼 배치\\n- 내 행은 정보 / 파티생성 버튼, 다른 유저는 정보 / 파티신청 버튼 표시"},
-  {"ver":"이전 패치 067","text":"- 온라인 상태가 오프라인으로 고정되는 문제 수정\\n- 로그인 중이면 온라인 연결을 주기적으로 재시도하고 유지\\n- 접속자 목록의 정보/파티신청 버튼이 오른쪽 끝에 보이도록 강제 표시"},
-  {"ver":"이전 패치 066","text":"- 접속자 아이디 박스 안의 유저 정보를 한 줄로 표시\\n- 한 줄 안에 레벨/닉네임/위치를 함께 표시\\n- 오른쪽 끝에 정보/파티신청 버튼을 고정 배치"}
+  {"ver":"현재 패치 069","text":"- 접속자 아이디 박스에서 자기 자신은 닉네임 뒤에 (나) 표시\\n- 자기 자신 행의 정보/파티신청 버튼 제거\\n- 상대 유저에게만 정보/파티신청 버튼 표시\\n- 온라인 인원 표시 중복 제거\\n- 정보/파티신청 버튼 동작 보강"},
+  {"ver":"이전 패치 068","text":"- 접속자 아이디 목록에서 내 행의 '나' / '내 캐릭터' 문구 제거\\n- 내 행 오른쪽에도 버튼 배치\\n- 내 행은 정보 / 파티생성 버튼, 다른 유저는 정보 / 파티신청 버튼 표시"},
+  {"ver":"이전 패치 067","text":"- 온라인 상태가 오프라인으로 고정되는 문제 수정\\n- 로그인 중이면 온라인 연결을 주기적으로 재시도하고 유지\\n- 접속자 목록의 정보/파티신청 버튼이 오른쪽 끝에 보이도록 강제 표시"}
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
@@ -5190,7 +5238,7 @@ function peerDisplayLocation(p){
 function onlineUserListRows(){
   const peers=activePeers(99999,false);
   const selfField=(FIELDS.find(f=>f.id===currentField)||{}).name||currentField;
-  const self=`<div class="partyMiniLine onlineUserInBox oneLine self"><div class="onlineUserLine"><b>Lv.${player.level||1}</b><span class="onlineNick">${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))}</span><span class="small onlineLoc">위치: ${escapeHtml(selfField)}</span></div><div class="onlineUserBoxBtns"><button type="button" onclick="Game.showStats()">정보</button><button type="button" onclick="Game.createParty()">파티생성</button></div></div>`;
+  const self=`<div class="partyMiniLine onlineUserInBox oneLine self noBtns"><div class="onlineUserLine"><b>Lv.${player.level||1}</b><span class="onlineNick">${escapeHtml(sanitizeNickname(player.nickname||'플레이어'))} <em>(나)</em></span><span class="small onlineLoc">위치: ${escapeHtml(selfField)}</span></div></div>`;
   const peerRows=peers.map(p=>{
     const id=escapeHtml(p.id||'');
     return `<div class="partyMiniLine onlineUserInBox oneLine"><div class="onlineUserLine"><b>Lv.${p.level||1}</b><span class="onlineNick">${escapeHtml(p.name||'플레이어')}</span><span class="small onlineLoc">위치: ${escapeHtml(peerDisplayLocation(p))}</span></div><div class="onlineUserBoxBtns"><button type="button" onclick="Game.showPeerInfo('${id}')">정보</button><button type="button" onclick="Game.requestPartyToPeer('${id}')">파티신청</button></div></div>`;
@@ -5237,9 +5285,9 @@ function showOnlineHub(autoConnect=true){
   const inviteHtml=invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>';
   const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b> · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${typeof fmtK==='function'?fmtK(m.hp||0):(m.hp||0)}/${typeof fmtK==='function'?fmtK(m.maxHp||0):(m.maxHp||0)}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
   const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>Lv.${p.level||1} ${escapeHtml(p.name||'플레이어')}</b><br><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
-  const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자 아이디</h3><span>${allOnline.count}명</span></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
+  const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자 아이디</h3></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
   const partyGroup=`<h3>파티</h3><div class="onlineGroupBox"><div class="footerBtns"><button onclick="Game.createParty()">파티 생성</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>${onlineState.partyId?`<div class="sub">파티 ID: ${escapeHtml(onlineState.partyId)}</div>`:''}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 파티 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
-  openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 접속자 ${allOnline.count}명 · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
+  openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.closePopup()">닫기</button></div>`);
 }
 function showParty(){showOnlineHub();}
 function updateLogToggleButtons(){
