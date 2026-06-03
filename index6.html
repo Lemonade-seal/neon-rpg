@@ -2871,7 +2871,7 @@ function msg(t,type='system'){
 }
 function toast(t){toastBox.textContent=t;toastBox.style.display='block';clearTimeout(toastBox._t);toastBox._t=setTimeout(()=>toastBox.style.display='none',1400);}
 function popupAllowsCloseX(){return !['boot','title','nickname','class','update','kakaoLogin','growth','roulette','guide'].includes(String(popupMode||''));}
-function openPopup(html){const raw=String(html||'');popup.innerHTML=(popupAllowsCloseX()&&!raw.includes('popupCloseX'))?`<button class="popupCloseX" onclick="Game.safeCall('closePopup')">X</button>${raw}`:raw;popupLayer.style.display='flex';gamePaused=true;}
+function openPopup(html){const raw=String(html||'');popup.innerHTML=(popupAllowsCloseX()&&!raw.includes('popupCloseX'))?`<button class="popupCloseX" onclick="Game.safeCall('closePopup')">X</button>${raw}`:raw;popupLayer.style.display='flex';gamePaused=false;}
 function closePopup(){popupLayer.style.display='none';popup.innerHTML='';popup.style.width='';popup.style.height='';popup.style.maxWidth='';popup.style.maxHeight='';popup.style.padding='';popup.style.overflow='';gamePaused=false;popupMode='';}
 function lineStyle(alpha=1,width=2){ctx.strokeStyle=`rgba(0,255,114,${alpha})`;ctx.lineWidth=width;ctx.shadowColor='rgba(0,255,114,.72)';ctx.shadowBlur=8;ctx.lineCap='round';ctx.lineJoin='round';}
 function fillStyle(alpha=.12){ctx.fillStyle=`rgba(0,255,114,${alpha})`;ctx.shadowColor='rgba(0,255,114,.5)';ctx.shadowBlur=8;}
@@ -4112,7 +4112,7 @@ function playerHit(dmg,source){
 }
 
 function openGrowth(){
-  gamePaused=true; pendingLevelUps=Math.max(0,pendingLevelUps-1); growthOptions=makeGrowthOptions(); growthSelectNeed=1; growthSelected=[]; rouletteUsed=false; popupMode='growth';
+  gamePaused=false; pendingLevelUps=Math.max(0,pendingLevelUps-1); growthOptions=makeGrowthOptions(); growthSelectNeed=1; growthSelected=[]; rouletteUsed=false; popupMode='growth';
   renderGrowth();
 }
 function nerfGrowthValue059(stat,value){
@@ -4543,7 +4543,7 @@ function autoRoamWhenNoTarget(st,dt){
 }
 function updateAuto(dt){
   try{
-    if(currentField==='town'||popupLayer.style.display==='flex'||!player.classChosen)return;
+    if(currentField==='town'||!player.classChosen)return;
     normalizePlayer();
     const st=computeStats();
     const hpPct=player.maxHp>0?player.hp/player.maxHp:1;
@@ -5743,7 +5743,7 @@ function handleRuntimeError(scope,e){
 }
 function loop(ts){
   const dt=Math.min(.05,(ts-last)/1000||0);last=ts;
-  try{if(!gamePaused)update(dt);}catch(e){handleRuntimeError('update',e);}
+  try{update(dt);}catch(e){handleRuntimeError('update',e);}
   try{draw();}catch(e){handleRuntimeError('draw',e);}
   requestAnimationFrame(loop);
 }
