@@ -2343,7 +2343,7 @@ window.addEventListener('pagehide',()=>{try{if(!cloudState.deleting&&!cloudState
 
 const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
-const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,lastHeartbeat:0,keepAliveTimer:null,peers:{},partyId:null,invites:{},chat:[]};
+const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,lastHeartbeat:0,lastPresenceTrack:0,lastPayloadX:null,lastPayloadY:null,lastPayloadField:'',lastPayloadAt:0,sendSeq:0,keepAliveTimer:null,peers:{},joinNotice:{},presenceReady:false,partyId:null,invites:{},chat:[]};
 storageSet('green_line_online_pid',onlineState.playerId);
 function leaveOnline(showToast=true){
   try{
@@ -2362,6 +2362,14 @@ function leaveOnline(showToast=true){
     onlineState.lastConnectTry=0;
     onlineState.lastSend=0;
     onlineState.peers={};
+    onlineState.joinNotice={};
+    onlineState.presenceReady=false;
+    onlineState.lastPresenceTrack=0;
+    onlineState.lastPayloadX=null;
+    onlineState.lastPayloadY=null;
+    onlineState.lastPayloadField='';
+    onlineState.lastPayloadAt=0;
+    onlineState.sendSeq=0;
     onlineState.invites={};
     if(showToast&&typeof toast==='function')toast('온라인 연결 해제');
     if(typeof popupMode!=='undefined'&&popupMode==='onlineHub'&&typeof showOnlineHub==='function'){
@@ -2377,12 +2385,42 @@ function leaveOnline(showToast=true){
     onlineState.channel=null;
     onlineState.client=null;
     onlineState.status='오프라인 오류';
+    onlineState.presenceReady=false;
+    onlineState.joinNotice={};
+    onlineState.lastPresenceTrack=0;
+    onlineState.lastPayloadX=null;
+    onlineState.lastPayloadY=null;
+    onlineState.lastPayloadField='';
+    onlineState.lastPayloadAt=0;
     return false;
   }
 }
 function myOnlineId(){return onlineState.playerId;}
 function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<8500)n++;}return n;}
 function onlineStatusText(){return onlineState.blocked?'온라인 재접속 필요':(onlineState.enabled?`온라인 · ${onlinePeerCount()}명`:`오프라인 · ${onlineState.status||'대기'}`);}
+
+function announcePeerJoin(p,prev){
+  try{
+    if(!p||!p.id||p.id===myOnlineId())return;
+    if(!onlineState.presenceReady)return;
+    const now=performance.now();
+    const stale=!prev||now-(Number(prev.seenAt)||0)>12000;
+    if(!stale)return;
+    onlineState.joinNotice=onlineState.joinNotice||{};
+    if(onlineState.joinNotice[p.id]&&now-onlineState.joinNotice[p.id]<15000)return;
+    onlineState.joinNotice[p.id]=now;
+    const lv=Math.max(1,Math.floor(Number(p.level)||1));
+    const name=sanitizeNickname(p.name||'플레이어');
+    msg(`Lv.${lv} ${name}님께서 접속하셨습니다`,'system');
+  }catch(e){console.error(e);}
+}
+function prunePeerJoinNotice(){
+  try{
+    const now=performance.now();
+    const book=onlineState.joinNotice||{};
+    for(const id in book){if(now-Number(book[id]||0)>60000)delete book[id];}
+  }catch(e){}
+}
 function scheduleOnlineReconnect(reason='retry',delay=1800){
   if(!cloudState.user||cloudState.deleting||cloudState.accountResetting)return false;
   if(typeof document!=='undefined'&&document.hidden)return false;
@@ -2464,6 +2502,13 @@ async function initPartyPresence(force=false){
     return false;
   }
 }
+function limitPeerVelocity(vx,vy,max=620){
+  vx=Number(vx)||0;vy=Number(vy)||0;
+  const sp=Math.hypot(vx,vy);
+  if(!Number.isFinite(sp)||sp<=0)return {vx:0,vy:0};
+  if(sp>max){const k=max/sp;return {vx:vx*k,vy:vy*k};}
+  return {vx,vy};
+}
 function sanitizePeerPayload(p,seenAt=performance.now()){
   if(!p||p.id===myOnlineId())return null;
   const id=String(p.id||'');
@@ -2472,17 +2517,9 @@ function sanitizePeerPayload(p,seenAt=performance.now()){
   const prev=onlineState.peers&&onlineState.peers[id];
   const field=String(p.field||'town');
   const prevField=prev?String(prev.field||'town'):field;
-  const oldDrawX=Number(prev&&Number.isFinite(Number(prev.drawX))?prev.drawX:x);
-  const oldDrawY=Number(prev&&Number.isFinite(Number(prev.drawY))?prev.drawY:y);
-  const oldTargetX=Number(prev&&Number.isFinite(Number(prev.targetX))?prev.targetX:x);
-  const oldTargetY=Number(prev&&Number.isFinite(Number(prev.targetY))?prev.targetY:y);
-  const moved=prev?Math.hypot(x-oldTargetX,y-oldTargetY):0;
-  const snap=!prev||field!==prevField||moved>360||Math.hypot(x-oldDrawX,y-oldDrawY)>420;
-  const drawX=snap?x:oldDrawX;
-  const drawY=snap?y:oldDrawY;
-  const dirByMove=(!snap&&moved>3)?Math.atan2(y-oldTargetY,x-oldTargetX):(Number(prev&&prev.dir)||0);
-  const moving=!!p.moving||(!snap&&moved>1.5);
-  return {
+  const incomingTs=Number(p.ts)||Date.now();
+  const prevTs=Number(prev&&prev.ts)||0;
+  const identity={
     id,
     userId:String(p.userId||''),
     name:sanitizeNickname(p.name||'플레이어'),
@@ -2490,6 +2527,33 @@ function sanitizePeerPayload(p,seenAt=performance.now()){
     jobName:String(p.jobName||jobById(p.job||'adventurer').name),
     level:Math.max(1,Math.floor(Number(p.level)||1)),
     field,
+    hp:Math.max(0,Number(p.hp)||0),
+    maxHp:Math.max(1,Number(p.maxHp)||1),
+    partyId:String(p.partyId||'')
+  };
+  if(prev&&field===prevField&&prevTs&&incomingTs+700<prevTs){
+    return Object.assign({},prev,identity,{seenAt,moving:!!p.moving||!!prev.moving,visualMoving:!!prev.visualMoving});
+  }
+  const oldDrawX=Number(prev&&Number.isFinite(Number(prev.drawX))?prev.drawX:x);
+  const oldDrawY=Number(prev&&Number.isFinite(Number(prev.drawY))?prev.drawY:y);
+  const oldTargetX=Number(prev&&Number.isFinite(Number(prev.targetX))?prev.targetX:x);
+  const oldTargetY=Number(prev&&Number.isFinite(Number(prev.targetY))?prev.targetY:y);
+  const moved=prev?Math.hypot(x-oldTargetX,y-oldTargetY):0;
+  const snap=!prev||field!==prevField||moved>360||Math.hypot(x-oldDrawX,y-oldDrawY)>440;
+  const drawX=snap?x:oldDrawX;
+  const drawY=snap?y:oldDrawY;
+  const dtRemote=prevTs?Math.max(.06,Math.min(1.0,(incomingTs-prevTs)/1000)):.24;
+  let vx=Number(p.vx),vy=Number(p.vy);
+  if(!Number.isFinite(vx)||!Number.isFinite(vy)){
+    vx=(!snap&&dtRemote>0)?(x-oldTargetX)/dtRemote:0;
+    vy=(!snap&&dtRemote>0)?(y-oldTargetY)/dtRemote:0;
+  }
+  const limited=limitPeerVelocity(vx,vy,620);
+  vx=limited.vx;vy=limited.vy;
+  const dirByMove=(!snap&&moved>2.2)?Math.atan2(y-oldTargetY,x-oldTargetX):(Number(prev&&prev.dir)||0);
+  const moving=!!p.moving||(!snap&&moved>1.0)||Math.hypot(vx,vy)>8;
+  const visualMoving=moving||!!(prev&&prev.visualMoving&&seenAt-Number(prev.lastMoveAt||0)<620);
+  return Object.assign(identity,{
     x:x,
     y:y,
     targetX:x,
@@ -2498,37 +2562,53 @@ function sanitizePeerPayload(p,seenAt=performance.now()){
     drawY,
     prevTargetX:oldTargetX,
     prevTargetY:oldTargetY,
+    vx,
+    vy,
+    speed:Math.hypot(vx,vy),
     lastMoveAt:moving?seenAt:(prev&&prev.lastMoveAt)||seenAt,
     dir:Number.isFinite(Number(p.dir))?Number(p.dir):dirByMove,
-    hp:Math.max(0,Number(p.hp)||0),
-    maxHp:Math.max(1,Number(p.maxHp)||1),
     moving,
-    visualMoving:moving,
-    partyId:String(p.partyId||''),
-    ts:Number(p.ts)||Date.now(),
+    visualMoving,
+    ts:incomingTs,
+    seq:Number(p.seq)||Number(prev&&prev.seq)||0,
     seenAt
-  };
+  });
 }
 function smoothPeerPosition(p,dt){
   if(!p)return;
   const now=performance.now();
-  const tx=Number.isFinite(Number(p.targetX))?Number(p.targetX):Number(p.x);
-  const ty=Number.isFinite(Number(p.targetY))?Number(p.targetY):Number(p.y);
-  let dx=Number.isFinite(Number(p.drawX))?Number(p.drawX):tx;
-  let dy=Number.isFinite(Number(p.drawY))?Number(p.drawY):ty;
-  const gap=Math.hypot(tx-dx,ty-dy);
-  if(!Number.isFinite(gap)||gap>420){
-    p.drawX=tx;
-    p.drawY=ty;
+  const baseX=Number.isFinite(Number(p.targetX))?Number(p.targetX):Number(p.x);
+  const baseY=Number.isFinite(Number(p.targetY))?Number(p.targetY):Number(p.y);
+  let dx=Number.isFinite(Number(p.drawX))?Number(p.drawX):baseX;
+  let dy=Number.isFinite(Number(p.drawY))?Number(p.drawY):baseY;
+  const gapBase=Math.hypot(baseX-dx,baseY-dy);
+  if(!Number.isFinite(gapBase)||gapBase>440){
+    p.drawX=baseX;
+    p.drawY=baseY;
     p.visualMoving=false;
     return;
   }
-  const follow=1-Math.exp(-Math.max(0.001,dt||0.016)*12.5);
+  const vx=Number(p.vx)||0;
+  const vy=Number(p.vy)||0;
+  const sp=Math.hypot(vx,vy);
+  const moving=!!p.moving||sp>8||gapBase>1.0;
+  let tx=baseX,ty=baseY;
+  if(moving&&sp>8){
+    const age=Math.max(0,Math.min(.22,(now-(Number(p.seenAt)||now))/1000));
+    const predictSec=Math.min(.16,.045+age*.55);
+    let ox=vx*predictSec,oy=vy*predictSec;
+    const off=Math.hypot(ox,oy);
+    if(off>34){const k=34/off;ox*=k;oy*=k;}
+    tx=baseX+ox;
+    ty=baseY+oy;
+  }
+  const gap=Math.hypot(tx-dx,ty-dy);
+  const follow=1-Math.exp(-Math.max(0.001,dt||0.016)*(moving?13.5:10.5));
   p.drawX=dx+(tx-dx)*follow;
   p.drawY=dy+(ty-dy)*follow;
   const left=Math.hypot(tx-p.drawX,ty-p.drawY);
-  p.visualMoving=left>1.2||now-(Number(p.lastMoveAt)||0)<320;
-  if(left<=1.2){p.drawX=tx;p.drawY=ty;}
+  p.visualMoving=left>0.7||gapBase>0.7||now-(Number(p.lastMoveAt)||0)<680;
+  if(left<=0.55&&!moving){p.drawX=baseX;p.drawY=baseY;}
 }
 function updateOnlinePeerSmoothing(dt){
   for(const id in onlineState.peers){
@@ -2543,10 +2623,15 @@ function syncOnlinePresence(){
       const arr=state[key]||[];
       for(const raw of arr){
         const p=sanitizePeerPayload(raw,now);
-        if(p&&p.id)next[p.id]=p;
+        if(p&&p.id){
+          announcePeerJoin(p,onlineState.peers&&onlineState.peers[p.id]);
+          next[p.id]=p;
+        }
       }
     });
     onlineState.peers=next;
+    onlineState.presenceReady=true;
+    prunePeerJoinNotice();
   }catch(e){
     console.error(e);
     onlineState.status='동기화 오류';
@@ -2555,6 +2640,7 @@ function syncOnlinePresence(){
 function handleOnlineState(raw){
   const p=sanitizePeerPayload(raw,performance.now());
   if(!p||!p.id)return;
+  announcePeerJoin(p,onlineState.peers&&onlineState.peers[p.id]);
   onlineState.peers[p.id]=p;
 }
 async function trackOnlinePresence(force=false){
@@ -2562,14 +2648,40 @@ async function trackOnlinePresence(force=false){
   if(onlineState.blocked||!onlineState.channel||!onlineState.enabled)return false;
   if(onlineState.sending)return false;
   const t=performance.now();
-  const minGap=force?350:900;
+  const px=Number(player.x)||0,py=Number(player.y)||0;
+  const movedSince=Number.isFinite(Number(onlineState.lastPayloadX))?Math.hypot(px-Number(onlineState.lastPayloadX),py-Number(onlineState.lastPayloadY||0)):0;
+  const fieldChanged=onlineState.lastPayloadField&&onlineState.lastPayloadField!==currentField;
+  const movingNow=!!player.movingAnim||movedSince>1.0||fieldChanged;
+  const minGap=force?220:(movingNow?165:920);
   if(t-(onlineState.lastSend||0)<minGap)return false;
+  const prevPayloadX=Number.isFinite(Number(onlineState.lastPayloadX))?Number(onlineState.lastPayloadX):px;
+  const prevPayloadY=Number.isFinite(Number(onlineState.lastPayloadY))?Number(onlineState.lastPayloadY):py;
+  const prevPayloadAt=Number(onlineState.lastPayloadAt)||0;
   onlineState.lastSend=t;
   onlineState.sending=true;
   const payload=buildOnlinePayload();
+  let vx=0,vy=0;
+  if(!fieldChanged&&prevPayloadAt>0){
+    const dtSec=Math.max(.05,Math.min(1.2,(t-prevPayloadAt)/1000));
+    vx=(payload.x-prevPayloadX)/dtSec;
+    vy=(payload.y-prevPayloadY)/dtSec;
+    const limited=limitPeerVelocity(vx,vy,620);
+    vx=limited.vx;vy=limited.vy;
+  }
+  payload.vx=Math.round(vx*10)/10;
+  payload.vy=Math.round(vy*10)/10;
+  payload.seq=(onlineState.sendSeq=(Number(onlineState.sendSeq)||0)+1);
   try{
-    await onlineState.channel.track(payload);
+    const shouldTrack=force||!onlineState.lastPresenceTrack||t-(onlineState.lastPresenceTrack||0)>4200;
+    if(shouldTrack){
+      await onlineState.channel.track(payload);
+      onlineState.lastPresenceTrack=t;
+    }
     await onlineState.channel.send({type:'broadcast',event:'online_state',payload});
+    onlineState.lastPayloadX=payload.x;
+    onlineState.lastPayloadY=payload.y;
+    onlineState.lastPayloadField=payload.field;
+    onlineState.lastPayloadAt=t;
     onlineState.lastHeartbeat=performance.now();
     return true;
   }catch(e){
@@ -5779,7 +5891,7 @@ function clearAllLocalGameDataForAccountDelete(){
     }
   }catch(e){console.error(e);}
   try{gameLog.length=0;}catch(e){}
-  try{onlineState.peers={};onlineState.invites={};onlineState.chat=[];onlineState.partyId=null;onlineState.enabled=false;onlineState.channel=null;}catch(e){}
+  try{onlineState.peers={};onlineState.joinNotice={};onlineState.presenceReady=false;onlineState.invites={};onlineState.chat=[];onlineState.partyId=null;onlineState.enabled=false;onlineState.channel=null;onlineState.lastPresenceTrack=0;onlineState.lastPayloadX=null;onlineState.lastPayloadY=null;onlineState.lastPayloadField='';onlineState.lastPayloadAt=0;}catch(e){}
   memorySave='';
 }
 function makeDeletedAccountResetPayload(){
