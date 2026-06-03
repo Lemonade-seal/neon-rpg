@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_110_skill_slot_select_popup -->
+<!-- build: index6_112_bag_slot_categories -->
 <style>
   :root{--g:#00ff72;--obj-rgb:0,255,114;--gd:rgba(var(--obj-rgb),.55);--gf:rgba(var(--obj-rgb),.18);--gb:rgba(var(--obj-rgb),.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1705,6 +1705,27 @@
   @media (max-width:420px){
     .skillInfoDeck{grid-template-columns:1fr;}
     .skillSlotGrid,.skillSlotChoiceGrid{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+
+
+  /* 113: PC stat panel wide click target */
+  #statPanel{
+    position:relative!important;
+    cursor:pointer!important;
+    pointer-events:auto!important;
+    min-height:var(--mini-size)!important;
+  }
+  #statPanel .compactHud,
+  #statPanel .compactHud *{
+    pointer-events:none!important;
+  }
+  #statPanel:after{
+    content:"";
+    position:absolute;
+    inset:0;
+    border-radius:inherit;
+    background:transparent;
+    pointer-events:none;
   }
 
 </style>
@@ -4887,10 +4908,43 @@ function goField(id){
   }
 }
 
-function renderBag(){
-  popupMode='bag'; const eq=Object.entries(player.equip).map(([slot,it])=>`<div class="card"><h3>${SLOT_LABEL[slot]}</h3>${it?`${it.rarity} ${it.name}<br><span class="small">Lv.${it.level} · ${SLOT_LABEL[it.slot]}</span><br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))}</span>`:'비어있음'}</div>`).join('');
-  const inv=player.inventory.map(it=>`<div class="card rare-${it.rarity}"><h3>${it.equipped?'[E] ':''}${it.name}</h3>${SLOT_LABEL[it.slot]} · Lv.${it.level} · ${it.rarity}<br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))} · 판매가 ${itemValue(it)}G</span><div class="footerBtns"><button onclick="Game.equipItem('${it.id}')">장착</button><button ${it.equipped?'disabled':''} onclick="Game.sellItem('${it.id}')">판매</button></div></div>`).join('')||'<div class="sub">아이템 없음</div>';
-  openPopup(`<div class="title">장비 / 가방</div><div class="sub">직업에 맞는 장비 점수를 기준으로 자동장착할 수 있습니다.</div><h3>착용 장비</h3><div class="grid">${eq}</div><div class="footerBtns"><button onclick="Game.autoEquipBest()">자동장착</button><button onclick="Game.sellAllUnequipped()">미장착 전체판매</button></div><h3>보유 아이템</h3><div class="grid">${inv}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+let bagSlotFilter='all';
+const BAG_SLOT_ORDER=['all','weapon','armor','helmet','boots','ring','amulet','relic'];
+function bagSlotLabel(slot){return slot==='all'?'전체':(SLOT_LABEL[slot]||slot||'기타');}
+function bagItemCard(it){
+  if(!it)return '';
+  const equipped=!!it.equipped;
+  return `<div class="card rare-${it.rarity}"><h3>${equipped?'[E] ':''}${it.name}</h3>${SLOT_LABEL[it.slot]||'기타'} · Lv.${it.level} · ${it.rarity}<br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))} · 판매가 ${itemValue(it)}G</span><div class="footerBtns"><button onclick="Game.equipItem('${it.id}')">장착</button><button ${equipped?'disabled':''} onclick="Game.sellItem('${it.id}')">판매</button></div></div>`;
+}
+function renderBag(filter){
+  popupMode='bag';
+  normalizePlayer();
+  if(typeof filter==='string')bagSlotFilter=filter;
+  if(!BAG_SLOT_ORDER.includes(bagSlotFilter))bagSlotFilter='all';
+  const eq=Object.entries(player.equip).map(([slot,it])=>`<div class="card"><h3>${SLOT_LABEL[slot]}</h3>${it?`${it.rarity} ${it.name}<br><span class="small">Lv.${it.level} · ${SLOT_LABEL[it.slot]}</span><br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))}</span>`:'비어있음'}</div>`).join('');
+  const items=Array.isArray(player.inventory)?player.inventory.slice():[];
+  const counts={all:items.length};
+  for(const slot of BAG_SLOT_ORDER.filter(s=>s!=='all'))counts[slot]=items.filter(it=>it&&it.slot===slot).length;
+  const tabs=BAG_SLOT_ORDER.map(slot=>`<button class="${bagSlotFilter===slot?'selected':''}" onclick="Game.renderBag('${slot}')">${bagSlotLabel(slot)} ${counts[slot]||0}</button>`).join('');
+  const sortItems=list=>list.slice().sort((a,b)=>{
+    const es=(b.equipped?1:0)-(a.equipped?1:0); if(es)return es;
+    const ss=(itemScore(b)||0)-(itemScore(a)||0); if(ss)return ss;
+    return (Number(b.level)||0)-(Number(a.level)||0);
+  });
+  let inv='';
+  if(!items.length){
+    inv='<div class="sub">아이템 없음</div>';
+  }else if(bagSlotFilter==='all'){
+    inv=BAG_SLOT_ORDER.filter(slot=>slot!=='all').map(slot=>{
+      const list=sortItems(items.filter(it=>it&&it.slot===slot));
+      if(!list.length)return '';
+      return `<h3>${bagSlotLabel(slot)} <span class="small">${list.length}개</span></h3><div class="grid">${list.map(bagItemCard).join('')}</div>`;
+    }).join('')||'<div class="sub">아이템 없음</div>';
+  }else{
+    const list=sortItems(items.filter(it=>it&&it.slot===bagSlotFilter));
+    inv=list.length?`<div class="grid">${list.map(bagItemCard).join('')}</div>`:`<div class="sub">${bagSlotLabel(bagSlotFilter)} 아이템 없음</div>`;
+  }
+  openPopup(`<div class="title">장비 / 가방</div><div class="sub">보유 아이템은 부위별 카테고리로 분류됩니다.</div><h3>착용 장비</h3><div class="grid">${eq}</div><div class="footerBtns"><button onclick="Game.autoEquipBest()">자동장착</button><button onclick="Game.sellAllUnequipped()">미장착 전체판매</button></div><h3>보유 아이템</h3><div class="tabs">${tabs}</div>${inv}<div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 const CODEX_REWARD_NORMAL=[{need:10,reward:1},{need:30,reward:2},{need:100,reward:5}];
 const CODEX_REWARD_BOSS=[{need:1,reward:2},{need:3,reward:4},{need:10,reward:10}];
@@ -6826,6 +6880,35 @@ function updatePortalTrigger(){
   }
 }
 
+function bindStatPanelWideClick(){
+  const panel=$('statPanel');
+  if(!panel||panel.dataset.statWideClickBound==='1')return;
+  panel.dataset.statWideClickBound='1';
+  let pressed=false;
+  const block=e=>{
+    if(!e)return;
+    if(typeof e.preventDefault==='function')e.preventDefault();
+    if(typeof e.stopPropagation==='function')e.stopPropagation();
+  };
+  panel.addEventListener('pointerdown',e=>{
+    pressed=true;
+    block(e);
+  },{passive:false});
+  panel.addEventListener('pointerup',e=>{
+    if(!pressed)return;
+    pressed=false;
+    block(e);
+    showStats();
+  },{passive:false});
+  panel.addEventListener('pointercancel',()=>{pressed=false;},{passive:true});
+  panel.addEventListener('mousedown',e=>{
+    block(e);
+  },{passive:false});
+  panel.addEventListener('click',e=>{
+    block(e);
+  },{passive:false});
+}
+
 function bind(){
   const joy=$('joy'), stick=$('stick');
   const setJoy=(clientX,clientY)=>{const r=joy.getBoundingClientRect();const cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=clientX-cx,dy=clientY-cy;const len=Math.hypot(dx,dy),max=r.width/2-22;if(len>max){dx=dx/len*max;dy=dy/len*max;}joystick.dx=dx/max;joystick.dy=dy/max;stick.style.transform=`translate(${dx}px,${dy}px)`;};
@@ -6838,7 +6921,7 @@ function bind(){
   const dodgeBtn=$('dodgeBtn');
   dodgeBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();dodge(true);},{passive:false});
   dodgeBtn.onclick=e=>{e.preventDefault();};
-  $('potionBtn').onclick=usePotion; $('talkPrompt').onclick=handleTalkPrompt; $('statBtn').onclick=showOnlineHub; $('statPanel').onclick=showStats; $('bagBtn').onclick=renderBag; $('codexBtn').onclick=()=>renderCodex(true); $('settingBtn').onclick=showSettings; const lb=$('log'); if(lb)lb.onclick=showQuickChat; $('logChatBtn').onclick=()=>toggleHudLogSetting('chat'); $('logSystemBtn').onclick=()=>toggleHudLogSetting('system'); $('logCombatBtn').onclick=()=>toggleHudLogSetting('combat'); updateLogToggleButtons(); zoneTag.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
+  $('potionBtn').onclick=usePotion; $('talkPrompt').onclick=handleTalkPrompt; $('statBtn').onclick=showOnlineHub; bindStatPanelWideClick(); $('bagBtn').onclick=renderBag; $('codexBtn').onclick=()=>renderCodex(true); $('settingBtn').onclick=showSettings; const lb=$('log'); if(lb)lb.onclick=showQuickChat; $('logChatBtn').onclick=()=>toggleHudLogSetting('chat'); $('logSystemBtn').onclick=()=>toggleHudLogSetting('system'); $('logCombatBtn').onclick=()=>toggleHudLogSetting('combat'); updateLogToggleButtons(); zoneTag.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
   mini.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();showFullMap();},{passive:false});
   game.addEventListener('mousemove',e=>{updateMouseAim(e.clientX,e.clientY);},{passive:true});
   game.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')updateMouseAim(e.clientX,e.clientY);},{passive:true});
