@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_071_show_peer_action_global_fix -->
+<!-- build: index6_072_connect_online_global_fix -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -2354,7 +2354,7 @@ function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(
 
 function startClassSelect(){showJobAgency();}
 let updateBootTimer=null;
-const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_071';
+const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_072';
 function repairSkillSlotDuplicates(){
   normalizePlayer();
   const used=new Set();
@@ -2479,9 +2479,10 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 071","text":"- showPeerAction 전역 미등록으로 인한 ReferenceError 재수정\\n- 필드 상호작용 호출부를 Game.showPeerAction 경유로 변경\\n- window/globalThis에 showPeerAction 강제 등록\\n- 접속자 버튼 기능 연결 유지"},
-  {"ver":"이전 패치 070","text":"- 069에서 발생한 showPeerAction 미정의 오류 수정\\n- 필드에서 근처 유저 터치/상호작용 시 정보/파티신청 메뉴 정상 표시\\n- 온라인 접속자 목록의 정보/파티신청 버튼 기능 재연결"},
-  {"ver":"이전 패치 069","text":"- 접속자 아이디 박스에서 자기 자신은 닉네임 뒤에 (나) 표시\\n- 자기 자신 행의 정보/파티신청 버튼 제거\\n- 상대 유저에게만 정보/파티신청 버튼 표시\\n- 온라인 인원 표시 중복 제거"}
+  {"ver":"현재 패치 072","text":"- connectOnlineFromPanel 미정의 오류 수정\\n- 온라인 재접속 관련 버튼 호출을 Game 경유로 통일\\n- window/globalThis에 connectOnlineFromPanel 강제 등록\\n- 온라인 버튼 오류 방어 추가"},
+  {"ver":"이전 패치 071","text":"- showPeerAction 전역 미등록으로 인한 ReferenceError 재수정\\n- 필드 상호작용 호출부를 Game.showPeerAction 경유로 변경\\n- window/globalThis에 showPeerAction 강제 등록"},
+  {"ver":"이전 패치 070","text":"- showPeerAction 미정의 오류 수정\\n- 필드에서 근처 유저 상호작용 메뉴 정상 표시"},
+  {"ver":"이전 패치 069","text":"- 접속자 아이디 박스에서 자기 자신은 닉네임 뒤에 (나) 표시\\n- 상대 유저에게만 정보/파티신청 버튼 표시\\n- 온라인 인원 표시 중복 제거"}
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
@@ -5285,6 +5286,25 @@ function forceOnlineKeepAlive(){
     ensureOnlineHubConnection(popupMode==='onlineHub',true);
   }
 }
+function connectOnlineFromPanel(){
+  try{
+    if(!cloudState.user){toast('로그인 필요');showKakaoLoginPage();return;}
+    onlineState.blocked=false;
+    onlineState.drawBlocked=false;
+    onlineState.enabled=false;
+    onlineState.connecting=false;
+    onlineState.status='재접속 중';
+    try{if(onlineState.channel){onlineState.channel.unsubscribe();onlineState.channel=null;}}catch(_){}
+    initPartyPresence(true).then(ok=>{
+      if(ok){trackOnlinePresence(true);toast('온라인 접속 확인');}
+      else toast('온라인 접속 실패');
+      if(popupMode==='onlineHub')showOnlineHub(false);
+    });
+  }catch(e){
+    console.error(e);
+    toast('온라인 접속 오류 차단');
+  }
+}
 function showOnlineHub(autoConnect=true){
   popupMode='onlineHub';
   normalizePlayer();
@@ -5501,6 +5521,15 @@ function startQuickGame(id='adventurer'){
   setTimeout(showPatchNotes,80);
 }
 window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,ensureOnlineHubConnection,forceOnlineKeepAlive,showPeerAction,showParty,toggleOnlineUserList,showPeerInfo,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+try{
+  window.connectOnlineFromPanel=window.Game.connectOnlineFromPanel;
+  globalThis.connectOnlineFromPanel=window.Game.connectOnlineFromPanel;
+  if(window.Game.showPeerAction){
+    window.showPeerAction=window.Game.showPeerAction;
+    globalThis.showPeerAction=window.Game.showPeerAction;
+  }
+}catch(e){}
+
 try{window.showPeerAction=window.Game.showPeerAction;globalThis.showPeerAction=window.Game.showPeerAction;}catch(e){}
 
 
