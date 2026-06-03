@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_123_dummy_position_persist / prev: index6_122_dummy_stable_rebuild -->
+<!-- build: index6_134_runtime_hardfix -->
 <style>
   :root{--g:#00ff72;--obj-rgb:0,255,114;--gd:rgba(var(--obj-rgb),.55);--gf:rgba(var(--obj-rgb),.18);--gb:rgba(var(--obj-rgb),.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1809,7 +1809,7 @@ window.addEventListener('unhandledrejection', function(e){
 'use strict';
 
 const $ = id => document.getElementById(id);
-const canvas = $('game'), ctx = canvas.getContext('2d');
+const canvas = $('game'), game = canvas, ctx = canvas.getContext('2d');
 const mini = $('mini'), mctx = mini.getContext('2d');
 const popupLayer = $('popupLayer'), popup = $('popup');
 const zoneTag = $('zoneTag');
@@ -2642,10 +2642,12 @@ window.addEventListener('pagehide',()=>{try{if(!cloudState.deleting&&!cloudState
 
 const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
-const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,lastHeartbeat:0,lastPresenceTrack:0,lastPayloadX:null,lastPayloadY:null,lastPayloadField:'',lastPayloadAt:0,sendSeq:0,keepAliveTimer:null,peers:{},joinNotice:{},presenceReady:false,partyId:null,partyOwnerId:'',invites:{},chat:[],devDummy:null};
+const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,lastHeartbeat:0,lastPresenceTrack:0,lastPayloadX:null,lastPayloadY:null,lastPayloadField:'',lastPayloadAt:0,sendSeq:0,keepAliveTimer:null,peers:{},joinNotice:{},presenceReady:false,partyId:null,partyOwnerId:'',invites:{},chat:[],devDummy:null,blockPartyInvites:false};
 storageSet('green_line_online_pid',onlineState.playerId);
 
 const partyPersistKey='green_line_party_state_v2';
+const partyInviteBlockKey='green_line_party_invite_block_v1';
+try{onlineState.blockPartyInvites=storageGet(partyInviteBlockKey)==='1';}catch(_){onlineState.blockPartyInvites=false;}
 const DEV_DUMMY_ID='dev_dummy_ai_warrior';
 const DEV_DUMMY_NICK_KEY='green_line_dev_dummy_nick_v4';
 const DEV_DUMMY_PROFILES=[
@@ -2702,6 +2704,27 @@ function clearPersistentParty(reason='partyClear'){
 function isPartyLeader(){return !!onlineState.partyId && String(onlineState.partyOwnerId||myOnlineId())===String(myOnlineId());}
 function partyLeaderLabel(){return isPartyLeader()?'파티장':'파티원';}
 function ensurePartyOwner(){if(onlineState.partyId&&!onlineState.partyOwnerId){onlineState.partyOwnerId=myOnlineId();savePersistentParty('partyOwnerFix');}return onlineState.partyOwnerId||'';}
+function partyInviteBlocked(){try{return !!onlineState.blockPartyInvites;}catch(_){return false;}}
+function setPartyInviteBlock(on,refresh=true){
+  try{
+    onlineState.blockPartyInvites=!!on;
+    storageSet(partyInviteBlockKey,onlineState.blockPartyInvites?'1':'0');
+    if(onlineState.blockPartyInvites){
+      try{onlineState.invites={}; onlineState.inviteAutoRejectAt=Date.now();}catch(_){ }
+      toast('자동거절 ON');
+    }else toast('자동거절 OFF');
+    if(refresh&&typeof showOnlineHub==='function')showOnlineHub(false);
+  }catch(e){console.warn('party invite block save skipped',e);}
+}
+function togglePartyInviteBlock(){setPartyInviteBlock(!partyInviteBlocked(),true);}
+function autoDeclinePartyInvite(p,source='remote'){
+  if(!p||p.to!==myOnlineId())return false;
+  try{if(p.from)delete onlineState.invites[p.from];}catch(_){ }
+  try{sendPartyBroadcast('party_decline',{to:p.from,partyId:p.partyId||'',auto:true,reason:'invite_blocked'});}catch(e){console.warn('party auto decline skipped',e);}
+  if(source!=='silent')msg(`${p.fromName||'유저'}님 파티 신청 자동거절`, 'system');
+  if(popupMode==='onlineHub')showOnlineHub(false);
+  return true;
+}
 function leaveOnline(showToast=true){
   try{
     const ch=onlineState.channel;
@@ -3237,7 +3260,147 @@ function devDummyDealDamage(d,m,dmg,kind='ally'){
   }
   return false;
 }
-function devDummyAttackEffects(d,target,skill=false){
+
+
+// 127: 스킬 이름/직업 의미 기반 공통 이펙트 애니메이션.
+// 모든 직업 스킬 사용 시 여기 한 곳을 거쳐 단어 뜻에 맞는 기본 시각 효과를 만든다.
+function skillVisualKind(jobId, skillName='', rank=1){
+  const name=String(skillName||'');
+  const jb=jobById(jobId||'')||{};
+  const base=jb.skillBase||jb.weaponBase||jobId||'blade';
+  const has=(...words)=>words.some(w=>name.includes(w));
+  if(has('치유','회복','재생','정화','구원','부활','기도','오라'))return 'heal';
+  if(has('선율','박자','행진곡','화음','음표','노래','합주','합창','대합주'))return 'music';
+  if(has('시간','초침','가속','느림','쿨타임','균열','역행','정지','시공'))return 'time';
+  if(has('염동','중력','정신','구체','초능력'))return 'psy';
+  if(has('권','펀치','철산고','무극','격','파쇄'))return 'fist';
+  if(has('찌르기','관통','창','선검'))return 'pierce';
+  if(has('화염','불','폭염','운석','메테오','태양','유성'))return 'fire';
+  if(has('얼음','빙결','서리','냉기'))return 'ice';
+  if(has('번개','전격','뇌','전류','전기','낙뢰'))return 'thunder';
+  if(has('독','맹독','산성','시약','연금','플라스크','부식','안개'))return 'toxin';
+  if(has('폭탄','폭발','기뢰','지뢰','폭격','포격','유탄'))return 'bomb';
+  if(has('저주','암흑','금기','흡수','사령','망령','영혼','혼','부패','죽음','낙인','공포','심연'))return 'curse';
+  if(has('성역','성광','광휘','빛','심판','축복','성스러운'))return 'holy';
+  if(has('거울','반사','역류'))return 'mirror';
+  if(has('보호','방벽','방패','장막','성채','철벽','수호','결계','불굴'))return 'guard';
+  if(has('소환','정령','계약','군단','분신','수호수','사역','세계수'))return 'summon';
+  if(has('포탑','터렛','기계','회로','드론','기어','장치','코일','코어','요새','증폭'))return 'mech';
+  if(has('탄','총','철갑','산탄','속사','로켓','위성'))return 'gun';
+  if(has('화살','사격','연사','저격','궁','표식','조준','덫화살'))return 'arrow';
+  if(has('암살','그림자','처형','급습','은신','암습','연막','절명','무영'))return 'shadow';
+  if(has('자연','숲','나무','새싹','야수','늑대','대지','가시','생명','세계수','원시'))return 'nature';
+  if(has('검','참격','베기','검기','도검','난무','차원','회전','폭풍','검무'))return 'slash';
+  if(base==='ranger'||base==='archer'||base==='sniper')return 'arrow';
+  if(base==='gunner')return 'gun';
+  if(base==='mage'||base==='chronomancer')return rank>=6?'fire':'arcane';
+  if(base==='psion')return 'psy';
+  if(base==='hexer'||base==='necromancer')return 'curse';
+  if(base==='summoner')return 'summon';
+  if(base==='druid'||base==='wildDruid')return 'nature';
+  if(base==='mechanic'||base==='engineer'||base==='artificer')return 'mech';
+  if(base==='mirror')return 'mirror';
+  if(base==='paladin'||base==='warden')return 'guard';
+  if(base==='priest')return 'heal';
+  if(base==='bard')return 'music';
+  if(base==='alchemist')return 'toxin';
+  if(base==='assassin')return 'shadow';
+  if(base==='monk')return 'fist';
+  return 'slash';
+}
+function skillVisualPoint(actor,target,range=180){
+  actor=actor||player;
+  if(target&&Number.isFinite(Number(target.x))&&Number.isFinite(Number(target.y)))return {x:Number(target.x),y:Number(target.y),target};
+  const a=Number.isFinite(Number(actor.dir))?Number(actor.dir):0;
+  return {x:(Number(actor.x)||0)+Math.cos(a)*range,y:(Number(actor.y)||0)+Math.sin(a)*range,target:null};
+}
+function pushSkillVisual(actor, skillName='', rank=1, jobId='', target=null){
+  actor=actor||player;
+  if(!actor||!Number.isFinite(Number(actor.x))||!Number.isFinite(Number(actor.y)))return;
+  const x=Number(actor.x), y=Number(actor.y);
+  const rnk=clamp(Math.floor(Number(rank)||1),1,MAX_SKILL_STAR||12);
+  const kind=skillVisualKind(jobId||actor.job||player.job, skillName, rnk);
+  const dir=Number.isFinite(Number(actor.dir))?Number(actor.dir):-Math.PI/2;
+  const aim=skillVisualPoint(actor,target,120+rnk*12);
+  const baseR=30+rnk*7;
+  const big=rnk>=9, ultimate=rnk>=11;
+  const glyphSides={mirror:6,holy:8,heal:8,guard:6,time:12,psy:5,music:7,nature:5,fist:4,pierce:3,gun:4,bomb:5}[kind]||4;
+  const common={kind,rank:rnk,maxLife:ultimate?1.12:(big?.86:.62),name:String(skillName||'')};
+  const glyphAt=(gx,gy,r=baseR+6,sides=glyphSides,life=common.maxLife)=>effects.push(Object.assign({type:'skillGlyph',x:gx,y:gy,life,maxLife:life,r,sides,rot:dir},common));
+  glyphAt(x,y);
+  if(kind==='slash'){
+    for(let i=0;i<(ultimate?5:big?3:2);i++)effects.push(Object.assign({type:'skillSlash',x:x+Math.cos(dir+Math.PI/2)*(i-1)*18,y:y+Math.sin(dir+Math.PI/2)*(i-1)*18,life:.42+i*.06,maxLife:.42+i*.06,r:58+rnk*9+i*12,a:dir,spread:.85+i*.08},common));
+    effects.push(Object.assign({type:'skillBeam',x,y:y-6,tx:aim.x,ty:aim.y,life:.28,maxLife:.28,width:ultimate?4:2.2},common));
+  }else if(kind==='pierce'){
+    for(let i=0;i<(ultimate?4:2);i++){const off=(i-((ultimate?4:2)-1)/2)*9;effects.push(Object.assign({type:'skillBeam',x:x+Math.cos(dir+Math.PI/2)*off,y:y+Math.sin(dir+Math.PI/2)*off-5,tx:aim.x+Math.cos(dir+Math.PI/2)*off,ty:aim.y+Math.sin(dir+Math.PI/2)*off,life:.32+i*.04,maxLife:.32+i*.04,width:ultimate?3.2:1.9},common));}
+    effects.push(Object.assign({type:'skillPierceTip',x:aim.x,y:aim.y,life:.38,maxLife:.38,a:dir,r:baseR},common));
+  }else if(kind==='fist'){
+    for(let i=0;i<(ultimate?6:big?4:3);i++){const a=dir+rnd(-.55,.55);const rr=26+i*12;effects.push(Object.assign({type:'skillFist',x:x+Math.cos(a)*rr,y:y+Math.sin(a)*rr,life:.36+i*.05,maxLife:.36+i*.05,r:18+i*4,a},common));}
+    effects.push(Object.assign({type:'skillPulse',x:aim.x,y:aim.y,life:.42,maxLife:.42,r:baseR+28},common));
+  }else if(kind==='arrow'){
+    for(let i=0;i<(ultimate?8:big?5:3);i++){const off=(i-((ultimate?8:big?5:3)-1)/2)*14;effects.push(Object.assign({type:'skillArrow',x:x+Math.cos(dir+Math.PI/2)*off,y:y+Math.sin(dir+Math.PI/2)*off,tx:aim.x+Math.cos(dir+Math.PI/2)*off,ty:aim.y+Math.sin(dir+Math.PI/2)*off,life:.48+i*.025,maxLife:.48+i*.025},common));}
+  }else if(kind==='gun'){
+    for(let i=0;i<(ultimate?9:big?6:4);i++){const spread=rnd(-.18,.18);effects.push(Object.assign({type:'skillBullet',x:x+rnd(-6,6),y:y-6+rnd(-4,4),tx:aim.x+Math.cos(dir+spread)*rnd(8,36),ty:aim.y+Math.sin(dir+spread)*rnd(8,36),life:.24+i*.018,maxLife:.24+i*.018},common));}
+    if(big)effects.push(Object.assign({type:'skillExplosion',x:aim.x,y:aim.y,life:.5,maxLife:.5,r:baseR+30},common));
+  }else if(kind==='fire'){
+    effects.push(Object.assign({type:'skillMeteor',x:aim.x,y:aim.y,life:.78,maxLife:.78,r:baseR+22},common));
+    effects.push(Object.assign({type:'skillFlameWave',x:aim.x,y:aim.y,life:.74,maxLife:.74,r:baseR+46,a:dir},common));
+    for(let i=0;i<(ultimate?6:3);i++)effects.push(Object.assign({type:'skillEmber',x:aim.x+rnd(-baseR,baseR),y:aim.y+rnd(-baseR,baseR),life:.66+rnd(0,.25),maxLife:.88,r:5+rnd(0,6),a:rnd(0,Math.PI*2)},common));
+  }else if(kind==='bomb'){
+    effects.push(Object.assign({type:'skillBombIcon',x:aim.x,y:aim.y,life:.42,maxLife:.42,r:baseR+18},common));
+    for(let i=0;i<(ultimate?7:4);i++)effects.push(Object.assign({type:'skillExplosion',x:aim.x+rnd(-baseR*.52,baseR*.52),y:aim.y+rnd(-baseR*.38,baseR*.38),life:.45+i*.075,maxLife:.45+i*.075,r:baseR+16+i*13},common));
+  }else if(kind==='ice'){
+    for(let i=0;i<8;i++){const a=i*Math.PI/4;effects.push(Object.assign({type:'skillShard',x:aim.x,y:aim.y,tx:aim.x+Math.cos(a)*(baseR+32),ty:aim.y+Math.sin(a)*(baseR+32),life:.62,maxLife:.62},common));}
+    glyphAt(aim.x,aim.y,baseR+24,6,.82);
+  }else if(kind==='thunder'){
+    for(let i=0;i<(ultimate?7:4);i++)effects.push(Object.assign({type:'skillBolt',x:x+rnd(-24,24),y:y-rnd(8,32),tx:aim.x+rnd(-baseR,baseR),ty:aim.y+rnd(-baseR,baseR),life:.34+i*.035,maxLife:.34+i*.035},common));
+  }else if(kind==='curse'){
+    effects.push(Object.assign({type:'skillCurseMark',x:aim.x,y:aim.y,life:.95,maxLife:.95,r:baseR+46},common));
+    for(let i=0;i<6;i++){const a=i*Math.PI/3;effects.push(Object.assign({type:'skillWisp',x:aim.x+Math.cos(a)*(baseR*.7),y:aim.y+Math.sin(a)*(baseR*.7),life:.86,maxLife:.86,r:10+i,a},common));}
+  }else if(kind==='holy'){
+    effects.push(Object.assign({type:'skillHolyRay',x:aim.x,y:aim.y,life:.88,maxLife:.88,r:baseR+42},common));
+    effects.push(Object.assign({type:'skillHalo',x:aim.x,y:aim.y,life:.86,maxLife:.86,r:baseR+50},common));
+  }else if(kind==='heal'){
+    effects.push(Object.assign({type:'skillHealSpiral',x,y:y-10,life:.9,maxLife:.9,r:baseR+34},common));
+    effects.push(Object.assign({type:'skillCross',x,y:y-24,life:.72,maxLife:.72,r:baseR+10},common));
+  }else if(kind==='music'){
+    for(let i=0;i<(ultimate?8:5);i++){const a=i*Math.PI*2/(ultimate?8:5);effects.push(Object.assign({type:'skillNote',x:x+Math.cos(a)*(baseR+18),y:y+Math.sin(a)*(baseR+18),life:.9+i*.03,maxLife:.9+i*.03,r:9,a},common));}
+    effects.push(Object.assign({type:'skillPulse',x,y,life:.9,maxLife:.9,r:baseR+56},common));
+  }else if(kind==='time'){
+    effects.push(Object.assign({type:'skillClock',x:aim.x,y:aim.y,life:.95,maxLife:.95,r:baseR+38,a:dir},common));
+    for(let i=0;i<3+(ultimate?2:0);i++)effects.push(Object.assign({type:'skillAfterimage',x:x-rnd(-20,20),y:y-rnd(-18,18),tx:aim.x+rnd(-20,20),ty:aim.y+rnd(-20,20),life:.42+i*.06,maxLife:.42+i*.06},common));
+  }else if(kind==='psy'){
+    for(let i=0;i<(ultimate?8:5);i++){const a=i*Math.PI*2/(ultimate?8:5)+dir*.2;effects.push(Object.assign({type:'skillOrb',x:x+Math.cos(a)*(baseR*.65),y:y+Math.sin(a)*(baseR*.65),tx:aim.x+Math.cos(a)*(baseR*.35),ty:aim.y+Math.sin(a)*(baseR*.35),life:.72+i*.035,maxLife:.72+i*.035,r:8+i},common));}
+    effects.push(Object.assign({type:'skillGravityLens',x:aim.x,y:aim.y,life:.76,maxLife:.76,r:baseR+38},common));
+  }else if(kind==='arcane'){
+    effects.push(Object.assign({type:'skillArcaneStar',x:aim.x,y:aim.y,life:.86,maxLife:.86,r:baseR+42,a:dir},common));
+    for(let i=0;i<(ultimate?6:3);i++){const a=i*Math.PI*2/(ultimate?6:3)+dir;effects.push(Object.assign({type:'skillBeam',x:x,y:y-8,tx:aim.x+Math.cos(a)*22,ty:aim.y+Math.sin(a)*22,life:.32+i*.035,maxLife:.32+i*.035,width:1.5},common));}
+  }else if(kind==='mirror'){
+    for(let i=0;i<6;i++){const a=i*Math.PI*2/6+dir*.15;effects.push(Object.assign({type:'skillMirror',x:x+Math.cos(a)*(baseR+12),y:y+Math.sin(a)*(baseR+12),life:.88,maxLife:.88,r:12,a},common));}
+    effects.push(Object.assign({type:'skillReflectLine',x,y,life:.72,maxLife:.72,r:baseR+48,a:dir},common));
+  }else if(kind==='guard'){
+    effects.push(Object.assign({type:'skillGuardWall',x,y,life:.82,maxLife:.82,r:baseR+48,a:dir},common));
+    for(let i=0;i<8;i++){const a=i*Math.PI*2/8+dir*.15;effects.push(Object.assign({type:'skillShield',x:x+Math.cos(a)*(baseR+12),y:y+Math.sin(a)*(baseR+12),life:.88,maxLife:.88,r:12,a},common));}
+  }else if(kind==='summon'){
+    for(let i=0;i<(ultimate?8:5);i++){const a=i*Math.PI*2/(ultimate?8:5);effects.push(Object.assign({type:'skillSummonRune',x:x+Math.cos(a)*(baseR+22),y:y+Math.sin(a)*(baseR+22),life:.96,maxLife:.96,r:11,a},common));}
+    glyphAt(x,y,baseR+38,5,.9);
+  }else if(kind==='nature'){
+    for(let i=0;i<(ultimate?9:6);i++){const a=i*Math.PI*2/(ultimate?9:6)+i*.11;effects.push(Object.assign({type:'skillLeaf',x:x+Math.cos(a)*(baseR+18),y:y+Math.sin(a)*(baseR+18),life:.9+i*.025,maxLife:.9+i*.025,r:10,a},common));}
+    effects.push(Object.assign({type:'skillRoot',x:aim.x,y:aim.y,life:.8,maxLife:.8,r:baseR+34},common));
+  }else if(kind==='mech'){
+    for(let i=0;i<4+(ultimate?4:0);i++){const a=i*Math.PI*2/(4+(ultimate?4:0));effects.push(Object.assign({type:'skillGear',x:x+Math.cos(a)*(baseR+24),y:y+Math.sin(a)*(baseR+24),life:.9,maxLife:.9,r:12+(i%2)*4,a},common));}
+    effects.push(Object.assign({type:'skillBeam',x,y:y-8,tx:aim.x,ty:aim.y,life:.38,maxLife:.38,width:3},common));
+  }else if(kind==='shadow'){
+    for(let i=0;i<(ultimate?7:4);i++)effects.push(Object.assign({type:'skillAfterimage',x:x-rnd(-24,24),y:y-rnd(-18,18),tx:aim.x+rnd(-30,30),ty:aim.y+rnd(-30,30),life:.46+i*.045,maxLife:.46+i*.045},common));
+  }else if(kind==='toxin'){
+    effects.push(Object.assign({type:'skillPoisonCloud',x:aim.x,y:aim.y,life:1.05,maxLife:1.05,r:baseR+42},common));
+    for(let i=0;i<(ultimate?11:6);i++){const a=dir+rnd(-.95,.95);const rr=rnd(28,baseR+52);effects.push(Object.assign({type:'skillBubble',x:aim.x+Math.cos(a)*rr,y:aim.y+Math.sin(a)*rr,life:.92+rnd(0,.25),maxLife:1.05,r:5+rnd(0,8)},common));}
+  }else{
+    effects.push(Object.assign({type:'skillPulse',x,y,life:.72,maxLife:.72,r:baseR+38},common));
+  }
+}
+
+function devDummyAttackEffects(d,target,skill=false,rank=1,skillName=null,jobId=null){
   if(!d||!target)return;
   d.attackAnim=.24;
   const a=Math.atan2(target.y-d.y,target.x-d.x);
@@ -3245,7 +3408,12 @@ function devDummyAttackEffects(d,target,skill=false){
   const sx=d.x+Math.cos(a)*18, sy=d.y+Math.sin(a)*18-6;
   effects.push({type:'linepop',x:sx,y:sy,tx:target.x,ty:target.y});
   effects.push({type:'spark',x:target.x,y:target.y,life:skill?.36:.2,r:skill?22:12});
-  if(skill)effects.push({type:'ring',x:target.x,y:target.y,life:.55,r:52});
+  if(skill){
+    const j=jobId||(devDummyProfile(d.profileId||d.id)||{}).job||d.job||'warrior';
+    const nm=skillName||((skillByRank(j,rank)||{}).name)||'AI스킬';
+    pushSkillVisual(d,nm,rank,j,target);
+    effects.push({type:'ring',x:target.x,y:target.y,life:.55,r:52});
+  }
 }
 function devDummySkillCooldown(d){
   const profile=devDummyProfile(d&&d.profileId||d&&d.id);
@@ -3259,7 +3427,8 @@ function devDummyCastSkill(d,target){
   const profile=devDummyProfile(d.profileId||d.id);
   const rank=Math.max(1,Math.min(MAX_SKILL_STAR,Number(d.skillStars&&d.skillStars[profile.job])||1));
   const dmg=Math.round(st.atk*(1.35+rank*.25));
-  devDummyAttackEffects(d,target,true);
+  const info=skillByRank(profile.job,rank)||{name:'AI스킬'};
+  devDummyAttackEffects(d,target,true,rank,info.name,profile.job);
   devDummyDealDamage(d,target,dmg,'aiSkill');
   const r=profile.job==='mageRoot'?72+rank*8:48+rank*5;
   for(const m of monsters){
@@ -3272,6 +3441,10 @@ function devDummyMaybeInvite(d,reason='boss'){
   const now=performance.now();
   if(now-(Number(d.aiInvite)||0)<45000)return false;
   d.aiInvite=now;
+  if(partyInviteBlocked()){
+    msg(`${d.name||'AI동료'} 파티 신청 자동거절`, 'system');
+    return false;
+  }
   const partyId='party_'+String(d.id||DEV_DUMMY_ID)+'_'+Date.now().toString(36);
   d.partyId=partyId;d.partyOwnerId=d.id||DEV_DUMMY_ID;
   onlineState.invites[d.id]={from:d.id,fromName:d.name||'AI동료',to:myOnlineId(),partyId,partyOwnerId:d.id,t:Date.now(),reason};
@@ -3563,10 +3736,14 @@ async function sendPartyBroadcast(event,payload){
 function ensureParty(){if(!onlineState.partyId){onlineState.partyId='party_'+myOnlineId()+'_'+Date.now().toString(36);onlineState.partyOwnerId=myOnlineId();savePersistentParty('partyCreate');}else ensurePartyOwner();return onlineState.partyId;}
 function showPartyInvitePopup(p){
   const from=escapeHtml(p.from||'');
-  openPopup(`<div class="title">파티 신청</div><div class="card"><h3>${escapeHtml(p.fromName||'유저')}</h3>상대가 파티 신청을 보냈습니다.<br><span class="onlineId">접속ID: ${escapeHtml(String(p.from||'').slice(-12))}</span></div><div class="footerBtns"><button onclick="Game.acceptPartyInvite('${from}')">수락</button><button onclick="Game.declinePartyInvite('${from}')">거절</button></div>`);
+  openPopup(`<div class="title">파티 신청</div><div class="card"><h3>${escapeHtml(p.fromName||'유저')}</h3>상대가 파티 신청을 보냈습니다.</div><div class="footerBtns"><button onclick="Game.acceptPartyInvite('${from}')">수락</button><button onclick="Game.declinePartyInvite('${from}')">거절</button></div>`);
 }
 function handlePartyInvite(p){
   if(!p||p.to!==myOnlineId())return;
+  if(partyInviteBlocked()){
+    autoDeclinePartyInvite(p);
+    return;
+  }
   onlineState.invites[p.from]=p;
   msg(`${p.fromName||'유저'}님이 파티 신청`, 'system');
   toast('파티 신청 도착');
@@ -3989,7 +4166,7 @@ function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(
 
 function startClassSelect(){showJobAgency();}
 let updateBootTimer=null;
-const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_073';
+const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_128';
 function repairSkillSlotDuplicates(){
   normalizePlayer();
   const used=new Set();
@@ -4072,7 +4249,7 @@ function updateRepairTasks(){
 function showUpdatePage(){
   mode='boot'; popupMode='update'; zoneTag.textContent='업데이트';
   if(updateBootTimer){clearTimeout(updateBootTimer);updateBootTimer=null;}
-  openPopup(`<div class="bootScreen"><div class="gameTitle">업데이트중입니다</div><div class="bootPanel"><b>실제 게임 데이터를 점검하고 있습니다.</b><br><span class="small">저장 데이터, 스킬 슬롯, 장비, 도감, 포털 데이터를 보정합니다.</span></div><div class="patchNoteBox">${patchNoteHtml()}</div><div class="updateProgressBox"><div class="updateProgressTop"><span>PATCH CHECK</span><b id="updatePct">0%</b></div><div class="updateTrack"><div class="updateFill" id="updateFill"></div></div><div class="updateStatus" id="updateStatus">대기 중...</div></div></div>`);
+  openPopup(`<div class="bootScreen"><div class="gameTitle">업데이트중입니다</div><div class="bootPanel"><b>실제 게임 데이터를 점검하고 있습니다.</b><br><span class="small">저장 데이터, 스킬 슬롯, 장비, 도감, 포털 데이터를 보정합니다.</span></div><div class="patchNoteBox">${patchNoteHtml()}</div><div class="updateProgressBox"><div class="updateProgressTop"><span>PATCH CHECK</span><b id="updatePct">0%</b></div><div class="updateTrack"><div class="updateFill" id="updateFill" style="display:block;width:0%"></div></div><div class="updateStatus" id="updateStatus">대기 중...</div></div></div>`);
   const tasks=updateRepairTasks();
   let i=0;
   const step=()=>{
@@ -4130,11 +4307,22 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 088","text":"- 최상단 정보 박스 표시 순서를 레벨 · 직업 · 닉네임으로 정리\n- 기존 버튼/채팅/포털 배치 패치 유지"},
-  {"ver":"이전 패치 080","text":"- 패치노트 문자열 줄바꿈으로 게임 스크립트가 중단되던 문제 수정\n- 시작/진행 흐름이 멈추지 않도록 JS 파싱 오류 제거\n- 상대 유저 부드러운 이동은 안전형 보간으로 유지"},
-  {"ver":"이전 패치 079","text":"- 상대 유저 부드러운 이동 패치를 안전형 보간으로 재정리\n- 예측 이동/추가 보간값을 제거해 게임 루프 충돌 가능성 차단\n- 큰 이동/필드 이동은 즉시 위치 보정, 일반 이동만 부드럽게 표시"},
-  {"ver":"이전 패치 073","text":"- 온라인/파티 함수 참조 오류를 안전 정리\n- showPeerAction/connectOnlineFromPanel/requestPartyToPeer 전역 호출 방어\n- 버튼 클릭은 Game.safeCall 경유로 실행되도록 보강\n- 온라인 재접속 호출이 누락되어도 게임이 멈추지 않게 처리\n- 렉 완화를 위해 온라인 재접속 재시도 간격 증가"},
-  {"ver":"이전 패치 072","text":"- connectOnlineFromPanel 미정의 오류 수정\n- 온라인 재접속 관련 버튼 호출을 Game 경유로 통일\n- window/globalThis에 connectOnlineFromPanel 강제 등록"}
+  {
+    ver:'현재 패치 135',
+    text:'- 패치노트 문자열 줄바꿈 오류를 실제 파일 기준으로 수정\n- 게임 시작/진행 스크립트 파싱 중단 문제 제거\n- 133~134 패치 내용은 유지'
+  },
+  {
+    ver:'이전 패치 134',
+    text:'- 자동거절/상점/스킬 이펙트 패치 유지\n- 업데이트 게이지와 시작 흐름 복구'
+  },
+  {
+    ver:'이전 패치 133',
+    text:'- 파티 신청 자동거절 버튼을 받은 신청 제목줄 오른쪽으로 이동\n- 자동거절 중에는 신청 목록/팝업 생성 차단\n- 장비 및 스킬 구매 메뉴 통합\n- 스킬 이펙트 타입 추가 분리'
+  },
+  {
+    ver:'이전 패치 132',
+    text:'- NPC 이름을 상인/길드마스터/면접관으로 변경\n- 포탈 글자를 포탈 오브젝트 바로 위로 이동\n- 스킬 단어 성향별 이펙트 애니메이션 분류 강화'
+  }
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
@@ -4756,7 +4944,7 @@ function enterField(id){
 }
 function setupTown(){
   mode='town'; dungeonMap=null; fieldSize=1800; player.x=900; player.y=1080;
-  npcs=[{x:900,y:545,name:'장로',kind:'quest'},{x:555,y:855,name:'잡화점',kind:'shop'},{x:1255,y:855,name:'길드',kind:'guild'},{x:555,y:1190,name:'직업소개소',kind:'jobAgency'},{x:1255,y:1190,name:'허수아비',kind:'dummy'},{x:900,y:1465,name:'포털',kind:'portal'}];
+  npcs=[{x:900,y:545,name:'장로',kind:'quest'},{x:555,y:855,name:'상인',kind:'shop'},{x:1255,y:855,name:'길드마스터',kind:'guild'},{x:555,y:1190,name:'면접관',kind:'jobAgency'},{x:1265,y:1200,name:'허수아비',kind:'dummy'},{x:900,y:1465,name:'포탈',kind:'portal'}];
   portalArmed=true;
 }
 function setupField(f){
@@ -5131,16 +5319,46 @@ function castHighTierSkill(aj,rank,st,skAtk,pow,radius,range,fromAuto=false){
   }
   return true;
 }
-function skillCooldownFactor(aj,slot,rank){
+function skillCooldownFactor(aj,slot,rank,jobId){
   slot=clamp(Number(slot)||1,1,4);
-  const summonLike=['summoner','mechanic'];
-  if(summonLike.includes(aj)){
-    const table=[.88,1.06,1.24,1.46];
-    return table[slot-1]||1;
-  }
-  if(aj==='paladin'||aj==='mirror')return [1.04,.92,1.18,1.34][slot-1]||1;
-  if(aj==='mage'||aj==='hexer'||aj==='alchemist')return [.96,1.08,1.22,1.40][slot-1]||1;
-  return [.94,1.02,1.16,1.30][slot-1]||1;
+  rank=clamp(Number(rank)||1,1,MAX_SKILL_STAR);
+  const job=jobById(jobId||player.job||aj)||{};
+  const base=job.skillBase||aj||'blade';
+  // 126: 직업/슬롯/성급별 쿨타임을 확실히 분리한다.
+  // 낮은 성급은 짧고, 고성급/광역/소환/궁극 계열은 길게 잡는다.
+  const slotTable={
+    blade:[.78,1.02,1.34,1.72],
+    warrior:[.82,1.06,1.38,1.78],
+    berserker:[.76,1.12,1.48,1.95],
+    assassin:[.62,.90,1.24,1.58],
+    ranger:[.86,1.10,1.42,1.88],
+    gunner:[.78,1.02,1.48,2.05],
+    sniper:[1.05,1.38,1.82,2.40],
+    mage:[1.00,1.32,1.74,2.28],
+    psion:[.96,1.28,1.72,2.24],
+    chronomancer:[.88,1.18,1.56,2.08],
+    hexer:[1.08,1.42,1.86,2.45],
+    necromancer:[1.12,1.46,1.92,2.52],
+    alchemist:[.92,1.30,1.82,2.48],
+    summoner:[1.06,1.48,2.02,2.72],
+    druid:[.98,1.38,1.92,2.60],
+    mechanic:[.94,1.34,1.96,2.78],
+    engineer:[1.00,1.46,2.12,2.92],
+    mirror:[.92,1.22,1.64,2.10],
+    paladin:[.96,1.26,1.72,2.24],
+    warden:[1.02,1.34,1.82,2.36],
+    priest:[1.08,1.42,1.88,2.44],
+    bard:[.82,1.14,1.54,2.06],
+    artificer:[1.04,1.48,2.04,2.82],
+    wildDruid:[.86,1.22,1.70,2.30],
+    adventurer:[.82,1.06,1.36,1.74],
+    legendaryHero:[.70,.98,1.36,1.86]
+  };
+  const byJob=slotTable[job.id]||slotTable[base]||[.86,1.16,1.58,2.08];
+  let factor=byJob[slot-1]||1;
+  const rankTier=rank>=12?2.05:rank>=11?1.72:rank>=9?1.42:rank>=7?1.25:rank>=5?1.10:1;
+  const powerTax=(rank*rank)*0.006;
+  return Math.max(.55,factor*(rankTier+powerTax));
 }
 function summonAttackCooldown(s){
   if(!s)return .85;
@@ -5166,11 +5384,13 @@ function useSkill(slot=1,fromAuto=false){
   const range=105+rank*7;
 
   if(fromAuto && !autoSkillCanCast(aj,rank,st,radius,range))return;
-  const cd=Math.max(1.05,cdBase*(1-st.cooldown)*sc.cooldown*skillCooldownFactor(aj,slot,rank));
+  const cd=Math.max(1.05,cdBase*(1-st.cooldown)*sc.cooldown*skillCooldownFactor(aj,slot,rank,j));
   player.skillTimers[idx]=cd;
   player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];
   player.skillTimerMax[idx]=cd;
   effects.push({type:'text',x:player.x,y:player.y-52,t:`${rank}성 ${info.name}`,life:.8,vy:-18,big:true});
+  const visualTarget=nearestMonster(range+360,true)||nearestMonster(range+220,false);
+  pushSkillVisual(player,info.name,rank,j,visualTarget);
 
   if(castHighTierSkill(aj,rank,st,skAtk,pow,radius,range,fromAuto))return;
 
@@ -5496,7 +5716,7 @@ function showShop(){
   const skillShopCard=isAdventurer
     ? `<button class="card" disabled><h3>스킬 상점</h3>정식 직업 선택 후 이용 가능<br><span class="small">장로 퀘스트 완료 → 직업소개소에서 1차 직업 선택</span></button>`
     : `<button class="card" onclick="Game.showSkillShop()"><h3>스킬 상점</h3>직업별 스킬 구매</button>`;
-  openPopup(`<div class="title">잡화점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G</div><h3>소모품 구매</h3><div class="grid">${cards}</div><h3>장비 구매</h3><div class="grid"><button class="card" onclick="Game.buy('weapon')"><h3>직업 무기 상자</h3>현재 직업에 맞는 무기 위주 · 260G</button><button class="card" onclick="Game.buy('armor')"><h3>직업 방어구 상자</h3>현재 직업에 맞는 방어구 위주 · 240G</button><button class="card" onclick="Game.buy('relic')"><h3>유물 상자</h3>500G</button></div><h3>스킬</h3><div class="grid">${skillShopCard}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+  openPopup(`<div class="title">장비 및 스킬 구매</div><div class="sub">보유 골드: ${Math.round(player.gold)}G</div><h3>소모품 구매</h3><div class="grid">${cards}</div><h3>장비 및 스킬 구매</h3><div class="grid"><button class="card" onclick="Game.buy('weapon')"><h3>직업 무기 상자</h3>현재 직업에 맞는 무기 위주 · 260G</button><button class="card" onclick="Game.buy('armor')"><h3>직업 방어구 상자</h3>현재 직업에 맞는 방어구 위주 · 240G</button><button class="card" onclick="Game.buy('relic')"><h3>유물 상자</h3>500G</button>${skillShopCard}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function showShopSell(){
   popupMode='shopSell';
@@ -5504,7 +5724,7 @@ function showShopSell(){
   const sellables=player.inventory.filter(it=>!it.equipped);
   const rows=sellables.map(it=>`<div class="card rare-${it.rarity}"><h3>${it.name}</h3>${SLOT_LABEL[it.slot]} · Lv.${it.level} · ${it.rarity}<br><span class="small">${statText(it.stats)}</span><br><span class="small">판매가 ${itemValue(it)}G</span><div class="footerBtns"><button onclick="Game.sellItem('${it.id}',true)">판매</button></div></div>`).join('')||'<div class="sub">판매 가능한 미장착 장비가 없습니다.</div>';
   const total=sellables.reduce((s,it)=>s+itemValue(it),0);
-  openPopup(`<div class="title">장비 판매</div><div class="sub">장착 중인 장비는 판매 대상에서 제외됩니다.<br>전체 판매 예상: ${total}G</div><div class="footerBtns"><button onclick="Game.sellAllUnequipped(true)">미장착 전체 판매</button><button onclick="Game.showShop()">잡화점으로</button></div><div class="grid">${rows}</div>`);
+  openPopup(`<div class="title">장비 판매</div><div class="sub">장착 중인 장비는 판매 대상에서 제외됩니다.<br>전체 판매 예상: ${total}G</div><div class="footerBtns"><button onclick="Game.sellAllUnequipped(true)">미장착 전체 판매</button><button onclick="Game.showShop()">장비 및 스킬 구매로</button></div><div class="grid">${rows}</div>`);
 }
 function pickArmorSlotForJob(jobId){
   const j=jobById(jobId||player.job||'blade'), base=j.skillBase||j.attackBase||j.id;
@@ -6726,7 +6946,83 @@ function drawFieldGround(){
 }
 
 function drawWorldBounds(){lineStyle(.35,3);ctx.strokeRect(10,10,fieldSize-20,fieldSize-20);}
-function drawTown(){lineStyle(.28,1.3);for(let x=360;x<=1440;x+=180){ctx.beginPath();ctx.moveTo(x,520);ctx.lineTo(x,1340);ctx.stroke();}for(let y=560;y<=1320;y+=160){ctx.beginPath();ctx.moveTo(380,y);ctx.lineTo(1420,y);ctx.stroke();}const buildings=[{x:770,y:455,w:260,h:180,label:'마을회관',roof:'dome'},{x:430,y:760,w:250,h:190,label:'잡화점',roof:'flat'},{x:1130,y:760,w:250,h:190,label:'길드',roof:'tower'},{x:770,y:1365,w:260,h:180,label:'포털',roof:'gate'},{x:430,y:1120,w:250,h:160,label:'직업소개소',roof:'tower'},{x:1140,y:1120,w:250,h:160,label:'훈련소',roof:'dome'}];for(const b of buildings){lineStyle(.72,2);ctx.strokeRect(b.x,b.y,b.w,b.h);lineStyle(.36,1);for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(b.x+b.w*i/3,b.y+20);ctx.lineTo(b.x+b.w*i/3,b.y+b.h-20);ctx.stroke();}lineStyle(.82,1.8);ctx.beginPath();if(b.roof==='dome'){ctx.arc(b.x+b.w/2,b.y,Math.min(b.w*.45,75),Math.PI,0);}else if(b.roof==='tower'){ctx.moveTo(b.x+30,b.y);ctx.lineTo(b.x+b.w/2,b.y-70);ctx.lineTo(b.x+b.w-30,b.y);}else if(b.roof==='gate'){ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+b.w/2,b.y-65);ctx.lineTo(b.x+b.w,b.y);}else{ctx.moveTo(b.x+16,b.y-28);ctx.lineTo(b.x+b.w-16,b.y-28);ctx.lineTo(b.x+b.w,b.y);ctx.lineTo(b.x,b.y);ctx.closePath();}ctx.stroke();ctx.font='12px monospace';ctx.fillStyle=themeLine(.72);ctx.textAlign='center';ctx.fillText(b.label,b.x+b.w/2,b.y+b.h+18);}lineStyle(.55,1.5);ctx.beginPath();ctx.arc(900,920,120,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(900,920,58,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(780,920);ctx.lineTo(1020,920);ctx.moveTo(900,800);ctx.lineTo(900,1040);ctx.stroke();for(const n of npcs){lineStyle(.9,2);if(n.kind==='portal'){const spin=performance.now()/700;ctx.beginPath();ctx.arc(n.x,n.y,48,0,Math.PI*2);ctx.stroke();ctx.beginPath();for(let a=0;a<Math.PI*4.5;a+=.28){const r=5+a*2.7;ctx.lineTo(n.x+Math.cos(a+spin)*r,n.y+Math.sin(a+spin)*r);}ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-58,n.y+62);ctx.lineTo(n.x+58,n.y+62);ctx.stroke();}else if(n.kind==='dummy'){const sway=Math.sin(performance.now()/320)*1.5;ctx.beginPath();ctx.moveTo(n.x,n.y-38);ctx.lineTo(n.x,n.y+34);ctx.moveTo(n.x-26,n.y-16+sway);ctx.lineTo(n.x+26,n.y-16-sway);ctx.moveTo(n.x-18,n.y+34);ctx.lineTo(n.x+18,n.y+34);ctx.stroke();ctx.strokeRect(n.x-13,n.y-30,26,32);ctx.beginPath();ctx.arc(n.x,n.y-45,10,0,Math.PI*2);ctx.moveTo(n.x-18,n.y-56);ctx.lineTo(n.x+18,n.y-56);ctx.moveTo(n.x-10,n.y-62);ctx.lineTo(n.x+10,n.y-62);ctx.stroke();ctx.font='9px monospace';ctx.fillStyle=themeLine(.75);ctx.textAlign='center';ctx.fillText('50타',n.x,n.y-11);}else{ctx.beginPath();ctx.arc(n.x,n.y,20,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-15,n.y+27);ctx.lineTo(n.x+15,n.y+27);ctx.stroke();}ctx.font='12px monospace';ctx.fillStyle=themeLine(.95);ctx.textAlign='center';ctx.fillText(n.name,n.x,n.kind==='dummy'?n.y-74:(n.kind==='portal'?n.y-86:n.y-38));}}
+
+function drawTownNpcStickman(n){
+  const t=performance.now()/1000;
+  const step=Math.sin(t*3.2+(n.x||0)*0.01);
+  const x=n.x,y=n.y;
+  const armSwing=step*.85;
+  const legSwing=step*1.15;
+  ctx.save();
+  // 마을 NPC도 플레이어와 동일한 졸라맨 기준 크기로 표시한다.
+  lineStyle(.92,1.8);
+  ctx.beginPath();
+  ctx.arc(x,y-24,8,0,Math.PI*2);
+  ctx.stroke();
+  lineStyle(.75,.85);
+  ctx.beginPath();
+  ctx.moveTo(x-2.5,y-26);ctx.lineTo(x-2.6,y-26.1);
+  ctx.moveTo(x+2.5,y-26);ctx.lineTo(x+2.6,y-26.1);
+  ctx.stroke();
+  lineStyle(.92,1.8);
+  ctx.beginPath();
+  ctx.moveTo(x,y-16);ctx.lineTo(x,y+8);
+  ctx.moveTo(x,y-9);ctx.lineTo(x-11-armSwing*.35,y-4);ctx.lineTo(x-16-armSwing*.5,y+2);
+  ctx.moveTo(x,y-9);ctx.lineTo(x+11+armSwing*.35,y-4);ctx.lineTo(x+16+armSwing*.5,y+2);
+  ctx.moveTo(x,y+8);ctx.lineTo(x-5.6-legSwing*.25,y+19);ctx.lineTo(x-7-legSwing*.55,y+29);
+  ctx.moveTo(x,y+8);ctx.lineTo(x+5.6+legSwing*.25,y+19);ctx.lineTo(x+7+legSwing*.55,y+29);
+  ctx.stroke();
+
+  // 역할 표식도 몸 크기에 맞춰 작게 조정한다.
+  lineStyle(.70,1.1);
+  ctx.beginPath();
+  if(n.kind==='quest'){
+    ctx.moveTo(x+12,y-8);ctx.lineTo(x+20,y+16);
+    ctx.moveTo(x+7,y-29);ctx.lineTo(x+14,y-36);ctx.moveTo(x+14,y-36);ctx.lineTo(x+21,y-29);
+  }else if(n.kind==='shop'){
+    ctx.strokeRect(x-13,y+17,26,12);
+    ctx.moveTo(x-10,y+17);ctx.lineTo(x-5,y+8);ctx.lineTo(x+5,y+8);ctx.lineTo(x+10,y+17);
+  }else if(n.kind==='guild'){
+    ctx.moveTo(x+14,y-15);ctx.lineTo(x+14,y+24);
+    ctx.moveTo(x+14,y-15);ctx.lineTo(x+28,y-8);ctx.lineTo(x+14,y-2);
+  }else if(n.kind==='jobAgency'){
+    ctx.strokeRect(x-14,y+17,28,12);
+    ctx.moveTo(x-8,y+17);ctx.lineTo(x-8,y+29);ctx.moveTo(x+8,y+17);ctx.lineTo(x+8,y+29);
+  }else{
+    ctx.moveTo(x+12,y-8);ctx.lineTo(x+22,y+14);
+  }
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawTrainingDummyNpc(n){
+  const x=n.x,y=n.y;
+  const t=performance.now()/460;
+  const sway=Math.sin(t)*1.2;
+  ctx.save();
+  // 플레이어/타 유저와 같은 기준 높이의 졸라맨 허수아비.
+  lineStyle(.92,1.8);
+  ctx.beginPath();
+  ctx.arc(x,y-24,8,0,Math.PI*2);
+  ctx.moveTo(x,y-16);ctx.lineTo(x,y+8);
+  ctx.moveTo(x-18,y-7+sway);ctx.lineTo(x+18,y-7-sway);
+  ctx.moveTo(x,y+8);ctx.lineTo(x-7,y+29);
+  ctx.moveTo(x,y+8);ctx.lineTo(x+7,y+29);
+  ctx.stroke();
+  lineStyle(.7,1.05);
+  ctx.beginPath();
+  ctx.arc(x,y-24,15,0,Math.PI*2);
+  ctx.moveTo(x-15,y-24);ctx.lineTo(x+15,y-24);
+  ctx.moveTo(x,y-39);ctx.lineTo(x,y-9);
+  ctx.stroke();
+  ctx.font='8px monospace';
+  ctx.fillStyle=themeLine(.75);
+  ctx.textAlign='center';
+  ctx.fillText('50타',x,y-3);
+  ctx.restore();
+}
+
+function drawTown(){lineStyle(.28,1.3);for(let x=360;x<=1440;x+=180){ctx.beginPath();ctx.moveTo(x,520);ctx.lineTo(x,1340);ctx.stroke();}for(let y=560;y<=1320;y+=160){ctx.beginPath();ctx.moveTo(380,y);ctx.lineTo(1420,y);ctx.stroke();}const buildings=[{x:770,y:455,w:260,h:180,label:'마을회관',roof:'dome'},{x:430,y:760,w:250,h:190,label:'잡화점',roof:'flat'},{x:1130,y:760,w:250,h:190,label:'길드',roof:'tower'},{x:770,y:1365,w:260,h:180,label:'포털',roof:'gate'},{x:430,y:1120,w:250,h:160,label:'직업소개소',roof:'tower'},{x:1140,y:1120,w:250,h:160,label:'훈련소',roof:'dome'}];for(const b of buildings){lineStyle(.72,2);ctx.strokeRect(b.x,b.y,b.w,b.h);lineStyle(.36,1);for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(b.x+b.w*i/3,b.y+20);ctx.lineTo(b.x+b.w*i/3,b.y+b.h-20);ctx.stroke();}lineStyle(.82,1.8);ctx.beginPath();if(b.roof==='dome'){ctx.arc(b.x+b.w/2,b.y,Math.min(b.w*.45,75),Math.PI,0);}else if(b.roof==='tower'){ctx.moveTo(b.x+30,b.y);ctx.lineTo(b.x+b.w/2,b.y-70);ctx.lineTo(b.x+b.w-30,b.y);}else if(b.roof==='gate'){ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+b.w/2,b.y-65);ctx.lineTo(b.x+b.w,b.y);}else{ctx.moveTo(b.x+16,b.y-28);ctx.lineTo(b.x+b.w-16,b.y-28);ctx.lineTo(b.x+b.w,b.y);ctx.lineTo(b.x,b.y);ctx.closePath();}ctx.stroke();ctx.font='12px monospace';ctx.fillStyle=themeLine(.72);ctx.textAlign='center';ctx.fillText(b.label,b.x+b.w/2,b.y+b.h+18);}lineStyle(.55,1.5);ctx.beginPath();ctx.arc(900,920,120,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(900,920,58,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(780,920);ctx.lineTo(1020,920);ctx.moveTo(900,800);ctx.lineTo(900,1040);ctx.stroke();for(const n of npcs){lineStyle(.9,2);if(n.kind==='portal'){const spin=performance.now()/700;ctx.beginPath();ctx.arc(n.x,n.y,48,0,Math.PI*2);ctx.stroke();ctx.beginPath();for(let a=0;a<Math.PI*4.5;a+=.28){const r=5+a*2.7;ctx.lineTo(n.x+Math.cos(a+spin)*r,n.y+Math.sin(a+spin)*r);}ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-58,n.y+62);ctx.lineTo(n.x+58,n.y+62);ctx.stroke();}else if(n.kind==='dummy'){drawTrainingDummyNpc(n);}else{drawTownNpcStickman(n);}ctx.font='12px monospace';ctx.fillStyle=themeLine(.95);ctx.textAlign='center';ctx.fillText(n.name,n.x,n.kind==='portal'?n.y-62:n.y-42);}}
 function drawClassWeapon(jobId, gripX, gripY, bladeAngle, atkP, leftGripX, leftGripY, actor){
   actor=actor||player||{};
   const jb=jobById(jobId||'blade');
@@ -7007,7 +7303,7 @@ function drawFieldPortals(){
     ctx.font='12px monospace';
     ctx.fillStyle=themeLine(.96);
     ctx.textAlign='center';
-    ctx.fillText(p.name||'포털',0,-54);
+    ctx.fillText((p.name||'포탈').replace('포털','포탈'),0,-((isNext?42:34)+14));
     const target=stageField(p.target);
     ctx.font='9px monospace';
     ctx.fillStyle=themeLine(.72);
@@ -7044,8 +7340,99 @@ function drawProjectiles(){
 }
 function drawSummons(){for(const s of summons){lineStyle(.8,2);if(s.kind==='turret'){ctx.strokeRect(s.x-14,s.y-14,28,28);ctx.beginPath();ctx.moveTo(s.x,s.y-22);ctx.lineTo(s.x,s.y+22);ctx.moveTo(s.x-22,s.y);ctx.lineTo(s.x+22,s.y);ctx.stroke();}else{ctx.beginPath();ctx.arc(s.x,s.y,14,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-8,s.y);ctx.lineTo(s.x+8,s.y);ctx.moveTo(s.x,s.y-8);ctx.lineTo(s.x,s.y+8);ctx.stroke();}}}
 function drawDrops(){const st=computeStats(),range=pickupRange(st);for(const d of drops){const pulling=Math.hypot(player.x-d.x,player.y-d.y)<range;lineStyle(pulling?.95:.8,pulling?2.4:2);ctx.strokeRect(d.x-8,d.y-8,16,16);ctx.beginPath();ctx.moveTo(d.x,d.y-13);ctx.lineTo(d.x+13,d.y);ctx.lineTo(d.x,d.y+13);ctx.lineTo(d.x-13,d.y);ctx.closePath();ctx.stroke();if(pulling){lineStyle(.28,1);ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(player.x,player.y);ctx.stroke();}}}
-function drawEffects(){for(const e of effects){if(e.type==='text'){ctx.save();ctx.globalAlpha=clamp(e.life/.7,0,1);ctx.fillStyle=themeLine(.95);ctx.shadowColor=themeLine(.9);ctx.shadowBlur=8;ctx.font=`${e.big?17:12}px monospace`;ctx.textAlign='center';ctx.fillText(e.t,e.x,e.y);ctx.restore();}else if(e.type==='spark'){lineStyle(.8,2);for(let i=0;i<6;i++){const a=i*Math.PI/3+e.life*8;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(a)*e.r,e.y+Math.sin(a)*e.r);ctx.stroke();}}else if(e.type==='ring'||e.type==='hex'){lineStyle(.6,2);ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1-e.life*.45),0,Math.PI*2);ctx.stroke();}else if(e.type==='linepop'){lineStyle(.75,2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();}else if(e.type==='bomb'){lineStyle(.8,2);ctx.beginPath();ctx.arc(e.x,e.y,Math.max(8,e.r),0,Math.PI*2);ctx.stroke();}}
-}
+function drawEffects(){for(const e of effects){
+  const max=e.maxLife||.9;
+  const p=clamp(1-(e.life/max),0,1);
+  if(e.type==='text'){
+    ctx.save();ctx.globalAlpha=clamp(e.life/.7,0,1);ctx.fillStyle=themeLine(.95);ctx.shadowColor=themeLine(.9);ctx.shadowBlur=8;ctx.font=`${e.big?17:12}px monospace`;ctx.textAlign='center';ctx.fillText(e.t,e.x,e.y);ctx.restore();
+  }else if(e.type==='spark'){
+    lineStyle(.8,2);for(let i=0;i<6;i++){const a=i*Math.PI/3+e.life*8;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(a)*e.r,e.y+Math.sin(a)*e.r);ctx.stroke();}
+  }else if(e.type==='ring'||e.type==='hex'){
+    lineStyle(.6,2);ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1-e.life*.45),0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='linepop'){
+    lineStyle(.75,2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();
+  }else if(e.type==='bomb'){
+    lineStyle(.8,2);ctx.beginPath();ctx.arc(e.x,e.y,Math.max(8,e.r),0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='skillGlyph'){
+    ctx.save();ctx.translate(e.x,e.y);ctx.rotate((e.rot||0)+p*Math.PI*1.5);lineStyle(.42+clamp(e.rank/20,0,.35),1.2+(e.rank>=9?.7:0));const sides=e.sides||4, rr=(e.r||42)*(1+p*.22);ctx.beginPath();for(let i=0;i<sides;i++){const a=i*Math.PI*2/sides;const px=Math.cos(a)*rr,py=Math.sin(a)*rr;if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);}ctx.closePath();ctx.stroke();ctx.beginPath();ctx.arc(0,0,rr*.45,0,Math.PI*2);ctx.stroke();ctx.restore();
+  }else if(e.type==='skillSlash'){
+    lineStyle(.86,2.0+(e.rank>=9?1.1:0));ctx.beginPath();const rr=(e.r||70)*(0.72+p*.36);ctx.arc(e.x,e.y,rr,(e.a||0)-(e.spread||.8),(e.a||0)+(e.spread||.8));ctx.stroke();lineStyle(.38,1);ctx.beginPath();ctx.arc(e.x,e.y,rr*.72,(e.a||0)-(e.spread||.8)*.7,(e.a||0)+(e.spread||.8)*.7);ctx.stroke();
+  }else if(e.type==='skillBeam'){
+    lineStyle(.74,Number(e.width)||2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();lineStyle(.28,1);ctx.beginPath();const dx=e.tx-e.x,dy=e.ty-e.y;for(let i=0;i<4;i++){const t=(i+p)%4/4;const x=e.x+dx*t,y=e.y+dy*t;ctx.moveTo(x-5,y-5);ctx.lineTo(x+5,y+5);}ctx.stroke();
+  }else if(e.type==='skillArrow'){
+    lineStyle(.88,1.6);const x=e.x+(e.tx-e.x)*p,y=e.y+(e.ty-e.y)*p;const a=Math.atan2(e.ty-e.y,e.tx-e.x);ctx.beginPath();ctx.moveTo(x-Math.cos(a)*18,y-Math.sin(a)*18);ctx.lineTo(x+Math.cos(a)*20,y+Math.sin(a)*20);ctx.lineTo(x+Math.cos(a)*12+Math.cos(a+2.45)*8,y+Math.sin(a)*12+Math.sin(a+2.45)*8);ctx.moveTo(x+Math.cos(a)*20,y+Math.sin(a)*20);ctx.lineTo(x+Math.cos(a)*12+Math.cos(a-2.45)*8,y+Math.sin(a)*12+Math.sin(a-2.45)*8);ctx.stroke();
+  }else if(e.type==='skillMeteor'){
+    lineStyle(.82,2.2);ctx.beginPath();ctx.moveTo(e.x-70*(1-p),e.y-110*(1-p));ctx.lineTo(e.x,e.y);ctx.stroke();ctx.beginPath();ctx.arc(e.x,e.y,(e.r||54)*p,0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='skillPulse'){
+    lineStyle(.55,1.8);ctx.beginPath();ctx.arc(e.x,e.y,(e.r||80)*p,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(e.x,e.y,(e.r||80)*(p*.55+.22),0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='skillShard'){
+    lineStyle(.76,1.5);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.lineTo(e.tx+(e.y-e.ty)*.10,e.ty+(e.tx-e.x)*.10);ctx.stroke();
+  }else if(e.type==='skillBolt'){
+    lineStyle(.95,1.8);ctx.beginPath();ctx.moveTo(e.x,e.y);const seg=4;for(let i=1;i<=seg;i++){const t=i/seg;ctx.lineTo(e.x+(e.tx-e.x)*t+rnd(-8,8),e.y+(e.ty-e.y)*t+rnd(-8,8));}ctx.stroke();
+  }else if(e.type==='skillHex'){
+    const rr=(e.r||80)*(0.65+p*.28);lineStyle(.7,1.7);ctx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3+p*2;const px=e.x+Math.cos(a)*rr,py=e.y+Math.sin(a)*rr;if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);}ctx.closePath();ctx.stroke();ctx.beginPath();ctx.moveTo(e.x-rr*.55,e.y);ctx.lineTo(e.x+rr*.55,e.y);ctx.moveTo(e.x,e.y-rr*.55);ctx.lineTo(e.x,e.y+rr*.55);ctx.stroke();
+  }else if(e.type==='skillWisp'){
+    const rr=Math.max(3,(e.r||8)*(1-p*.28));lineStyle(.74,1.3);ctx.beginPath();ctx.arc(e.x+Math.cos((e.a||0)+p*5)*10,e.y+Math.sin((e.a||0)+p*5)*10-p*10,rr,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos((e.a||0)+p*5)*10,e.y+Math.sin((e.a||0)+p*5)*10-p*10);ctx.stroke();
+  }else if(e.type==='skillBubble'){
+    lineStyle(.58,1.1);ctx.beginPath();ctx.arc(e.x,e.y-(p*18),Math.max(3,(e.r||8)*(1-p*.18)),0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(e.x+(e.r||8)*.25,e.y-(p*18)-(e.r||8)*.25,Math.max(1.5,(e.r||8)*.22),0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='skillPillar'){
+    lineStyle(.78,2);ctx.beginPath();ctx.moveTo(e.x,e.y-110);ctx.lineTo(e.x,e.y+34);ctx.moveTo(e.x-14,e.y-80+p*40);ctx.lineTo(e.x+14,e.y-80+p*40);ctx.moveTo(e.x-20,e.y+16);ctx.lineTo(e.x+20,e.y+16);ctx.stroke();
+  }else if(e.type==='skillMirror'){
+    lineStyle(.82,1.45);ctx.save();ctx.translate(e.x,e.y);ctx.rotate((e.a||0)+p*.8);ctx.beginPath();ctx.moveTo(0,-(e.r||12));ctx.lineTo((e.r||12),0);ctx.lineTo(0,(e.r||12));ctx.lineTo(-(e.r||12),0);ctx.closePath();ctx.stroke();ctx.restore();
+  }else if(e.type==='skillSummonRune'){
+    lineStyle(.82,1.45);ctx.beginPath();ctx.arc(e.x,e.y,(e.r||10)*(1+p*.22),0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(e.x-(e.r||10),e.y);ctx.lineTo(e.x+(e.r||10),e.y);ctx.moveTo(e.x,e.y-(e.r||10));ctx.lineTo(e.x,e.y+(e.r||10));ctx.stroke();
+  }else if(e.type==='skillGear'){
+    const rr=e.r||13;ctx.save();ctx.translate(e.x,e.y);ctx.rotate((e.a||0)+p*5);lineStyle(.82,1.35);ctx.beginPath();ctx.arc(0,0,rr,0,Math.PI*2);for(let i=0;i<8;i++){const a=i*Math.PI/4;ctx.moveTo(Math.cos(a)*rr,Math.sin(a)*rr);ctx.lineTo(Math.cos(a)*(rr+5),Math.sin(a)*(rr+5));}ctx.stroke();ctx.restore();
+  }else if(e.type==='skillAfterimage'){
+    lineStyle(.62,1.6);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+(e.tx-e.x)*p,e.y+(e.ty-e.y)*p);ctx.stroke();
+  }else if(e.type==='skillPierceTip'){
+    ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.a||0);lineStyle(.88,1.7);ctx.beginPath();ctx.moveTo(18,0);ctx.lineTo(-10,-8);ctx.lineTo(-4,0);ctx.lineTo(-10,8);ctx.closePath();ctx.stroke();ctx.restore();
+  }else if(e.type==='skillFist'){
+    ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.a||0);lineStyle(.82,1.8);ctx.beginPath();ctx.arc(0,0,(e.r||18)*(1-p*.25),0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(-8,-6);ctx.lineTo(12,-6);ctx.lineTo(18,0);ctx.lineTo(12,6);ctx.lineTo(-8,6);ctx.closePath();ctx.stroke();ctx.restore();
+  }else if(e.type==='skillBullet'){
+    const x=e.x+(e.tx-e.x)*p,y=e.y+(e.ty-e.y)*p;const a=Math.atan2(e.ty-e.y,e.tx-e.x);lineStyle(.9,1.5);ctx.beginPath();ctx.moveTo(x-Math.cos(a)*16,y-Math.sin(a)*16);ctx.lineTo(x+Math.cos(a)*8,y+Math.sin(a)*8);ctx.stroke();
+  }else if(e.type==='skillExplosion'){
+    const rr=(e.r||60)*p;lineStyle(.82,2);ctx.beginPath();ctx.arc(e.x,e.y,rr,0,Math.PI*2);ctx.stroke();lineStyle(.5,1.2);for(let i=0;i<8;i++){const a=i*Math.PI/4+p;ctx.beginPath();ctx.moveTo(e.x+Math.cos(a)*rr*.35,e.y+Math.sin(a)*rr*.35);ctx.lineTo(e.x+Math.cos(a)*rr,e.y+Math.sin(a)*rr);ctx.stroke();}
+  }else if(e.type==='skillFlameWave'){
+    const rr=(e.r||70)*(0.45+p*.75);lineStyle(.78,2);for(let i=0;i<3;i++){ctx.beginPath();ctx.arc(e.x,e.y,rr+i*10,(e.a||0)-.9+i*.12,(e.a||0)+.9-i*.12);ctx.stroke();}
+  }else if(e.type==='skillEmber'){
+    lineStyle(.62,1.2);ctx.beginPath();ctx.arc(e.x+Math.cos(e.a||0)*p*18,e.y+Math.sin(e.a||0)*p*18-p*12,Math.max(2,(e.r||6)*(1-p*.4)),0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='skillBombIcon'){
+    const rr=(e.r||48)*(1-p*.2);lineStyle(.88,1.8);ctx.beginPath();ctx.arc(e.x,e.y,rr*.34,0,Math.PI*2);ctx.moveTo(e.x+rr*.16,e.y-rr*.28);ctx.quadraticCurveTo(e.x+rr*.34,e.y-rr*.58,e.x+rr*.58,e.y-rr*.42);ctx.stroke();
+  }else if(e.type==='skillCurseMark'){
+    const rr=(e.r||76)*(0.65+p*.18);lineStyle(.78,1.8);ctx.beginPath();for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*4/5+p*.8;ctx.lineTo(e.x+Math.cos(a)*rr,e.y+Math.sin(a)*rr);}ctx.closePath();ctx.stroke();ctx.beginPath();ctx.arc(e.x,e.y,rr*.32,0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='skillHolyRay'){
+    const rr=e.r||70;lineStyle(.85,2);ctx.beginPath();ctx.moveTo(e.x,e.y-rr*(1.2+p*.4));ctx.lineTo(e.x,e.y+rr*.45);ctx.moveTo(e.x-rr*.35,e.y-rr*.15);ctx.lineTo(e.x+rr*.35,e.y-rr*.15);ctx.stroke();
+  }else if(e.type==='skillHalo'){
+    const rr=(e.r||72)*(0.62+p*.25);lineStyle(.72,1.6);ctx.beginPath();ctx.ellipse(e.x,e.y-26,rr*.72,rr*.18,p*.9,0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='skillHealSpiral'){
+    const rr=e.r||60;lineStyle(.78,1.7);ctx.beginPath();for(let a=0;a<Math.PI*5;a+=.22){const r=6+a*rr/18;ctx.lineTo(e.x+Math.cos(a+p*5)*r,e.y+Math.sin(a+p*5)*r-p*18);}ctx.stroke();
+  }else if(e.type==='skillGravityLens'){
+    const rr=(e.r||68)*(0.55+p*.3);lineStyle(.76,1.8);ctx.beginPath();ctx.ellipse(e.x,e.y,rr,rr*.36,p*2.5,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.ellipse(e.x,e.y,rr*.38,rr,p*1.7,0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='skillArcaneStar'){
+    const rr=(e.r||72)*(0.64+p*.2);lineStyle(.82,1.7);ctx.beginPath();for(let i=0;i<10;i++){const a=(e.a||0)+i*Math.PI/5+p*1.8;const r=i%2?rr*.42:rr;ctx.lineTo(e.x+Math.cos(a)*r,e.y+Math.sin(a)*r);}ctx.closePath();ctx.stroke();
+  }else if(e.type==='skillReflectLine'){
+    const rr=(e.r||70)*(0.55+p*.22);lineStyle(.76,1.6);ctx.beginPath();ctx.moveTo(e.x-rr,e.y-rr*.35);ctx.lineTo(e.x+rr,e.y+rr*.35);ctx.moveTo(e.x-rr,e.y+rr*.35);ctx.lineTo(e.x+rr,e.y-rr*.35);ctx.stroke();
+  }else if(e.type==='skillGuardWall'){
+    const rr=e.r||76;lineStyle(.82,1.8);ctx.save();ctx.translate(e.x,e.y);ctx.rotate(e.a||0);ctx.beginPath();ctx.moveTo(-rr*.55,-rr*.45);ctx.lineTo(rr*.55,-rr*.45);ctx.lineTo(rr*.42,rr*.42);ctx.lineTo(0,rr*.68);ctx.lineTo(-rr*.42,rr*.42);ctx.closePath();ctx.stroke();ctx.restore();
+  }else if(e.type==='skillPoisonCloud'){
+    const rr=(e.r||72)*(0.55+p*.32);lineStyle(.58,1.5);for(let i=0;i<5;i++){const a=i*Math.PI*2/5+p*.7;ctx.beginPath();ctx.arc(e.x+Math.cos(a)*rr*.28,e.y+Math.sin(a)*rr*.18,rr*(.25+.04*i),0,Math.PI*2);ctx.stroke();}
+  }else if(e.type==='skillCross'){
+    lineStyle(.88,2);const r=(e.r||42)*(1-p*.18);ctx.beginPath();ctx.moveTo(e.x-r*.18,e.y-r*.55);ctx.lineTo(e.x+r*.18,e.y-r*.55);ctx.lineTo(e.x+r*.18,e.y-r*.18);ctx.lineTo(e.x+r*.55,e.y-r*.18);ctx.lineTo(e.x+r*.55,e.y+r*.18);ctx.lineTo(e.x+r*.18,e.y+r*.18);ctx.lineTo(e.x+r*.18,e.y+r*.55);ctx.lineTo(e.x-r*.18,e.y+r*.55);ctx.lineTo(e.x-r*.18,e.y+r*.18);ctx.lineTo(e.x-r*.55,e.y+r*.18);ctx.lineTo(e.x-r*.55,e.y-r*.18);ctx.lineTo(e.x-r*.18,e.y-r*.18);ctx.closePath();ctx.stroke();
+  }else if(e.type==='skillNote'){
+    const yy=e.y-p*20;lineStyle(.78,1.45);ctx.beginPath();ctx.arc(e.x,yy,Math.max(4,e.r||8),0,Math.PI*2);ctx.moveTo(e.x+(e.r||8),yy);ctx.lineTo(e.x+(e.r||8),yy-28);ctx.quadraticCurveTo(e.x+20,yy-34,e.x+26,yy-22);ctx.stroke();
+  }else if(e.type==='skillClock'){
+    const rr=(e.r||70);lineStyle(.76,1.8);ctx.beginPath();ctx.arc(e.x,e.y,rr*(.75+p*.18),0,Math.PI*2);ctx.stroke();for(let i=0;i<12;i++){const a=i*Math.PI/6+p*2;ctx.beginPath();ctx.moveTo(e.x+Math.cos(a)*rr*.65,e.y+Math.sin(a)*rr*.65);ctx.lineTo(e.x+Math.cos(a)*rr*.78,e.y+Math.sin(a)*rr*.78);ctx.stroke();}ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(p*5)*rr*.45,e.y+Math.sin(p*5)*rr*.45);ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(p*2.4+1.3)*rr*.28,e.y+Math.sin(p*2.4+1.3)*rr*.28);ctx.stroke();
+  }else if(e.type==='skillOrb'){
+    const x=e.x+(e.tx-e.x)*p,y=e.y+(e.ty-e.y)*p;lineStyle(.76,1.5);ctx.beginPath();ctx.arc(x,y,Math.max(4,(e.r||8)*(1-p*.2)),0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(x,y);ctx.stroke();
+  }else if(e.type==='skillShield'){
+    ctx.save();ctx.translate(e.x,e.y);ctx.rotate((e.a||0)+p*.5);lineStyle(.82,1.55);ctx.beginPath();ctx.moveTo(0,-(e.r||14));ctx.lineTo((e.r||14)*.9,-(e.r||14)*.15);ctx.lineTo((e.r||14)*.55,(e.r||14));ctx.lineTo(0,(e.r||14)*1.25);ctx.lineTo(-(e.r||14)*.55,(e.r||14));ctx.lineTo(-(e.r||14)*.9,-(e.r||14)*.15);ctx.closePath();ctx.stroke();ctx.restore();
+  }else if(e.type==='skillLeaf'){
+    ctx.save();ctx.translate(e.x,e.y-p*16);ctx.rotate((e.a||0)+p*.7);lineStyle(.7,1.3);ctx.beginPath();ctx.moveTo(0,-(e.r||10));ctx.quadraticCurveTo((e.r||10),0,0,(e.r||10));ctx.quadraticCurveTo(-(e.r||10),0,0,-(e.r||10));ctx.stroke();ctx.restore();
+  }else if(e.type==='skillRoot'){
+    const rr=(e.r||60)*(0.7+p*.15);lineStyle(.72,1.6);for(let i=0;i<6;i++){const a=i*Math.PI/3+p*.4;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.quadraticCurveTo(e.x+Math.cos(a)*rr*.45,e.y+Math.sin(a)*rr*.25,e.x+Math.cos(a)*rr,e.y+Math.sin(a)*rr*.55);ctx.stroke();}
+  }
+}}
 function drawMiniMap(){
   const mw=Math.max(56,mini.clientWidth||80), mh=Math.max(56,mini.clientHeight||mw), pad=4;
   const iw=mw-pad*2, ih=mh-pad*2;
@@ -7394,7 +7781,10 @@ function showOnlineHub(autoConnect=true){
   const allOnline=onlineUserListRows();
   const near=activePeers(220,true);
   const members=onlineState.partyId?partyMembers():[];
-  const inviteHtml=invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>';
+  const inviteBlockOn=partyInviteBlocked();
+  if(inviteBlockOn&&invites.length){try{onlineState.invites={};}catch(_){ }}
+  const inviteGuardHtml=`<div class="onlineSectionTitle"><h3>받은 파티 신청</h3><button class="${inviteBlockOn?'autoOn':''}" style="height:26px;padding:2px 8px;font-size:10px;border-radius:8px" onclick="Game.togglePartyInviteBlock()">자동거절</button></div><div class="sub">${inviteBlockOn?'ON · 들어오는 파티 신청을 즉시 거절합니다.':'OFF · 파티 신청을 받을 수 있습니다.'}</div>`;
+  const inviteHtml=inviteBlockOn?'<div class="partyMiniLine">자동거절 적용 중</div>':(invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>');
   const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b>${m.id===onlineState.partyOwnerId?' <span class="small">[파티장]</span>':''} · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${typeof fmtK==='function'?fmtK(m.hp||0):(m.hp||0)}/${typeof fmtK==='function'?fmtK(m.maxHp||0):(m.maxHp||0)}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
   const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>Lv.${p.level||1} ${escapeHtml(p.name||'플레이어')}</b><br><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
   const onlineGroup=onlineState.partyId
@@ -7403,7 +7793,8 @@ function showOnlineHub(autoConnect=true){
   const partyButtons=onlineState.partyId
     ? `<div class="footerBtns"><button onclick="Game.showTransferPartyLeader()">파티장 넘기기</button><button onclick="Game.showKickPartyMember()">내보내기</button><button onclick="Game.disbandParty()">파티해산</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>`
     : '';
-  const partyGroup=`<h3>파티</h3><div class="onlineGroupBox">${partyButtons}${onlineState.partyId?`<div class="sub">파티 ID: ${escapeHtml(onlineState.partyId)} · ${escapeHtml(partyLeaderLabel())}</div>`:'<div class="sub">파티는 상대에게 파티 신청을 보내면 자동으로 유지됩니다.</div>'}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div><h3>받은 파티 신청</h3><div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
+  const partyStatusText=onlineState.partyId?`<div class="sub">${escapeHtml(partyLeaderLabel())}</div>`:'<div class="sub">파티는 상대에게 파티 신청을 보내면 자동으로 유지됩니다.</div>';
+  const partyGroup=`<h3>파티</h3><div class="onlineGroupBox">${partyButtons}${partyStatusText}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div>${inviteGuardHtml}<div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
   openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function showParty(){showOnlineHub();}
@@ -7852,7 +8243,7 @@ function safeConnectOnlineFromPanel(){
 }
 
 applyThemeColors();
-window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,disbandParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSkillInfoPanel,showSkillSlotSelectPopup,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showTransferPartyLeader,transferPartyLeader,showKickPartyMember,kickPartyMember,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,setAutoBattleType,showSkillInfoPanel,showSkillSlotSettings,clearSkillSlots,beginSkillDrag,beginSkillPointerDrag,skillSlotDragOver,skillSlotDragLeave,dropSkillOnSlot,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,disbandParty,togglePartyInviteBlock,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSkillInfoPanel,showSkillSlotSelectPopup,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showTransferPartyLeader,transferPartyLeader,showKickPartyMember,kickPartyMember,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,setAutoBattleType,showSkillInfoPanel,showSkillSlotSettings,clearSkillSlots,beginSkillDrag,beginSkillPointerDrag,skillSlotDragOver,skillSlotDragLeave,dropSkillOnSlot,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 try{
   window.showPeerAction=(id)=>gameSafeCall('showPeerAction',id);
   globalThis.showPeerAction=window.showPeerAction;
