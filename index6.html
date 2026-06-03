@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_079_peer_smooth_safe -->
+<!-- build: index6_080_progress_fix -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -2614,19 +2614,10 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 079","text":"- 상대 유저 부드러운 이동 패치를 안전형 보간으로 재정리
-- 예측 이동/추가 보간값을 제거해 게임 루프 충돌 가능성 차단
-- 큰 이동/필드 이동은 즉시 위치 보정, 일반 이동만 부드럽게 표시"},
-  {"ver":"이전 패치 073","text":"- 온라인/파티 함수 참조 오류를 안전 정리
-- showPeerAction/connectOnlineFromPanel/requestPartyToPeer 전역 호출 방어
-- 버튼 클릭은 Game.safeCall 경유로 실행되도록 보강
-- 온라인 재접속 호출이 누락되어도 게임이 멈추지 않게 처리
-- 렉 완화를 위해 온라인 재접속 재시도 간격 증가"},
-  {"ver":"이전 패치 072","text":"- connectOnlineFromPanel 미정의 오류 수정
-- 온라인 재접속 관련 버튼 호출을 Game 경유로 통일
-- window/globalThis에 connectOnlineFromPanel 강제 등록"},
-  {"ver":"이전 패치 071","text":"- showPeerAction 전역 미등록으로 인한 ReferenceError 재수정
-- 필드 상호작용 호출부를 Game.showPeerAction 경유로 변경"}
+  {"ver":"현재 패치 080","text":"- 패치노트 문자열 줄바꿈으로 게임 스크립트가 중단되던 문제 수정\n- 시작/진행 흐름이 멈추지 않도록 JS 파싱 오류 제거\n- 상대 유저 부드러운 이동은 안전형 보간으로 유지"},
+  {"ver":"이전 패치 079","text":"- 상대 유저 부드러운 이동 패치를 안전형 보간으로 재정리\n- 예측 이동/추가 보간값을 제거해 게임 루프 충돌 가능성 차단\n- 큰 이동/필드 이동은 즉시 위치 보정, 일반 이동만 부드럽게 표시"},
+  {"ver":"이전 패치 073","text":"- 온라인/파티 함수 참조 오류를 안전 정리\n- showPeerAction/connectOnlineFromPanel/requestPartyToPeer 전역 호출 방어\n- 버튼 클릭은 Game.safeCall 경유로 실행되도록 보강\n- 온라인 재접속 호출이 누락되어도 게임이 멈추지 않게 처리\n- 렉 완화를 위해 온라인 재접속 재시도 간격 증가"},
+  {"ver":"이전 패치 072","text":"- connectOnlineFromPanel 미정의 오류 수정\n- 온라인 재접속 관련 버튼 호출을 Game 경유로 통일\n- window/globalThis에 connectOnlineFromPanel 강제 등록"}
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
