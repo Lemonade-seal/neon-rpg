@@ -2520,6 +2520,9 @@ function limitPeerVelocity(vx,vy,max=620){
 function sanitizePeerPayload(p,seenAt=performance.now()){
   if(!p||p.id===myOnlineId())return null;
   const id=String(p.id||'');
+  const currentUserId=(cloudState.user&&cloudState.user.id)?String(cloudState.user.id):'';
+  const incomingUserId=p.userId?String(p.userId):'';
+  if(currentUserId&&incomingUserId&&incomingUserId===currentUserId)return null;
   const x=Number(p.x),y=Number(p.y);
   if(!id||!Number.isFinite(x)||!Number.isFinite(y))return null;
   const prev=onlineState.peers&&onlineState.peers[id];
@@ -2888,11 +2891,17 @@ function drawRemotePlayerSprite(p){
 function drawOnlinePlayers(){
   if(onlineState.drawBlocked)return;
   try{
+    const selfUserId=(cloudState.user&&cloudState.user.id)?String(cloudState.user.id):'';
+    const picked={};
     for(const id in onlineState.peers){
       const p=onlineState.peers[id];
       if(!p||id===myOnlineId())continue;
-      drawRemotePlayerSprite(p);
+      if(selfUserId&&p.userId&&String(p.userId)===selfUserId)continue;
+      const key=p.userId?('u:'+String(p.userId)):('p:'+String(p.id||id));
+      const old=picked[key];
+      if(!old||Number(p.seenAt||0)>Number(old.seenAt||0))picked[key]=p;
     }
+    for(const key in picked)drawRemotePlayerSprite(picked[key]);
   }catch(e){
     console.error(e);
     onlineState.drawBlocked=true;
@@ -3398,6 +3407,7 @@ function nearestDungeonPoint(x,y,rad=18){
 }
 function resolveDungeonEntity(o,oldX,oldY,rad=18){
   if(!o)return;
+  const isPlayer=(typeof player!=='undefined'&&o===player);
   if(!dungeonActive()){
     o.x=clamp(o.x,rad,fieldSize-rad); o.y=clamp(o.y,rad,fieldSize-rad); return;
   }
@@ -3405,6 +3415,24 @@ function resolveDungeonEntity(o,oldX,oldY,rad=18){
   if(dungeonPointWalkable(o.x,o.y,rad))return;
   if(Number.isFinite(oldY)&&dungeonPointWalkable(o.x,oldY,rad)){o.y=oldY;return;}
   if(Number.isFinite(oldX)&&dungeonPointWalkable(oldX,o.y,rad)){o.x=oldX;return;}
+
+  // Player must never be snapped across the map. A snap looks like a clone/afterimage
+  // on mobile while the camera and online payload are updating. Keep the old safe spot
+  // or nudge toward the nearest safe point in very small steps.
+  if(isPlayer){
+    if(Number.isFinite(oldX)&&Number.isFinite(oldY)&&dungeonPointWalkable(oldX,oldY,rad)){
+      o.x=oldX; o.y=oldY; return;
+    }
+    const p=nearestDungeonPoint(o.x,o.y,rad);
+    const dx=p.x-o.x,dy=p.y-o.y,d=Math.hypot(dx,dy);
+    if(d>0.01){
+      const step=Math.min(d,7);
+      o.x=clamp(o.x+dx/d*step,rad,fieldSize-rad);
+      o.y=clamp(o.y+dy/d*step,rad,fieldSize-rad);
+    }
+    return;
+  }
+
   const p=nearestDungeonPoint(Number.isFinite(oldX)?oldX:o.x,Number.isFinite(oldY)?oldY:o.y,rad);
   o.x=p.x; o.y=p.y;
 }
@@ -4672,32 +4700,59 @@ function findEscapePoint(o,rad=18,targetX=null,targetY=null){
 function autoEscapePlayerStuck(ox,oy,dt,inputActive=false){
   if(!dungeonActive())return;
   const rad=22;
+  const now=performance.now();
+  const safeOld=Number.isFinite(ox)&&Number.isFinite(oy)&&dungeonPointWalkable(ox,oy,rad);
+
+  // No forced teleport. If player is inside a wall, either return to the last safe
+  // coordinate or slowly push toward the closest safe point.
   if(!dungeonPointWalkable(player.x,player.y,rad)){
-    const p=nearestDungeonPoint(Number.isFinite(ox)?ox:player.x,Number.isFinite(oy)?oy:player.y,rad);
-    player.x=p.x;player.y=p.y;player.autoStuckTimer=0;player.autoUnstuckGoal=null;return;
+    if(safeOld){
+      player.x=ox; player.y=oy;
+      player.autoStuckTimer=0;
+      player.autoUnstuckGoal=null;
+      return;
+    }
+    const p=nearestDungeonPoint(player.x,player.y,rad);
+    const dx=p.x-player.x,dy=p.y-player.y,d=Math.hypot(dx,dy);
+    if(d>0.01){
+      const step=Math.min(d,Math.max(1.2,95*(Number(dt)||0.016)));
+      player.x=clamp(player.x+dx/d*step,rad,fieldSize-rad);
+      player.y=clamp(player.y+dy/d*step,rad,fieldSize-rad);
+    }
+    player.autoStuckTimer=0;
+    return;
   }
+
   const moved=Math.hypot(player.x-ox,player.y-oy);
   if(inputActive&&moved<0.18)player.autoStuckTimer=(player.autoStuckTimer||0)+dt;
   else player.autoStuckTimer=Math.max(0,(player.autoStuckTimer||0)-dt*2.2);
-  if(player.autoStuckTimer>.26){
+  if(player.autoStuckTimer>.34){
     const goal=player.autoMode&&player.autoRoamPoint?player.autoRoamPoint:nearestMonster(760,true);
     const p=findEscapePoint(player,rad,goal&&goal.x,goal&&goal.y);
     if(p){
-      player.autoUnstuckGoal={x:p.x,y:p.y,until:performance.now()+900};
+      player.autoUnstuckGoal={x:p.x,y:p.y,until:now+1200};
       player.autoPathCache=null;
     }
     player.autoStuckTimer=0;
   }
   const ug=player.autoUnstuckGoal;
-  if(ug&&performance.now()<ug.until){
+  if(ug&&now<ug.until){
     const dx=ug.x-player.x,dy=ug.y-player.y,d=Math.hypot(dx,dy);
     if(d<3){player.autoUnstuckGoal=null;return;}
     const ox2=player.x,oy2=player.y;
-    const step=Math.min(d,Math.max(2,170*(Number(dt)||0.016)));
-    player.x=clamp(player.x+dx/d*step,rad,fieldSize-rad);
-    player.y=clamp(player.y+dy/d*step,rad,fieldSize-rad);
-    resolveDungeonEntity(player,ox2,oy2,rad);
-    if(Math.hypot(player.x-ox2,player.y-oy2)<0.05)player.autoUnstuckGoal=null;
+    const step=Math.min(d,Math.max(1.2,115*(Number(dt)||0.016)));
+    const nx=clamp(player.x+dx/d*step,rad,fieldSize-rad);
+    const ny=clamp(player.y+dy/d*step,rad,fieldSize-rad);
+    if(dungeonPointWalkable(nx,ny,rad)){
+      player.x=nx; player.y=ny;
+    }else if(dungeonPointWalkable(nx,player.y,rad)){
+      player.x=nx;
+    }else if(dungeonPointWalkable(player.x,ny,rad)){
+      player.y=ny;
+    }else{
+      player.autoUnstuckGoal=null;
+    }
+    if(Math.hypot(player.x-ox2,player.y-oy2)<0.03)player.autoUnstuckGoal=null;
   }else if(ug){
     player.autoUnstuckGoal=null;
   }
