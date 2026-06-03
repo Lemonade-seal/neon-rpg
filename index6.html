@@ -2064,8 +2064,22 @@ function sanitizePeerPayload(p,seenAt=performance.now()){
   const x=Number(p.x),y=Number(p.y);
   if(!id||!Number.isFinite(x)||!Number.isFinite(y))return null;
   const prev=onlineState.peers&&onlineState.peers[id];
-  const prevDrawX=Number(prev&&Number.isFinite(Number(prev.drawX))?prev.drawX:x);
-  const prevDrawY=Number(prev&&Number.isFinite(Number(prev.drawY))?prev.drawY:y);
+  const prevField=prev?String(prev.field||'town'):String(p.field||'town');
+  const field=String(p.field||'town');
+  const oldDrawX=Number(prev&&Number.isFinite(Number(prev.drawX))?prev.drawX:x);
+  const oldDrawY=Number(prev&&Number.isFinite(Number(prev.drawY))?prev.drawY:y);
+  const oldTargetX=Number(prev&&Number.isFinite(Number(prev.targetX))?prev.targetX:oldDrawX);
+  const oldTargetY=Number(prev&&Number.isFinite(Number(prev.targetY))?prev.targetY:oldDrawY);
+  const oldSeen=Number(prev&&Number.isFinite(Number(prev.seenAt))?prev.seenAt:seenAt);
+  const packetSec=clamp((seenAt-oldSeen)/1000,.28,1.15);
+  const moved=Math.hypot(x-oldTargetX,y-oldTargetY);
+  const snap=!prev||field!==prevField||moved>420||Math.hypot(x-oldDrawX,y-oldDrawY)>520;
+  const vx=snap?0:(x-oldTargetX)/Math.max(.18,packetSec);
+  const vy=snap?0:(y-oldTargetY)/Math.max(.18,packetSec);
+  const dirFromVel=Math.hypot(vx,vy)>4?Math.atan2(vy,vx):Number(p.dir)||0;
+  const interpMs=snap?0:clamp(packetSec*1180,360,1320);
+  const drawX=snap?x:oldDrawX;
+  const drawY=snap?y:oldDrawY;
   return {
     id,
     userId:String(p.userId||''),
@@ -2073,20 +2087,27 @@ function sanitizePeerPayload(p,seenAt=performance.now()){
     job:String(p.job||'adventurer'),
     jobName:String(p.jobName||jobById(p.job||'adventurer').name),
     level:Math.max(1,Math.floor(Number(p.level)||1)),
-    field:String(p.field||'town'),
+    field,
     x:x,
     y:y,
     targetX:x,
     targetY:y,
-    drawX:prevDrawX,
-    drawY:prevDrawY,
-    prevTargetX:Number(prev&&Number.isFinite(Number(prev.targetX))?prev.targetX:x),
-    prevTargetY:Number(prev&&Number.isFinite(Number(prev.targetY))?prev.targetY:y),
-    lastMoveAt:seenAt,
-    dir:Number(p.dir)||0,
+    drawX,
+    drawY,
+    fromX:drawX,
+    fromY:drawY,
+    prevTargetX:oldTargetX,
+    prevTargetY:oldTargetY,
+    vx,
+    vy,
+    interpStart:seenAt,
+    interpEnd:seenAt+interpMs,
+    lastMoveAt:moved>1.2?seenAt:(prev&&prev.lastMoveAt)||seenAt,
+    dir:dirFromVel,
     hp:Math.max(0,Number(p.hp)||0),
     maxHp:Math.max(1,Number(p.maxHp)||1),
-    moving:!!p.moving,
+    moving:!!p.moving||moved>2.5||Math.hypot(vx,vy)>8,
+    visualMoving:!!p.moving||moved>2.5||Math.hypot(vx,vy)>8,
     partyId:String(p.partyId||''),
     ts:Number(p.ts)||Date.now(),
     seenAt
@@ -2094,19 +2115,38 @@ function sanitizePeerPayload(p,seenAt=performance.now()){
 }
 function smoothPeerPosition(p,dt){
   if(!p)return;
+  const now=performance.now();
   const tx=Number.isFinite(Number(p.targetX))?Number(p.targetX):Number(p.x);
   const ty=Number.isFinite(Number(p.targetY))?Number(p.targetY):Number(p.y);
   let dx=Number.isFinite(Number(p.drawX))?Number(p.drawX):tx;
   let dy=Number.isFinite(Number(p.drawY))?Number(p.drawY):ty;
   const gap=Math.hypot(tx-dx,ty-dy);
-  if(!Number.isFinite(gap)||gap>360){
+  if(!Number.isFinite(gap)||gap>520){
     p.drawX=tx;
     p.drawY=ty;
+    p.visualMoving=false;
     return;
   }
-  const follow=1-Math.exp(-Math.max(0.001,dt||0.016)*13.5);
-  p.drawX=dx+(tx-dx)*follow;
-  p.drawY=dy+(ty-dy)*follow;
+  const start=Number(p.interpStart)||now;
+  const end=Math.max(start+1,Number(p.interpEnd)||now);
+  const raw=clamp((now-start)/(end-start),0,1);
+  const ease=raw*raw*(3-2*raw);
+  let baseX=Number.isFinite(Number(p.fromX))?Number(p.fromX):dx;
+  let baseY=Number.isFinite(Number(p.fromY))?Number(p.fromY):dy;
+  let targetX=baseX+(tx-baseX)*ease;
+  let targetY=baseY+(ty-baseY)*ease;
+  if(raw>=1&&now-end<360){
+    const extra=(now-end)/1000;
+    const vx=Number(p.vx)||0,vy=Number(p.vy)||0;
+    targetX=tx+vx*extra*.38;
+    targetY=ty+vy*extra*.38;
+    if(Math.hypot(targetX-tx,targetY-ty)>38){targetX=tx;targetY=ty;}
+  }
+  const follow=1-Math.exp(-Math.max(.001,dt||.016)*32);
+  p.drawX=dx+(targetX-dx)*follow;
+  p.drawY=dy+(targetY-dy)*follow;
+  const v=Math.hypot(Number(p.vx)||0,Number(p.vy)||0);
+  p.visualMoving=raw<1||gap>1.8||v>7||now-(Number(p.lastMoveAt)||0)<260;
 }
 function updateOnlinePeerSmoothing(dt){
   for(const id in onlineState.peers){
@@ -2297,8 +2337,9 @@ function drawRemotePlayerSprite(p){
   ctx.translate(x,y);
   ctx.globalAlpha=clamp(1-age/10000,.62,.96);
   const t=performance.now()/1000;
-  const step=p.moving?Math.sin(t*11+(x+y)*.01):0;
-  const bob=p.moving?Math.abs(step)*.8:0;
+  const moving=!!p.visualMoving||!!p.moving;
+  const step=moving?Math.sin(t*11+(x+y)*.01):0;
+  const bob=moving?Math.abs(step)*.8:0;
   ctx.translate(0,-bob);
 
   lineStyle(.72,1.55);
@@ -2597,9 +2638,31 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 073","text":"- 온라인/파티 함수 참조 오류를 안전 정리\\n- showPeerAction/connectOnlineFromPanel/requestPartyToPeer 전역 호출 방어\\n- 버튼 클릭은 Game.safeCall 경유로 실행되도록 보강\\n- 온라인 재접속 호출이 누락되어도 게임이 멈추지 않게 처리\\n- 렉 완화를 위해 온라인 재접속 재시도 간격 증가"},
-  {"ver":"이전 패치 072","text":"- connectOnlineFromPanel 미정의 오류 수정\\n- 온라인 재접속 관련 버튼 호출을 Game 경유로 통일\\n- window/globalThis에 connectOnlineFromPanel 강제 등록"},
-  {"ver":"이전 패치 071","text":"- showPeerAction 전역 미등록으로 인한 ReferenceError 재수정\\n- 필드 상호작용 호출부를 Game.showPeerAction 경유로 변경"}
+  {
+    "ver": "현재 패치 078",
+    "text": "- 상대 유저 좌표 수신 시 순간이동하지 않고 보간 이동 처리
+- 패킷 간격 기준 ease 보간과 원격 이동 애니메이션 보강
+- 큰 거리/필드 이동은 텔레포트로 처리해 잔상 오류 방지"
+  },
+  {
+    "ver": "이전 패치 073",
+    "text": "- 온라인/파티 함수 참조 오류를 안전 정리
+- showPeerAction/connectOnlineFromPanel/requestPartyToPeer 전역 호출 방어
+- 버튼 클릭은 Game.safeCall 경유로 실행되도록 보강
+- 온라인 재접속 호출이 누락되어도 게임이 멈추지 않게 처리
+- 렉 완화를 위해 온라인 재접속 재시도 간격 증가"
+  },
+  {
+    "ver": "이전 패치 072",
+    "text": "- connectOnlineFromPanel 미정의 오류 수정
+- 온라인 재접속 관련 버튼 호출을 Game 경유로 통일
+- window/globalThis에 connectOnlineFromPanel 강제 등록"
+  },
+  {
+    "ver": "이전 패치 071",
+    "text": "- showPeerAction 전역 미등록으로 인한 ReferenceError 재수정
+- 필드 상호작용 호출부를 Game.showPeerAction 경유로 변경"
+  }
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
