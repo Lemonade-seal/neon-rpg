@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_094_death_cooldown_portal_ai -->
+<!-- build: index6_098_skill_graphics_equip_fix -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1522,19 +1522,22 @@
   }
 
 
-  /* 085: 공격/회피 버튼 위치 교체 */
+  /* 098: 공격/회피 버튼 위치 재교환 */
   #actions{
     grid-template-areas:
       "skill1 skill2 skill3 skill4"
-      ". . dodge attack"!important;
+      ". . attack dodge"!important;
   }
-  #dodgeBtn{grid-area:dodge!important;}
   #attackBtn{grid-area:attack!important;}
+  #dodgeBtn{grid-area:dodge!important;}
 
 
   /* 090: 스테이지 포털/마을 포털 선택 상태 */
   .fieldLocked{opacity:.38!important;filter:grayscale(.35);}
   .fieldOpenTag{font-size:10px;opacity:.82;margin-top:4px;}
+
+  /* 098: 그래픽 설정 미리보기 */
+  .themePreview{height:42px;border:1px solid var(--gd);border-radius:12px;background:var(--bg);box-shadow:inset 0 0 14px var(--gb);display:flex;align-items:center;justify-content:center;color:var(--g);font-weight:900;text-shadow:0 0 8px var(--gd);}
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
@@ -1936,6 +1939,20 @@ function extendSkillBooksToMax(){
   }
 }
 extendSkillBooksToMax();
+function compactHighTierSkillDescriptions(){
+  for(const id in SKILL_BOOK){
+    const list=SKILL_BOOK[id];
+    if(!Array.isArray(list))continue;
+    if(list[10])list[10].desc=`${list[10].name}을 발동하는 11성 초월기`;
+    if(list[11])list[11].desc=`${list[11].name}을 발동하는 12성 궁극기`;
+  }
+}
+compactHighTierSkillDescriptions();
+function skillRequiredLevel(rank){
+  const table=[1,3,5,8,12,16,22,30,40,55,75,95];
+  return table[clamp(Math.floor(Number(rank)||1),1,MAX_SKILL_STAR)-1]||1;
+}
+function canUseSkillRank(rank){return Number(player.level||1)>=skillRequiredLevel(rank);}
 function skillList(jobId=player.job){const direct=SKILL_BOOK[jobId];if(direct)return direct;const jb=jobById(jobId||'blade');if(jb&&jb.skillBase&&SKILL_BOOK[jb.skillBase])return SKILL_BOOK[jb.skillBase];return SKILL_BOOK.blade;}
 function skillStar(jobId=player.job){
   player.skillStars = player.skillStars || {};
@@ -3002,8 +3019,8 @@ function toast(t){toastBox.textContent=t;toastBox.style.display='block';clearTim
 function popupAllowsCloseX(){return !['boot','title','nickname','class','update','kakaoLogin','growth','roulette','guide'].includes(String(popupMode||''));}
 function openPopup(html){const raw=String(html||'');popup.innerHTML=(popupAllowsCloseX()&&!raw.includes('popupCloseX'))?`<button class="popupCloseX" onclick="Game.safeCall('closePopup')">X</button>${raw}`:raw;popupLayer.style.display='flex';gamePaused=false;}
 function closePopup(){popupLayer.style.display='none';popup.innerHTML='';popup.style.width='';popup.style.height='';popup.style.maxWidth='';popup.style.maxHeight='';popup.style.padding='';popup.style.overflow='';gamePaused=false;popupMode='';}
-function lineStyle(alpha=1,width=2){ctx.strokeStyle=`rgba(0,255,114,${alpha})`;ctx.lineWidth=width;ctx.shadowColor='rgba(0,255,114,.72)';ctx.shadowBlur=8;ctx.lineCap='round';ctx.lineJoin='round';}
-function fillStyle(alpha=.12){ctx.fillStyle=`rgba(0,255,114,${alpha})`;ctx.shadowColor='rgba(0,255,114,.5)';ctx.shadowBlur=8;}
+function lineStyle(alpha=1,width=2){const c=hexToRgb(themeHex('gl_theme_line','#00ff72'));ctx.strokeStyle=`rgba(${c.r},${c.g},${c.b},${alpha})`;ctx.lineWidth=width;ctx.shadowColor=`rgba(${c.r},${c.g},${c.b},.72)`;ctx.shadowBlur=8;ctx.lineCap='round';ctx.lineJoin='round';}
+function fillStyle(alpha=.12){const c=hexToRgb(themeHex('gl_theme_line','#00ff72'));ctx.fillStyle=`rgba(${c.r},${c.g},${c.b},${alpha})`;ctx.shadowColor=`rgba(${c.r},${c.g},${c.b},.5)`;ctx.shadowBlur=8;}
 
 function jobById(id){return JOBS.find(j=>j.id===id)||JOBS[0];}
 function computeStats(){
@@ -3040,16 +3057,32 @@ function repairEquipmentRuntime(){
   normalizePlayer();
   player.inventory=Array.isArray(player.inventory)?player.inventory.filter(it=>it&&typeof it==='object'&&it.id&&it.slot&&it.stats):[];
   player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});
+  const seen=new Set();
+  player.inventory=player.inventory.filter(it=>{
+    if(seen.has(it.id))return false;
+    seen.add(it.id);return true;
+  });
+  for(const slot of Object.keys(player.equip)){
+    let it=player.equip[slot];
+    if(!it||it.slot!==slot){player.equip[slot]=null;continue;}
+    const inv=player.inventory.find(x=>x.id===it.id);
+    if(inv)player.equip[slot]=inv;
+    else player.inventory.push(it);
+  }
+  const equippedIds=new Set();
   for(const slot of Object.keys(player.equip)){
     const it=player.equip[slot];
-    if(!it||it.slot!==slot){player.equip[slot]=null;continue;}
-    if(!player.inventory.find(x=>x.id===it.id))player.inventory.push(it);
-    it.equipped=true;
+    if(!it||it.slot!==slot||equippedIds.has(it.id)){player.equip[slot]=null;continue;}
+    equippedIds.add(it.id);
   }
   for(const it of player.inventory){
-    it.equipped=!!(player.equip[it.slot]&&player.equip[it.slot].id===it.id);
+    it.equipped=false;
     if(!it.stats||typeof it.stats!=='object')it.stats={atk:1};
     if((player.job||'adventurer')==='adventurer'&&it.slot==='weapon'&&(it.name==='낡은 수련검'||it.name==='초록 직업무기'||it.name==='몽둥이'))it.name='나뭇가지';
+  }
+  for(const slot of Object.keys(player.equip)){
+    const it=player.equip[slot];
+    if(it)it.equipped=true;
   }
   if((player.job||'adventurer')==='adventurer'&&player.equip.weapon&&(player.equip.weapon.name==='낡은 수련검'||player.equip.weapon.name==='초록 직업무기'||player.equip.weapon.name==='몽둥이'))player.equip.weapon.name='나뭇가지';
 }
@@ -3898,9 +3931,14 @@ function statText(stats){return Object.entries(stats).map(([k,v])=>{
   return `${label} +${Math.abs(n)>=10?Math.round(n):Math.round(n*10)/10}`;
 }).join(' / ');}
 function equipItem(id,silent=false){
+  normalizePlayer();
   const it=player.inventory.find(x=>x.id===id); if(!it)return;
-  const old=player.equip[it.slot]; if(old) old.equipped=false;
-  player.equip[it.slot]=it; it.equipped=true; syncHp(); if(!silent){toast(`${it.name} 착용`); renderBag();}
+  for(const item of player.inventory){if(item.slot===it.slot)item.equipped=false;}
+  for(const slot of Object.keys(player.equip)){
+    if(slot===it.slot && player.equip[slot])player.equip[slot].equipped=false;
+    if(player.equip[slot]&&player.equip[slot].id===it.id)player.equip[slot]=null;
+  }
+  player.equip[it.slot]=it; it.equipped=true; repairEquipmentRuntime(); syncHp(); if(!silent){toast(`${it.name} 착용`); renderBag();}
 }
 function sellItem(id,fromShop=false){
   const it=player.inventory.find(x=>x.id===id); if(!it||it.equipped)return;
@@ -4111,7 +4149,7 @@ function skillTargetPoint(range=520){
   const p=nearestDungeonPoint(x,y,22);
   return {x:p.x,y:p.y,target:null};
 }
-function castHighTierSkill(aj,rank,st,skAtk,pow,radius,range){
+function castHighTierSkill(aj,rank,st,skAtk,pow,radius,range,fromAuto=false){
   if(rank<11)return false;
   const high=rank===12, amp=high?1.38:1.0;
   const tp=skillTargetPoint(range+420), cx=tp.x, cy=tp.y;
@@ -4133,7 +4171,7 @@ function castHighTierSkill(aj,rank,st,skAtk,pow,radius,range){
   }else if(aj==='assassin'){
     const list=monsters.filter(m=>!m.dead&&dist(player,m)<(high?760:560)&&dungeonLineWalkable(player.x,player.y,m.x,m.y,8)).sort((a,b)=>(b.boss?1:0)-(a.boss?1:0)||dist(player,a)-dist(player,b)).slice(0,high?10:6);
     for(const m of list){doDamage(m,skAtk*(high?5.3:3.5)*(1+st.critDmg*.45),'execution',false);effects.push({type:'spark',x:m.x,y:m.y,life:.5,r:high?34:25});}
-    player.dashTime=.12;player.dodgeTimer=Math.min(player.dodgeTimer,.08);
+    if(!fromAuto){player.dashTime=.12;player.dodgeTimer=Math.min(player.dodgeTimer,.08);}
   }else if(aj==='paladin'){
     const heal=Math.round(player.maxHp*(high?.48:.32));player.hp=clamp(player.hp+heal,0,player.maxHp);player.shield=Math.max(player.shield,high?5.8:3.8);addBuff('대광휘',high?5.2:3.5,{def:high?rank*.34:rank*.24});damageArea(player.x,player.y,high?330:240,skAtk*(high?3.2:2.1)*pow,'judgement');effects.push({type:'text',x:player.x,y:player.y-42,t:`+${heal} 광휘`,life:1,vy:-22,heal:true});effects.push({type:'ring',x:player.x,y:player.y,life:1.1,r:high?330:240});
   }else if(aj==='alchemist'){
@@ -4166,6 +4204,8 @@ function useSkill(slot=1,fromAuto=false){
   const st=computeStats(); if((player.skillTimers&&player.skillTimers[idx]>0)||player.skillTimer>0)return;
   const rank=skillRankForSlot(slot);
   if(rank<=0){toast(`스킬${slot} 미습득`);return;}
+  const reqLv=skillRequiredLevel(rank);
+  if(player.level<reqLv){toast(`${rank}성 스킬은 Lv.${reqLv} 필요`);return;}
   const sc=skillScale(rank), j=player.job, aj=(jobById(j).skillBase||j), info=skillByRank(j,rank);
   // 059 밸런스: 스킬 기본 계수/범위/쿨타임을 전체 하향
   const cdBase=Math.max(4.2,9.8-rank*.05);
@@ -4182,7 +4222,7 @@ function useSkill(slot=1,fromAuto=false){
   player.skillTimerMax[idx]=cd;
   effects.push({type:'text',x:player.x,y:player.y-52,t:`${rank}성 ${info.name}`,life:.8,vy:-18,big:true});
 
-  if(castHighTierSkill(aj,rank,st,skAtk,pow,radius,range))return;
+  if(castHighTierSkill(aj,rank,st,skAtk,pow,radius,range,fromAuto))return;
 
   if(aj==='blade'){
     const t=nearestMonster(range);
@@ -4227,8 +4267,18 @@ function useSkill(slot=1,fromAuto=false){
   } else if(aj==='assassin'){
     const count=rank<=3?1:rank<=7?Math.min(5,rank-1):Math.min(9,rank);
     const list=monsters.filter(m=>!m.dead&&dist(player,m)<range+160).sort((a,b)=>dist(player,a)-dist(player,b)).slice(0,count);
-    for(const m of list){const ox=player.x,oy=player.y;player.x=clamp(m.x-28,40,fieldSize-40);player.y=clamp(m.y-28,40,fieldSize-40);resolveDungeonEntity(player,ox,oy,22);doDamage(m,skAtk*(1.85+rank*.34)*(1+st.critDmg*.35),'assassin',rank<6);effects.push({type:'spark',x:m.x,y:m.y,life:.42,r:26+rank*3});}
-    if(rank>=7){player.dodgeTimer=Math.min(player.dodgeTimer,.15);player.dashTime=.08;}
+    for(const m of list){
+      if(fromAuto){
+        doDamage(m,skAtk*(1.85+rank*.34)*(1+st.critDmg*.35),'assassin',rank<6);
+      }else{
+        const ox=player.x,oy=player.y;
+        player.x=clamp(m.x-28,40,fieldSize-40);player.y=clamp(m.y-28,40,fieldSize-40);
+        resolveDungeonEntity(player,ox,oy,22);
+        doDamage(m,skAtk*(1.85+rank*.34)*(1+st.critDmg*.35),'assassin',rank<6);
+      }
+      effects.push({type:'spark',x:m.x,y:m.y,life:.42,r:26+rank*3});
+    }
+    if(rank>=7&&!fromAuto){player.dodgeTimer=Math.min(player.dodgeTimer,.15);player.dashTime=.08;}
   } else if(aj==='paladin'){
     const heal=Math.round(player.maxHp*(.08+rank*.025));player.hp=clamp(player.hp+heal,0,player.maxHp);player.shield=Math.max(player.shield,1.3+rank*.25); addBuff('성역',1.3+rank*.25,{def:rank*.18});
     const r=90+rank*17; damageArea(player.x,player.y,r,skAtk*(.9+rank*.18)*pow,'holy');
@@ -4454,7 +4504,7 @@ function showTown(){
   closePopup();
 }
 function adventurerQuestState(){normalizePlayer();return player.adventurerQuest;}
-function showElderGuide(){popupMode='guide';openPopup(`<div class="title">장로의 안내</div><div class="card"><h3>정식 직업 등록 전 안내</h3>처음에는 <b>모험가</b>로 시작합니다.<br>마을 북쪽 <b>장로</b>에게 모험가 퀘스트를 받고, 훈련소 허수아비를 50대 때리면 직업소개소에서 1차 직업을 선택할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
+function showElderGuide(){popupMode='guide';openPopup(`<div class="title">장로의 안내</div><div class="card"><h3>정식 직업 등록 전 안내</h3>처음에는 <b>모험가</b>로 시작합니다.<br>마을 북쪽 <b>장로</b>에게 모험가 퀘스트를 받고, 훈련소 허수아비를 50대 때리면 직업소개소에서 1차 직업을 선택할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.showSkillSlotSettings()">스킬</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
 function showAdventurerQuest(){
   const q=adventurerQuestState();
   const hits=clamp(Math.floor(Number(q.dummyHits)||0),0,50);
@@ -4528,9 +4578,10 @@ function showSkillShop(){
   popupMode='skillShop';
   const j=player.job||'blade', job=jobById(j), learned=skillStar(j), cost=skillCost(j), list=skillList(j), next=Math.min(MAX_SKILL_STAR,learned+1);
   const current=learned>0?`현재 사용 스킬: ${learned}성 ${skillByRank(j,learned).name}`:'현재 사용 스킬: 미습득';
-  const nextText=learned>=MAX_SKILL_STAR?'모든 스킬 습득 완료':`다음 구매: ${next}성 ${skillByRank(j,next).name} · ${cost}G`;
-  const rows=list.map((s,i)=>{const lv=i+1, owned=learned>=lv, nextSkill=learned+1===lv;return `<div class="card ${owned?'selected':''} ${nextSkill?'rare-희귀':''}"><h3>${lv}성 ${s.name} ${owned?'[보유]':''}</h3>${s.desc}<br><span class="small">${owned?'습득 완료':(nextSkill?'다음 구매 · ':'잠김 · ')+(SKILL_COSTS[i]||0)+'G'}</span></div>`;}).join('');
-  openPopup(`<div class="title">스킬 상점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G · 직업마다 서로 다른 ${MAX_SKILL_STAR}종 스킬을 1성부터 순서대로 구매합니다. 11성/12성은 초월 스킬입니다.</div><div class="card"><h3>${job.name} 스킬 트리</h3>${current}<br>${nextText}</div><div class="footerBtns"><button ${learned>=MAX_SKILL_STAR?'disabled':''} onclick="Game.buySkill()">${learned>=MAX_SKILL_STAR?'전체 습득 완료':`${next}성 스킬 구매`}</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><h3>직업 스킬 ${MAX_SKILL_STAR}종</h3><div class="grid3">${rows}</div>`);
+  const nextReq=skillRequiredLevel(next);
+  const nextText=learned>=MAX_SKILL_STAR?'모든 스킬 습득 완료':`다음 구매: ${next}성 ${skillByRank(j,next).name} · Lv.${nextReq} 필요 · ${cost}G`;
+  const rows=list.map((sk,i)=>{const lv=i+1, owned=learned>=lv, nextSkill=learned+1===lv, req=skillRequiredLevel(lv), lvOk=player.level>=req;return `<div class="card ${owned?'selected':''} ${nextSkill?'rare-희귀':''}"><h3>${lv}성 ${sk.name} ${owned?'[보유]':''}</h3>${sk.desc}<br><span class="small">Lv.${req} 필요 · ${owned?'습득 완료':(nextSkill?(lvOk?'구매 가능 · ':'레벨 부족 · '):'잠김 · ')+(SKILL_COSTS[i]||0)+'G'}</span></div>`;}).join('');
+  openPopup(`<div class="title">스킬 상점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G · 직업마다 서로 다른 ${MAX_SKILL_STAR}종 스킬을 1성부터 순서대로 구매합니다. 11성/12성은 초월 스킬입니다.</div><div class="card"><h3>${job.name} 스킬 트리</h3>${current}<br>${nextText}</div><div class="footerBtns"><button ${learned>=MAX_SKILL_STAR||player.level<nextReq?'disabled':''} onclick="Game.buySkill()">${learned>=MAX_SKILL_STAR?'전체 습득 완료':`${next}성 스킬 구매`}</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><h3>직업 스킬 ${MAX_SKILL_STAR}종</h3><div class="grid3">${rows}</div>`);
 }
 function buySkill(){
   normalizePlayer();
@@ -4540,17 +4591,18 @@ function buySkill(){
     return;
   }
   const j=player.job||'blade'; player.skillStars=player.skillStars||{}; const learned=skillStar(j); if(learned>=MAX_SKILL_STAR){toast('이미 모든 스킬 습득');return;}
+  const next=learned+1, reqLv=skillRequiredLevel(next);
+  if(player.level<reqLv){toast(`${next}성 스킬은 Lv.${reqLv} 필요`);showSkillShop();return;}
   const cost=skillCost(j); if(player.gold<cost){toast(`골드 부족: ${cost}G 필요`);return;}
-  const next=learned+1, info=skillByRank(j,next);
+  const info=skillByRank(j,next);
   player.gold-=cost; player.skillStars[j]=next; toast(`${next}성 스킬 습득: ${info.name}`); showSkillShop(); updateHud();
 }
 function showGuild(){
   popupMode='guild';
-  const rank = player.guildTokens>=20?'마스터':player.guildTokens>=10?'정예':player.guildTokens>=4?'단원':'신입'; player.guildRank=rank;
-  openPopup(`<div class="title">길드</div><div class="card"><h3>길드 계급: ${rank}</h3>토큰: ${player.guildTokens}<br>효과: 계급에 따라 장비 드랍률과 골드 획득이 소폭 증가합니다.</div><div class="grid"><button onclick="Game.guildMission()">길드 의뢰 받기</button><button onclick="Game.guildReward()">토큰 장비 교환</button></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+  openPopup(`<div class="title">길드</div><div class="card"><h3>개발중</h3>길드 콘텐츠는 나중에 개발할 예정입니다.<br><span class="small">현재는 이용할 수 없습니다.</span></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
-function guildMission(){player.guildTokens+=1;player.questKills=0;toast('길드 의뢰 등록: 필드 사냥으로 토큰 누적');showGuild();}
-function guildReward(){if(player.guildTokens<3){toast('토큰 부족');return;}player.guildTokens-=3;player.inventory.push(makeItem(player.level,'레어',null));toast('길드 장비 획득');showGuild();}
+function guildMission(){toast('길드는 개발중입니다');showGuild();}
+function guildReward(){toast('길드는 개발중입니다');showGuild();}
 function showFieldSelect(){
   popupMode='fieldSelect';
   normalizeStageProgress();
@@ -4588,7 +4640,7 @@ function goField(id){
 }
 
 function renderBag(){
-  popupMode='bag'; const eq=Object.entries(player.equip).map(([slot,it])=>`<div class="card"><h3>${SLOT_LABEL[slot]}</h3>${it?`${it.rarity} ${it.name}<br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))}</span>`:'비어있음'}</div>`).join('');
+  popupMode='bag'; const eq=Object.entries(player.equip).map(([slot,it])=>`<div class="card"><h3>${SLOT_LABEL[slot]}</h3>${it?`${it.rarity} ${it.name}<br><span class="small">Lv.${it.level} · ${SLOT_LABEL[it.slot]}</span><br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))}</span>`:'비어있음'}</div>`).join('');
   const inv=player.inventory.map(it=>`<div class="card rare-${it.rarity}"><h3>${it.equipped?'[E] ':''}${it.name}</h3>${SLOT_LABEL[it.slot]} · Lv.${it.level} · ${it.rarity}<br><span class="small">${statText(it.stats)}</span><br><span class="small">점수 ${Math.round(itemScore(it))} · 판매가 ${itemValue(it)}G</span><div class="footerBtns"><button onclick="Game.equipItem('${it.id}')">장착</button><button ${it.equipped?'disabled':''} onclick="Game.sellItem('${it.id}')">판매</button></div></div>`).join('')||'<div class="sub">아이템 없음</div>';
   openPopup(`<div class="title">장비 / 가방</div><div class="sub">직업에 맞는 장비 점수를 기준으로 자동장착할 수 있습니다.</div><h3>착용 장비</h3><div class="grid">${eq}</div><div class="footerBtns"><button onclick="Game.autoEquipBest()">자동장착</button><button onclick="Game.sellAllUnequipped()">미장착 전체판매</button></div><h3>보유 아이템</h3><div class="grid">${inv}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
@@ -6040,13 +6092,17 @@ function loop(ts){
 }
 requestAnimationFrame(loop);
 
-function dodge(){
-  if(player.dodgeTimer>0||!player.classChosen)return;
+function dodge(fromButton=false){
+  if(player.dodgeTimer>0||!player.classChosen)return false;
+  // Dash is allowed only from the manual dodge button.
+  // Auto combat may steer away, but it must not trigger instant movement.
+  if(!fromButton)return false;
   const st=computeStats();
   player.dodgeTimer=Math.max(.55,1.35-(st.dodge||0)*.8);
   if(Math.hypot(joystick.dx,joystick.dy)>.05) player.dir=Math.atan2(joystick.dy,joystick.dx);
   player.dashTime=.16; player.hurt=0;
   effects.push({type:'ring',x:player.x,y:player.y,life:.24,r:28});
+  return true;
 }
 
 function showOnlinePanel(){
@@ -6298,7 +6354,14 @@ function showLogSettings(){
 }
 function toggleLogSetting(k){normalizePlayer();player.logSettings[k]=player.logSettings[k]===false;updateLogBox();updateLogToggleButtons();requestCloudSave('logSetting');showLogSettings();}
 function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
-function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드, 파티, 로그, 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showOnlineHub()">온라인</button><button onclick="Game.showLogSettings()">로그/채팅</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
+function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드, 그래픽, 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showGraphicSettings()">그래픽</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
+function themeHex(key,fallback){try{return localStorage.getItem(key)||fallback;}catch(e){return fallback;}}
+function hexToRgb(hex){const h=String(hex||'').replace('#','');if(!/^[0-9a-fA-F]{6}$/.test(h))return {r:0,g:255,b:114};return {r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
+function setAlpha(hex,a){const c=hexToRgb(hex);return `rgba(${c.r},${c.g},${c.b},${a})`;}
+function applyThemeColors(){const bg=themeHex('gl_theme_bg','#000000'), line=themeHex('gl_theme_line','#00ff72');document.documentElement.style.setProperty('--bg',bg);document.documentElement.style.setProperty('--g',line);document.documentElement.style.setProperty('--gd',setAlpha(line,.55));document.documentElement.style.setProperty('--gf',setAlpha(line,.18));document.documentElement.style.setProperty('--gb',setAlpha(line,.075));document.body.style.background=bg;const wrap=$('wrap');if(wrap)wrap.style.background=bg;}
+function showGraphicSettings(){const bg=themeHex('gl_theme_bg','#000000'), line=themeHex('gl_theme_line','#00ff72');openPopup(`<div class="title">그래픽 설정</div><div class="sub">배경색과 라인색을 바꿉니다. 설정은 이 기기에 저장됩니다.</div><div class="card"><h3>미리보기</h3><div class="themePreview">GREEN LINE</div></div><div class="grid"><div class="card"><h3>배경색</h3><input class="neonInput" type="color" value="${bg}" oninput="Game.setThemeColor('bg',this.value)"></div><div class="card"><h3>라인색</h3><input class="neonInput" type="color" value="${line}" oninput="Game.setThemeColor('line',this.value)"></div></div><div class="footerBtns"><button onclick="Game.resetThemeColors()">기본값</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
+function setThemeColor(kind,val){try{localStorage.setItem(kind==='bg'?'gl_theme_bg':'gl_theme_line',val);}catch(e){}applyThemeColors();}
+function resetThemeColors(){try{localStorage.removeItem('gl_theme_bg');localStorage.removeItem('gl_theme_line');}catch(e){}applyThemeColors();showGraphicSettings();}
 function quickToggleAuto(){
   try{
     normalizePlayer();
@@ -6315,7 +6378,7 @@ function showAutoPanel(){
   const style=rangedAttackProfile(player.job,computeStats())?'원거리 추적/거리 유지':'근접 접근/회피 돌진';
   const slots=player.skillSlots.slice(0,4).map((r,i)=>{const ok=r>0&&r<=skillStar();const name=ok?skillByRank(player.job,r).name:'비움';return `스킬${i+1}: ${ok?`${r}성 ${name}`:'비움'}`;}).join('<br>');
   const pot=CONSUMABLES[player.potionSlot]||CONSUMABLES.potion;
-  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${job.name}</b> · ${job.type}<br>자동 전투 방식: ${style}</div><div class="card"><h3>현재 슬롯</h3>${slots}<br>물약 슬롯: ${pot.name} · HP ${Math.round(player.autoPotionPct*100)}% 이하 자동 사용</div><div class="grid"><button onclick="Game.toggleAuto()" class="${player.autoMode?'autoOn':''}">오토 ${player.autoMode?'ON':'OFF'}</button><button onclick="Game.showSkillSlotSettings()">스킬 설정</button><button onclick="Game.showPotionSettings()">물약 설정</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">오토 중 오류가 나면 자동으로 오토를 끄고 게임은 계속 진행됩니다.</div>`);
+  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${job.name}</b> · ${job.type}<br>자동 전투 방식: ${style}</div><div class="card"><h3>현재 슬롯</h3>${slots}<br>물약 슬롯: ${pot.name} · HP ${Math.round(player.autoPotionPct*100)}% 이하 자동 사용</div><div class="grid"><button onclick="Game.toggleAuto()" class="${player.autoMode?'autoOn':''}">오토 ${player.autoMode?'ON':'OFF'}</button><button onclick="Game.showPotionSettings()">물약 설정</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">오토 중 오류가 나면 자동으로 오토를 끄고 게임은 계속 진행됩니다.</div>`);
 }
 
 function showSkillSlotSettings(){
@@ -6411,7 +6474,7 @@ function bind(){
   hold($('attackBtn'),()=>{attackHeld=true;normalAttack();},()=>attackHeld=false);
   for(let i=1;i<=4;i++){const btn=$(`skillBtn${i}`);if(btn)hold(btn,()=>{skillHeld[i-1]=true;safeUseSkill(i);},()=>skillHeld[i-1]=false);}
   const dodgeBtn=$('dodgeBtn');
-  dodgeBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();dodge();},{passive:false});
+  dodgeBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();dodge(true);},{passive:false});
   dodgeBtn.onclick=e=>{e.preventDefault();};
   $('potionBtn').onclick=usePotion; $('talkPrompt').onclick=handleTalkPrompt; $('statBtn').onclick=showOnlineHub; $('statPanel').onclick=showStats; $('bagBtn').onclick=renderBag; $('codexBtn').onclick=()=>renderCodex(true); $('settingBtn').onclick=showSettings; const lb=$('log'); if(lb)lb.onclick=showQuickChat; $('logChatBtn').onclick=()=>toggleHudLogSetting('chat'); $('logSystemBtn').onclick=()=>toggleHudLogSetting('system'); $('logCombatBtn').onclick=()=>toggleHudLogSetting('combat'); updateLogToggleButtons(); zoneTag.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
   mini.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();showFullMap();},{passive:false});
@@ -6532,7 +6595,8 @@ function safeConnectOnlineFromPanel(){
   return false;
 }
 
-window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+applyThemeColors();
+window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 try{
   window.showPeerAction=(id)=>gameSafeCall('showPeerAction',id);
   globalThis.showPeerAction=window.showPeerAction;
