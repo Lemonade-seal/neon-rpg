@@ -4671,18 +4671,35 @@ function findEscapePoint(o,rad=18,targetX=null,targetY=null){
 }
 function autoEscapePlayerStuck(ox,oy,dt,inputActive=false){
   if(!dungeonActive())return;
-  if(!dungeonPointWalkable(player.x,player.y,22)){
-    const p=nearestDungeonPoint(Number.isFinite(ox)?ox:player.x,Number.isFinite(oy)?oy:player.y,22);
-    player.x=p.x;player.y=p.y;player.autoStuckTimer=0;return;
+  const rad=22;
+  if(!dungeonPointWalkable(player.x,player.y,rad)){
+    const p=nearestDungeonPoint(Number.isFinite(ox)?ox:player.x,Number.isFinite(oy)?oy:player.y,rad);
+    player.x=p.x;player.y=p.y;player.autoStuckTimer=0;player.autoUnstuckGoal=null;return;
   }
   const moved=Math.hypot(player.x-ox,player.y-oy);
   if(inputActive&&moved<0.18)player.autoStuckTimer=(player.autoStuckTimer||0)+dt;
   else player.autoStuckTimer=Math.max(0,(player.autoStuckTimer||0)-dt*2.2);
   if(player.autoStuckTimer>.26){
     const goal=player.autoMode&&player.autoRoamPoint?player.autoRoamPoint:nearestMonster(760,true);
-    const p=findEscapePoint(player,22,goal&&goal.x,goal&&goal.y);
-    if(p){const ox2=player.x,oy2=player.y;player.x=p.x;player.y=p.y;resolveDungeonEntity(player,ox2,oy2,22);player.autoPathCache=null;}
+    const p=findEscapePoint(player,rad,goal&&goal.x,goal&&goal.y);
+    if(p){
+      player.autoUnstuckGoal={x:p.x,y:p.y,until:performance.now()+900};
+      player.autoPathCache=null;
+    }
     player.autoStuckTimer=0;
+  }
+  const ug=player.autoUnstuckGoal;
+  if(ug&&performance.now()<ug.until){
+    const dx=ug.x-player.x,dy=ug.y-player.y,d=Math.hypot(dx,dy);
+    if(d<3){player.autoUnstuckGoal=null;return;}
+    const ox2=player.x,oy2=player.y;
+    const step=Math.min(d,Math.max(2,170*(Number(dt)||0.016)));
+    player.x=clamp(player.x+dx/d*step,rad,fieldSize-rad);
+    player.y=clamp(player.y+dy/d*step,rad,fieldSize-rad);
+    resolveDungeonEntity(player,ox2,oy2,rad);
+    if(Math.hypot(player.x-ox2,player.y-oy2)<0.05)player.autoUnstuckGoal=null;
+  }else if(ug){
+    player.autoUnstuckGoal=null;
   }
 }
 function autoThreatDamageRatio(mon,st){
@@ -4852,7 +4869,7 @@ function antiStuckMonster(m,ox,oy,d,aggroed,dt){
     const goal=sideGoal||steer;
     const px=m.x,py=m.y;
     const a=Math.atan2(goal.y-m.y,goal.x-m.x);
-    const step=Math.max(22,Math.min(78,(m.speed||70)*0.55));
+    const step=Math.max(8,Math.min(24,(m.speed||70)*(Number(dt)||0.016)*3.2));
     m.x=clamp(m.x+Math.cos(a)*step,rad,fieldSize-rad);
     m.y=clamp(m.y+Math.sin(a)*step,rad,fieldSize-rad);
     resolveDungeonEntity(m,px,py,rad);
