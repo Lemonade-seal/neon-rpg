@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_081_legendary_hero_layout -->
+<!-- build: index6_084_chat_wide_peer_popup -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1400,6 +1400,109 @@
       --control-bottom:18px;
     }
   }
+
+
+  /* 083: 채팅/로그필터 외곽을 하단 버튼 도크와 정렬 + 스킬 순서 1-2-3-4 */
+  #actions{
+    grid-template-areas:
+      "skill1 skill2 skill3 skill4"
+      ". . attack dodge"!important;
+  }
+  #skillBtn1{grid-area:skill1!important;}
+  #skillBtn2{grid-area:skill2!important;}
+  #skillBtn3{grid-area:skill3!important;}
+  #skillBtn4{grid-area:skill4!important;}
+
+  @media (orientation:portrait){
+    :root{
+      --log-filter-w:44px;
+      --log-filter-gap:4px;
+    }
+    .log{
+      left:calc(100vw - var(--safe-right) - var(--control-side) - var(--action-dock-w))!important;
+      right:calc(var(--safe-right) + var(--control-side) + var(--log-filter-w) + var(--log-filter-gap))!important;
+      bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--action-dock-h) + 8px)!important;
+      height:58px!important;
+      min-height:58px!important;
+      max-height:58px!important;
+    }
+    #logToggleBar{
+      right:calc(var(--safe-right) + var(--control-side))!important;
+      bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--action-dock-h) + 8px)!important;
+      width:var(--log-filter-w)!important;
+    }
+    #logToggleBar button{
+      width:var(--log-filter-w)!important;
+    }
+  }
+
+  @media (orientation:landscape){
+    :root{
+      --log-filter-w:44px;
+      --log-filter-gap:4px;
+    }
+    .log{
+      left:calc(100vw - var(--safe-right) - var(--control-side) - var(--action-dock-w))!important;
+      right:calc(var(--safe-right) + var(--control-side) + var(--log-filter-w) + var(--log-filter-gap))!important;
+      bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--action-dock-h) + 6px)!important;
+      height:52px!important;
+      min-height:52px!important;
+      max-height:52px!important;
+    }
+    #logToggleBar{
+      right:calc(var(--safe-right) + var(--control-side))!important;
+      bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--action-dock-h) + 6px)!important;
+      width:var(--log-filter-w)!important;
+    }
+    #logToggleBar button{
+      width:var(--log-filter-w)!important;
+    }
+  }
+
+  @media (orientation:landscape) and (max-height:430px){
+    .log{
+      height:48px!important;
+      min-height:48px!important;
+      max-height:48px!important;
+    }
+  }
+
+
+  /* 084: 채팅창 좌측 확장 + 접속자 행 클릭 팝업 방식 */
+  @media (orientation:portrait){
+    .log{
+      left:calc(var(--safe-left) + var(--control-side))!important;
+      right:calc(var(--safe-right) + var(--control-side) + var(--log-filter-w) + var(--log-filter-gap))!important;
+    }
+  }
+  .onlineUserInBox.oneLine.peerClickable{
+    grid-template-columns:minmax(0,1fr)!important;
+    cursor:pointer;
+  }
+  .onlineUserInBox.oneLine.peerClickable:active{
+    background:rgba(0,255,114,.09)!important;
+  }
+  .onlineUserInBox.oneLine.peerClickable .onlineUserLine{
+    width:100%!important;
+  }
+  .onlineUserInBox.oneLine.peerClickable .onlineIdentity{
+    width:100%!important;
+  }
+  .onlineUserInBox.oneLine.peerClickable .onlineUserBoxBtns{
+    display:none!important;
+  }
+
+
+
+  /* 085: 공격/회피 버튼 위치 교체 */
+  #actions{
+    grid-template-areas:
+      "skill1 skill2 skill3 skill4"
+      ". . dodge attack"!important;
+  }
+  #dodgeBtn{grid-area:dodge!important;}
+  #attackBtn{grid-area:attack!important;}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -5571,7 +5674,7 @@ function onlineUserListRows(){
     const id=escapeHtml(p.id||'');
     const nick=escapeHtml(p.name||'플레이어');
     const loc=escapeHtml(peerDisplayLocation(p));
-    return `<div class="partyMiniLine onlineUserInBox oneLine"><div class="onlineUserLine"><b>Lv.${p.level||1}</b><span class="onlineIdentity"><span class="onlineNickText">${nick}</span><span class="onlineLocText"> · 위치: ${loc}</span></span></div><div class="onlineUserBoxBtns"><button type="button" onclick="Game.showPeerInfo('${id}')">정보</button><button type="button" onclick="Game.requestPartyToPeer('${id}')">파티신청</button></div></div>`;
+    return `<div class="partyMiniLine onlineUserInBox oneLine peerClickable" role="button" tabindex="0" onclick="Game.showPeerInfo('${id}')"><div class="onlineUserLine"><b>Lv.${p.level||1}</b><span class="onlineIdentity"><span class="onlineNickText">${nick}</span><span class="onlineLocText"> · 위치: ${loc}</span></span></div></div>`;
   }).join('');
   return {count:1+peers.length,html:self+(peerRows||'<div class="partyMiniLine">다른 접속 유저 없음</div>'),peers};
 }
