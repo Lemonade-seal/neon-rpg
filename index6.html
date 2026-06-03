@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_069_online_self_label_buttons_action_fix -->
+<!-- build: index6_070_show_peer_action_fix -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -2240,6 +2240,16 @@ function drawOnlinePlayers(){
     msg('실시간 유저 표시 오류를 차단했습니다.', 'system');
   }
 }
+function showPeerAction(id){
+  const p=onlineState.peers&&onlineState.peers[id];
+  if(!p){
+    toast('대상 유저 없음');
+    if(typeof showOnlineHub==='function')showOnlineHub(false);
+    return;
+  }
+  const loc=typeof peerDisplayLocation==='function'?peerDisplayLocation(p):((FIELDS.find(f=>f.id===p.field)||{}).name||p.field||'');
+  openPopup(`<div class="title">유저 상호작용</div><div class="card"><h3>${escapeHtml(p.name||'플레이어')}</h3>레벨: ${p.level||1}<br>직업: ${escapeHtml(p.jobName||jobById(p.job||'adventurer').name)}<br>위치: ${escapeHtml(loc)}</div><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(id)}')">파티신청</button><button onclick="Game.closePopup()">닫기</button></div>`);
+}
 function showPeerInfo(id){
   const p=onlineState.peers&&onlineState.peers[id];
   if(!p){
@@ -2343,7 +2353,7 @@ function syncHp(){const st=computeStats();player.maxHp=st.maxHp;player.hp=clamp(
 
 function startClassSelect(){showJobAgency();}
 let updateBootTimer=null;
-const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_069';
+const UPDATE_BOOT_SEEN_KEY='green_line_update_seen_index6_070';
 function repairSkillSlotDuplicates(){
   normalizePlayer();
   const used=new Set();
@@ -2468,9 +2478,9 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 069","text":"- 접속자 아이디 박스에서 자기 자신은 닉네임 뒤에 (나) 표시\\n- 자기 자신 행의 정보/파티신청 버튼 제거\\n- 상대 유저에게만 정보/파티신청 버튼 표시\\n- 온라인 인원 표시 중복 제거\\n- 정보/파티신청 버튼 동작 보강"},
-  {"ver":"이전 패치 068","text":"- 접속자 아이디 목록에서 내 행의 '나' / '내 캐릭터' 문구 제거\\n- 내 행 오른쪽에도 버튼 배치\\n- 내 행은 정보 / 파티생성 버튼, 다른 유저는 정보 / 파티신청 버튼 표시"},
-  {"ver":"이전 패치 067","text":"- 온라인 상태가 오프라인으로 고정되는 문제 수정\\n- 로그인 중이면 온라인 연결을 주기적으로 재시도하고 유지\\n- 접속자 목록의 정보/파티신청 버튼이 오른쪽 끝에 보이도록 강제 표시"}
+  {"ver":"현재 패치 070","text":"- 069에서 발생한 showPeerAction 미정의 오류 수정\\n- 필드에서 근처 유저 터치/상호작용 시 정보/파티신청 메뉴 정상 표시\\n- 온라인 접속자 목록의 정보/파티신청 버튼 기능 재연결"},
+  {"ver":"이전 패치 069","text":"- 접속자 아이디 박스에서 자기 자신은 닉네임 뒤에 (나) 표시\\n- 자기 자신 행의 정보/파티신청 버튼 제거\\n- 상대 유저에게만 정보/파티신청 버튼 표시\\n- 온라인 인원 표시 중복 제거"},
+  {"ver":"이전 패치 068","text":"- 접속자 아이디 목록에서 내 행의 '나' / '내 캐릭터' 문구 제거\\n- 내 행 오른쪽에도 버튼 배치\\n- 내 행은 정보 / 파티생성 버튼, 다른 유저는 정보 / 파티신청 버튼 표시"}
 ];
 function patchNoteHtml(){
   return PATCH_NOTES.slice(0,4).map((p)=>`<div class="card"><h3>${escapeHtml(p.ver)}</h3><div class="small">${escapeHtml(p.text).replace(/\n/g,'<br>')}</div></div>`).join('');
@@ -5489,7 +5499,7 @@ function startQuickGame(id='adventurer'){
   saveGame();
   setTimeout(showPatchNotes,80);
 }
-window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+window.Game={pickJob,openPopup,closePopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSettings,showOnlineHub,ensureOnlineHubConnection,forceOnlineKeepAlive,showPeerAction,showParty,toggleOnlineUserList,showPeerAction,showPeerInfo,showPeerAction,requestPartyToPeer,acceptPartyInvite,declinePartyInvite,createParty,leaveParty,sendPartyChat,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,connectOnlineFromPanel,leaveOnline,sendOnlinePing,showAutoPanel,showSkillSlotSettings,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 
 // 시작 흐름: 버전별 최초 접속은 업데이트 점검 → 같은 버전 새로고침은 생략 → Supabase Kakao 로그인 → 서버 자동 로드 → 게임 진입
 player=basePlayer();
