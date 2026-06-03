@@ -1908,7 +1908,7 @@ window.addEventListener('pagehide',()=>{try{if(!cloudState.deleting&&!cloudState
 
 const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
-const onlineState={enabled:false,connecting:false,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,peers:{},partyId:null,invites:{},chat:[]};
+const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,peers:{},partyId:null,invites:{},chat:[]};
 storageSet('green_line_online_pid',onlineState.playerId);
 function leaveOnline(showToast=true){
   try{
@@ -1919,6 +1919,8 @@ function leaveOnline(showToast=true){
     }
     onlineState.enabled=false;
     onlineState.connecting=false;
+    onlineState.sending=false;
+    if(onlineState.reconnectTimer){clearTimeout(onlineState.reconnectTimer);onlineState.reconnectTimer=null;}
     onlineState.channel=null;
     onlineState.client=null;
     onlineState.status='오프라인';
@@ -1935,6 +1937,8 @@ function leaveOnline(showToast=true){
     console.error(e);
     onlineState.enabled=false;
     onlineState.connecting=false;
+    onlineState.sending=false;
+    if(onlineState.reconnectTimer){clearTimeout(onlineState.reconnectTimer);onlineState.reconnectTimer=null;}
     onlineState.channel=null;
     onlineState.client=null;
     onlineState.status='오프라인 오류';
@@ -1944,6 +1948,24 @@ function leaveOnline(showToast=true){
 function myOnlineId(){return onlineState.playerId;}
 function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<8500)n++;}return n;}
 function onlineStatusText(){return onlineState.blocked?'온라인 재접속 필요':(onlineState.enabled?`온라인 · ${onlinePeerCount()}명`:`오프라인 · ${onlineState.status||'대기'}`);}
+function scheduleOnlineReconnect(reason='retry',delay=1800){
+  if(!cloudState.user||cloudState.deleting||cloudState.accountResetting)return false;
+  if(typeof document!=='undefined'&&document.hidden)return false;
+  const now=performance.now();
+  if(onlineState.reconnectTimer)return false;
+  if(now-(onlineState.lastReconnectSchedule||0)<1200)return false;
+  onlineState.lastReconnectSchedule=now;
+  onlineState.status='재접속 대기';
+  onlineState.reconnectTimer=setTimeout(()=>{
+    onlineState.reconnectTimer=null;
+    try{
+      if(!cloudState.user||cloudState.deleting||cloudState.accountResetting)return;
+      if(typeof document!=='undefined'&&document.hidden)return;
+      ensureOnlineHubConnection(popupMode==='onlineHub',true);
+    }catch(e){console.error(e);onlineState.status='재접속 오류';}
+  },delay);
+  return true;
+}
 function buildOnlinePayload(){
   normalizePlayer();
   return {id:myOnlineId(),userId:(cloudState.user&&cloudState.user.id)||'',name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,partyId:onlineState.partyId||'',ts:Date.now()};
@@ -1985,11 +2007,12 @@ async function initPartyPresence(force=false){
           if(popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),800);
         }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
           onlineState.enabled=false;
+          onlineState.connecting=false;
+          onlineState.sending=false;
           onlineState.status=status;
           try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
           onlineState.channel=null;
-          onlineState.lastConnectTry=0;
-          if(popupMode==='onlineHub')setTimeout(()=>ensureOnlineHubConnection(true,true),650);
+          scheduleOnlineReconnect(status,1800);
         }
       });
     return true;
@@ -1997,6 +2020,7 @@ async function initPartyPresence(force=false){
     console.error(e);
     onlineState.enabled=false;
     onlineState.connecting=false;
+    onlineState.sending=false;
     onlineState.status='접속 실패';
     try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
     onlineState.channel=null;
@@ -2082,10 +2106,14 @@ function handleOnlineState(raw){
   onlineState.peers[p.id]=p;
 }
 async function trackOnlinePresence(force=false){
+  if(typeof document!=='undefined'&&document.hidden&&!force)return false;
   if(onlineState.blocked||!onlineState.channel||!onlineState.enabled)return false;
+  if(onlineState.sending)return false;
   const t=performance.now();
-  if(!force&&t-(onlineState.lastSend||0)<220)return false;
+  const minGap=force?350:900;
+  if(t-(onlineState.lastSend||0)<minGap)return false;
   onlineState.lastSend=t;
+  onlineState.sending=true;
   const payload=buildOnlinePayload();
   try{
     await onlineState.channel.track(payload);
@@ -2094,12 +2122,17 @@ async function trackOnlinePresence(force=false){
   }catch(e){
     console.error(e);
     onlineState.enabled=false;
+    onlineState.connecting=false;
     onlineState.status='전송 실패';
     try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
     onlineState.channel=null;
+    scheduleOnlineReconnect('send_failed',2200);
     return false;
+  }finally{
+    onlineState.sending=false;
   }
 }
+
 function pruneOnlinePeers(){
   const now=performance.now();
   for(const id in onlineState.peers){
@@ -2110,20 +2143,23 @@ function pruneOnlinePeers(){
 function updateOnline(dt){
   updateOnlinePeerSmoothing(dt);
   try{
-    if(cloudState.user)forceOnlineKeepAlive();
-    if(!onlineState.enabled)return;
+    if(!cloudState.user)return;
+    if(typeof document!=='undefined'&&document.hidden)return;
+    if(!onlineState.enabled){forceOnlineKeepAlive();return;}
     trackOnlinePresence(false);
     pruneOnlinePeers();
   }catch(e){
     console.error(e);
     onlineState.enabled=false;
     onlineState.connecting=false;
+    onlineState.sending=false;
     onlineState.status='온라인 오류 재접속 대기';
     try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){}
     onlineState.channel=null;
-    onlineState.lastConnectTry=0;
+    scheduleOnlineReconnect('update_error',2200);
   }
 }
+
 async function sendPartyBroadcast(event,payload){
   if(!onlineState.channel)await initPartyPresence();
   if(!onlineState.channel)return false;
@@ -5314,8 +5350,12 @@ function onlineRankingRows(){
 }
 function ensureOnlineHubConnection(refresh=false,force=false){
   if(!cloudState.user){onlineState.status='로그인 필요';onlineState.enabled=false;return;}
+  if(typeof document!=='undefined'&&document.hidden&&!force)return;
   if(onlineState.enabled&&!force)return;
-  if(onlineState.connecting&&!force)return;
+  if(onlineState.connecting)return;
+  const now=performance.now();
+  if(force&&onlineState.lastConnectTry&&now-onlineState.lastConnectTry<1200)return;
+  onlineState.lastConnectTry=now;
   onlineState.blocked=false;
   onlineState.drawBlocked=false;
   onlineState.status='접속 중';
@@ -5326,16 +5366,15 @@ function ensureOnlineHubConnection(refresh=false,force=false){
 }
 function forceOnlineKeepAlive(){
   if(!cloudState.user)return;
-  if(onlineState.enabled&&onlineState.channel){
-    trackOnlinePresence(false);
-    return;
-  }
+  if(typeof document!=='undefined'&&document.hidden)return;
+  if(onlineState.enabled&&onlineState.channel)return;
   const now=performance.now();
-  if(!onlineState.connecting&&(!onlineState.lastConnectTry||now-onlineState.lastConnectTry>5000)){
+  if(!onlineState.connecting&&(!onlineState.lastConnectTry||now-onlineState.lastConnectTry>7000)){
     onlineState.lastConnectTry=now;
     ensureOnlineHubConnection(popupMode==='onlineHub',true);
   }
 }
+
 function connectOnlineFromPanel(){
   try{
     if(!cloudState.user){toast('로그인 필요');showKakaoLoginPage();return;}
@@ -5343,6 +5382,8 @@ function connectOnlineFromPanel(){
     onlineState.drawBlocked=false;
     onlineState.enabled=false;
     onlineState.connecting=false;
+    onlineState.sending=false;
+    if(onlineState.reconnectTimer){clearTimeout(onlineState.reconnectTimer);onlineState.reconnectTimer=null;}
     onlineState.status='재접속 중';
     try{if(onlineState.channel){onlineState.channel.unsubscribe();onlineState.channel=null;}}catch(_){}
     initPartyPresence(true).then(ok=>{
@@ -5528,7 +5569,33 @@ function bind(){
   document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false}); document.addEventListener('contextmenu',e=>e.preventDefault()); document.addEventListener('selectstart',e=>e.preventDefault());
 }
 bind();
-window.addEventListener('pagehide',()=>leaveOnline(false));
+function resumeOnlineAfterHidden(reason='resume'){
+  try{
+    if(!cloudState.user)return false;
+    if(cloudState.deleting||cloudState.accountResetting)return false;
+    if(typeof document!=='undefined'&&document.hidden)return false;
+    onlineState.blocked=false;
+    onlineState.drawBlocked=false;
+    if(onlineState.enabled&&onlineState.channel){
+      trackOnlinePresence(true);
+      return true;
+    }
+    if(onlineState.connecting)return false;
+    return scheduleOnlineReconnect(reason,220);
+  }catch(e){
+    console.error(e);
+    return false;
+  }
+}
+window.addEventListener('pagehide',()=>{
+  try{
+    if(cloudState.deleting||cloudState.accountResetting)leaveOnline(false);
+  }catch(e){}
+});
+window.addEventListener('pageshow',()=>resumeOnlineAfterHidden('pageshow'));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)resumeOnlineAfterHidden('visibilitychange');});
+window.addEventListener('focus',()=>resumeOnlineAfterHidden('focus'));
+window.addEventListener('online',()=>resumeOnlineAfterHidden('online'));
 
 function startAdventurerGame(){
   const nick=sanitizeNickname(player.nickname||'플레이어');
