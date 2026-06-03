@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_080_progress_fix -->
+<!-- build: index6_081_legendary_hero_layout -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1254,6 +1254,152 @@
     width:100%!important;
   }
 
+
+  /* 081: 하단 버튼 도킹 재정렬 + 채팅창 하단 확장 */
+  :root{
+    --dock-gap:5px;
+    --dock-btn-w:clamp(42px,12.1vw,50px);
+    --dock-row-h:42px;
+    --action-dock-w:calc(var(--dock-btn-w) * 4 + var(--dock-gap) * 3);
+    --action-dock-h:calc(var(--dock-row-h) * 2 + var(--dock-gap));
+    --action-group-w:var(--action-dock-w);
+    --action-group-h:var(--action-dock-h);
+  }
+  #actions{
+    right:calc(var(--control-side) + var(--safe-right))!important;
+    bottom:calc(var(--control-bottom) + var(--safe-bottom))!important;
+    width:var(--action-dock-w)!important;
+    height:var(--action-dock-h)!important;
+    display:grid!important;
+    grid-template-columns:repeat(4,var(--dock-btn-w))!important;
+    grid-template-rows:repeat(2,var(--dock-row-h))!important;
+    grid-template-areas:
+      "skill3 skill4 skill1 skill2"
+      ". . attack dodge"!important;
+    gap:var(--dock-gap)!important;
+  }
+  #skillBtn3{grid-area:skill3!important;}
+  #skillBtn4{grid-area:skill4!important;}
+  #skillBtn1{grid-area:skill1!important;}
+  #skillBtn2{grid-area:skill2!important;}
+  #attackBtn{grid-area:attack!important;}
+  #dodgeBtn{grid-area:dodge!important;}
+  #actions button,
+  #skillBtn1,#skillBtn2,#skillBtn3,#skillBtn4,#attackBtn,#dodgeBtn{
+    width:var(--dock-btn-w)!important;
+    min-width:0!important;
+    max-width:var(--dock-btn-w)!important;
+    height:var(--dock-row-h)!important;
+    min-height:0!important;
+    justify-self:stretch!important;
+    align-self:stretch!important;
+    font-size:9.5px!important;
+    border-radius:9px!important;
+    padding:2px!important;
+  }
+  #leftQuick{
+    left:auto!important;
+    right:calc(var(--control-side) + var(--safe-right) + var(--dock-btn-w) * 2 + var(--dock-gap) * 2)!important;
+    bottom:calc(var(--control-bottom) + var(--safe-bottom))!important;
+    width:calc(var(--dock-btn-w) * 2 + var(--dock-gap))!important;
+    height:var(--dock-row-h)!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,var(--dock-btn-w))!important;
+    gap:var(--dock-gap)!important;
+    z-index:7!important;
+  }
+  #leftQuick button{
+    width:var(--dock-btn-w)!important;
+    min-width:0!important;
+    max-width:var(--dock-btn-w)!important;
+    height:var(--dock-row-h)!important;
+    min-height:0!important;
+    font-size:9.5px!important;
+    border-radius:9px!important;
+    padding:2px!important;
+  }
+  .log{
+    bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--action-dock-h) + 6px)!important;
+    left:calc(9px + var(--safe-left))!important;
+    right:calc(60px + var(--safe-right))!important;
+    height:58px!important;
+    min-height:58px!important;
+    max-height:58px!important;
+  }
+  #logToggleBar{
+    bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--action-dock-h) + 6px)!important;
+    right:calc(8px + var(--safe-right))!important;
+  }
+  @media (max-width:374px) and (orientation:portrait){
+    :root{--dock-gap:4px;--dock-btn-w:40px;--dock-row-h:39px;}
+    #actions button,#leftQuick button{font-size:8.5px!important;border-radius:8px!important;}
+    #actions button .skillName{font-size:8px!important;line-height:1.05!important;}
+  }
+  @media (min-width:420px) and (orientation:portrait){
+    :root{--dock-btn-w:52px;--dock-row-h:45px;--dock-gap:6px;}
+  }
+  @media (orientation:landscape){
+    :root{--dock-btn-w:44px;--dock-row-h:36px;--dock-gap:5px;}
+    .log{
+      left:calc(var(--safe-left) + var(--joy-size) + 34px)!important;
+      right:calc(var(--safe-right) + var(--action-dock-w) + 62px)!important;
+      bottom:calc(var(--safe-bottom) + 6px)!important;
+      height:52px!important;
+      min-height:52px!important;
+      max-height:52px!important;
+    }
+    #logToggleBar{
+      right:calc(var(--safe-right) + var(--action-dock-w) + 12px)!important;
+      bottom:calc(var(--safe-bottom) + 6px)!important;
+    }
+  }
+  @media (orientation:landscape) and (max-height:430px){
+    :root{--dock-btn-w:40px;--dock-row-h:32px;--dock-gap:4px;}
+    #actions button,#leftQuick button{font-size:8px!important;}
+    .log{height:48px!important;min-height:48px!important;max-height:48px!important;}
+  }
+
+
+
+  /* 082: 아날로그 스틱 축소 - 채팅창과 겹침 방지 */
+  @media (orientation:portrait){
+    :root{
+      --joy-size:88px;
+      --stick-size:30px;
+      --control-bottom:18px;
+    }
+    #joy{
+      width:var(--joy-size)!important;
+      height:var(--joy-size)!important;
+      bottom:calc(var(--control-bottom) + var(--safe-bottom))!important;
+    }
+    #stick{
+      width:var(--stick-size)!important;
+      height:var(--stick-size)!important;
+      left:calc((var(--joy-size) - var(--stick-size)) / 2)!important;
+      top:calc((var(--joy-size) - var(--stick-size)) / 2)!important;
+    }
+    .log{
+      bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--action-dock-h) + 8px)!important;
+    }
+    #logToggleBar{
+      bottom:calc(var(--safe-bottom) + var(--control-bottom) + var(--action-dock-h) + 8px)!important;
+    }
+  }
+  @media (max-width:374px) and (orientation:portrait){
+    :root{
+      --joy-size:78px;
+      --stick-size:26px;
+      --control-bottom:16px;
+    }
+  }
+  @media (min-width:420px) and (orientation:portrait){
+    :root{
+      --joy-size:94px;
+      --stick-size:32px;
+      --control-bottom:18px;
+    }
+  }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1449,18 +1595,7 @@ const TIER3_SPEC={
   artificer:[['energyEngineer','에너지엔지니어','증폭 장치 버프 특화','buffer'],['amplifierEngineer','증폭기술자','파티 화력 증폭 특화','buffer']]
 };
 const HIDDEN_JOBS=[
-  {id:'dragonKnight',name:'용기사',type:'히든 탱커돌진형',desc:'용의 흔적을 계승한 돌진형 탱커.',base:{atk:10,hp:170,def:8,speed:128,aspd:.95,crit:.06,skillPower:1.1},skillBase:'warden',weaponBase:'blade',attackBase:'blade',tier:'hidden',hidden:true,baseClass:'warrior',role:'tank',subRoles:['charge','taunt'],unlock:{level:50,bossKills:10,requireJobs:['warden','ironGuardian','shieldLord'],hint:'수호자 계열로 보스를 충분히 제압'}},
-  {id:'magicSwordsman',name:'마검사',type:'히든 물마검형',desc:'검격과 마법탄을 함께 쓰는 혼합 딜러.',base:{atk:10,hp:120,def:3,speed:136,aspd:1.05,crit:.08,skillPower:1.28,range:125},skillBase:'mage',weaponBase:'blade',attackBase:'mage',tier:'hidden',hidden:true,baseClass:'warrior',role:'hybrid',subRoles:['melee','magic'],unlock:{level:50,totalKills:250,requireJobs:['blade','swordSaint','duelMaster','mage','archMage','elementalist'],hint:'검과 마법 계열 숙련 흔적 확보'}},
-  {id:'bloodPriest',name:'혈사제',type:'히든 흡혈힐러형',desc:'적에게 피해를 주며 아군을 회복하는 위험한 힐러.',base:{atk:7,hp:125,def:3,speed:122,aspd:.98,crit:.05,lifesteal:.08,hpRegen:1.2,skillPower:1.22},skillBase:'hexer',weaponBase:'paladin',attackBase:'hexer',tier:'hidden',hidden:true,baseClass:'acolyte',role:'healer',subRoles:['lifesteal','heal'],unlock:{level:50,totalKills:300,requireJobs:['priest','highPriest','savior'],hint:'사제 계열로 흡혈 전투 기록 축적'}},
-  {id:'radiantSaint',name:'광휘성자',type:'히든 최상급힐러형',desc:'파티 생존을 극대화하는 고급 회복 직업.',base:{atk:4,hp:140,def:5,speed:118,aspd:.9,crit:.03,hpRegen:2.4,skillPower:1.38,cooldown:.1},skillBase:'paladin',weaponBase:'paladin',attackBase:'mage',tier:'hidden',hidden:true,baseClass:'acolyte',role:'healer',subRoles:['heal','revive','cleanse'],unlock:{level:55,bossKills:6,requireJobs:['highPriest','savior','worldTreeSage'],hint:'상급 회복 계열로 보스전 생존 기록 달성'}},
-  {id:'darkSaint',name:'암흑성자',type:'히든 힐디버퍼형',desc:'회복과 저주를 동시에 다루는 변칙 지원가.',base:{atk:6,hp:122,def:3,speed:120,aspd:.96,crit:.04,hpRegen:1.3,skillPower:1.3},skillBase:'hexer',weaponBase:'paladin',attackBase:'hexer',tier:'hidden',hidden:true,baseClass:'acolyte',role:'debuffer',subRoles:['heal','curse'],unlock:{level:50,totalKills:350,requireJobs:['priest','hexer','abyssCaster','corrosionMage'],hint:'회복과 저주 양쪽 흔적 확보'}},
-  {id:'runeKnight',name:'룬나이트',type:'히든 버프탱커형',desc:'룬 보호막으로 파티를 강화하는 탱커.',base:{atk:7,hp:160,def:8,speed:118,aspd:.9,crit:.04,skillPower:1.15,hpRegen:1.0},skillBase:'paladin',weaponBase:'mirror',attackBase:'blade',tier:'hidden',hidden:true,baseClass:'warrior',role:'tank',subRoles:['rune','buff','shield'],unlock:{level:50,bossKills:5,requireJobs:['paladin','lightGuardian','shieldLord'],hint:'성기사/수호자 계열 보호막 기록 축적'}},
-  {id:'dimensionMage',name:'차원술사',type:'히든 시공제어형',desc:'순간이동과 광역 제어에 특화된 시공 직업.',base:{atk:7,hp:98,def:2,speed:150,aspd:1.05,crit:.06,skillPower:1.35,cooldown:.14,range:175},skillBase:'chronomancer',weaponBase:'mage',attackBase:'mage',tier:'hidden',hidden:true,baseClass:'mage',role:'buffer',subRoles:['blink','slow','cooldown'],unlock:{level:50,totalKills:280,requireJobs:['chronomancer','spacetimeMage','chronoMaster'],hint:'시간술사 계열로 전투 기록 축적'}},
-  {id:'lichLord',name:'강령군주',type:'히든 소환디버퍼형',desc:'망령 군단과 저주를 운용하는 고급 소환 직업.',base:{atk:7,hp:118,def:3,speed:116,aspd:.92,crit:.04,skillPower:1.3,summonPower:1.35},skillBase:'necromancer',weaponBase:'hexer',attackBase:'hexer',tier:'hidden',hidden:true,baseClass:'summonist',role:'debuffer',subRoles:['summon','curse'],unlock:{level:50,totalKills:300,requireJobs:['necromancer','ghostLord','deathMage'],hint:'사령술사 계열 망령 기록 축적'}},
-  {id:'neonSamurai',name:'네온사무라이',type:'히든 고속검형',desc:'고속 이동과 연속 검격을 쓰는 희귀 근접 딜러.',base:{atk:11,hp:112,def:2,speed:166,aspd:1.35,crit:.14,critDmg:.8,dodge:.08},skillBase:'assassin',weaponBase:'blade',attackBase:'blade',tier:'hidden',hidden:true,baseClass:'warrior',role:'meleeDps',subRoles:['speed','crit'],unlock:{level:50,totalKills:400,requireJobs:['blade','assassin','swordSaint','shadowAssassin'],hint:'검투사와 암살 계열 전투 기록 확보'}},
-  {id:'overclocker',name:'오버클로커',type:'히든 쿨감버퍼형',desc:'장치와 시간 증폭을 결합한 공속/쿨감 버퍼.',base:{atk:5,hp:108,def:3,speed:132,aspd:1.12,crit:.05,skillPower:1.12,cooldown:.18,summonPower:1.12},skillBase:'mechanic',weaponBase:'mechanic',attackBase:'mechanic',tier:'hidden',hidden:true,baseClass:'engineer',role:'buffer',subRoles:['haste','cooldown','device'],unlock:{level:50,totalKills:260,requireJobs:['artificer','energyEngineer','amplifierEngineer','chronomancer'],hint:'장치술사 또는 시간술사 계열 증폭 기록 확보'}},
-  {id:'blacksmith',name:'대장장이',type:'히든 장비지원형',desc:'전투력은 낮지만 장비 성장과 강화 보조에 특화된다.',base:{atk:6,hp:135,def:5,speed:110,aspd:.85,crit:.03,goldBonus:.1},skillBase:'mechanic',weaponBase:'mechanic',attackBase:'blade',tier:'hidden',hidden:true,baseClass:'engineer',role:'buffer',subRoles:['gear','craft'],unlock:{level:45,gold:8000,totalKills:200,hint:'충분한 골드와 장비 운용 경험 확보'}},
-  {id:'treasureHunter',name:'보물사냥꾼',type:'히든 드롭특화형',desc:'전투보다 골드와 드롭 획득에 특화된 탐험 직업.',base:{atk:7,hp:108,def:2,speed:158,aspd:1.18,crit:.1,goldBonus:.22,expBonus:.08,magnet:160},skillBase:'ranger',weaponBase:'ranger',attackBase:'ranger',tier:'hidden',hidden:true,baseClass:'archer',role:'rangeDps',subRoles:['loot','mobility'],unlock:{level:45,gold:12000,totalKills:250,hint:'많은 골드와 사냥 기록 확보'}}
+  {id:'legendaryHero',name:'전설의 용사',type:'히든 최종 용사형',desc:'모험가로 Lv.100에 도달한 자만 각성하는 유일한 히든 직업. 높은 기본 스탯, 빠른 공속, 강한 생존력과 초월 검기를 모두 갖춘다.',base:{atk:26,hp:360,def:16,speed:172,aspd:1.45,crit:.22,critDmg:1.15,lifesteal:.08,hpRegen:4.0,skillPower:1.85,cooldown:.28,range:130,dodge:.14,expBonus:.22,goldBonus:.18,magnet:220},skillBase:'blade',weaponBase:'blade',attackBase:'blade',weaponName:'전설의 용사검',tier:'hidden',hidden:true,baseClass:'adventurer',role:'hybrid',subRoles:['legend','melee','survival','burst'],party:{threat:1.25,healPower:.45,buffPower:.45,debuffPower:.25,shieldPower:.75},growthStats:['atk','hp','def','speed','aspd','crit','critDmg','lifesteal','hpRegen','skillPower','cooldown','dodge','expBonus','goldBonus'],unlock:{level:100,requireCurrentJob:'adventurer',hint:'모험가 상태로 Lv.100 달성'}}
 ];
 function scaleBaseStats(base={},mul={}){const out=Object.assign({},base);for(const k in mul){if(typeof out[k]==='number')out[k]=+(out[k]*mul[k]).toFixed(3);}return out;}
 function makeTier3Jobs(){const out=[];for(const prevId in TIER3_SPEC){const prevMeta=JOB_META[prevId]||{};const prevJob=JOBS.find(j=>j.id===prevId)||EXTRA_SECOND_JOBS.find(j=>j.id===prevId)||{};for(const spec of TIER3_SPEC[prevId]){const [id,name,desc,role]=spec;const base=scaleBaseStats(prevJob.base||{}, {atk:1.12,hp:1.14,def:1.12,speed:1.03,aspd:1.04,skillPower:1.07,summonPower:1.08,hpRegen:1.12,range:1.04});out.push({id,name,type:`3차 ${ROLE_LABEL[role]||'전문가'}형`,desc,base,skillBase:prevJob.skillBase||prevId,weaponBase:prevJob.weaponBase||prevJob.skillBase||prevId,attackBase:prevJob.attackBase||prevJob.skillBase||prevId,weaponName:`초록 ${name} 무기`,tier:3,baseClass:prevMeta.baseClass||prevJob.baseClass,previousJob:prevId,role,subRoles:[...(prevMeta.subRoles||[]),'tier3'],party:Object.assign({},prevMeta.party||{}),growthStats:[...(prevJob.growthStats||BASE_GROWTH[prevJob.skillBase]||BASE_GROWTH[prevId]||['atk','hp','def'])]});}}
@@ -1608,6 +1743,21 @@ const SKILL_BOOK = {
 
 Object.assign(SKILL_BOOK,{monk:['원투 펀치','파쇄권','돌진권','연환격','기공탄','철산고','분신타','폭렬난무','진각파','무극권'].map((name,i)=>({name,desc:`권투가 ${i+1}성 기술`})),gunner:['속사','철갑탄','산탄','유탄','집중사격','관통탄','로켓연사','탄막전개','위성탄','네온 포격'].map((name,i)=>({name,desc:`거너 ${i+1}성 기술`})),druid:['새싹정령','쌍정령','수호나무','정령탄','치유숲','정령무리','생명의 고리','대지수호','숲의 군단','세계수 소환'].map((name,i)=>({name,desc:`정령술사 ${i+1}성 기술`})),chronomancer:['시간침','가속장','느림고리','시간탄','초침폭발','쿨타임 왜곡','시간균열','역행파동','정지장','시공붕괴'].map((name,i)=>({name,desc:`시간술사 ${i+1}성 기술`})),berserker:['분노참','피의 돌진','대검압','광폭회전','피흡검','파괴검','붉은폭풍','광란난무','혈검파','광전신 강림'].map((name,i)=>({name,desc:`광전사 ${i+1}성 기술`})),sniper:['정밀사격','관통저격','속박화살','폭발저격','연속조준','거리보정','저격비','별빛관통','사신탄','절대조준'].map((name,i)=>({name,desc:`저격수 ${i+1}성 기술`})),necromancer:['망령탄','약화혼','독혼무리','사령사슬','망자의 손','영혼흡수','부패장','사령군단','죽음낙인','망자의 왕'].map((name,i)=>({name,desc:`사령술사 ${i+1}성 기술`})),engineer:['기뢰','점착폭탄','소형드론','지뢰밭','화염포탑','전기장','중장터렛','폭격신호','기계요새','종말병기'].map((name,i)=>({name,desc:`공병 ${i+1}성 기술`})),warden:['수호타','방벽','도발파동','철벽장','수호성역','대지방패','응징벽','불굴의 맹세','성채소환','절대수호'].map((name,i)=>({name,desc:`수호자 ${i+1}성 기술`})),psion:['염동탄','쌍구체','중력장','정신파','염동폭발','구체난사','정신절단','중력붕괴','초능력장','네온 염동폭풍'].map((name,i)=>({name,desc:`염동술사 ${i+1}성 기술`}))});
 Object.assign(SKILL_BOOK,{priest:['치유','정화','빛의 손길','광역 치유','보호 기도','회복 오라','구원의 빛','성스러운 결계','부활 기도','대구원'].map((name,i)=>({name,desc:`사제 ${i+1}성 지원 기술`})),bard:['용기의 선율','가속의 박자','전투 행진곡','방어의 화음','집중의 음표','승리의 노래','쿨타임 합주','풍요의 선율','전장의 합창','네온 대합주'].map((name,i)=>({name,desc:`음유시인 ${i+1}성 파티 버프`})),artificer:['증폭 장치','보호 장치','속도 코일','공명 기어','에너지 장판','파티 증폭기','쿨링 코어','보호막 발생기','오버차지','네온 증폭탑'].map((name,i)=>({name,desc:`장치술사 ${i+1}성 설치 지원`})),wildDruid:['야수 발톱','자연 회복','늑대 돌진','가시 갑피','숲의 숨결','야수 변신','대지 포효','생명 순환','정령야수','원시의 숲'].map((name,i)=>({name,desc:`드루이드 ${i+1}성 자연 기술`}))});
+
+SKILL_BOOK.legendaryHero = [
+  ['용사참','전방의 적을 베고 작은 검기를 터뜨린다.'],
+  ['쌍성검','두 번의 빠른 검격으로 가까운 적을 정리한다.'],
+  ['수호검기','주변을 베며 짧은 보호막을 얻는다.'],
+  ['광휘돌진','목표 방향으로 돌진해 경로상의 적에게 피해를 준다.'],
+  ['용맹의 원','주변 적을 크게 타격하고 체력을 일부 회복한다.'],
+  ['별빛연참','가까운 적 여럿에게 연속 참격을 가한다.'],
+  ['불굴의 맹세','방어와 회복력을 높이고 광역 피해를 준다.'],
+  ['전설검무','넓은 범위에 빠른 검무를 펼친다.'],
+  ['용사의 심판','가장 강한 적을 중심으로 광휘 폭발을 만든다.'],
+  ['천공용사검','전장에 거대한 검기를 떨어뜨린다.'],
+  ['차원용사참','차원검문을 열어 직선상의 적을 여러 번 벤다.'],
+  ['전설강림','전설의 용사 환영이 전장을 난타하고 마무리 폭발을 일으킨다.']
+].map((v,i)=>({name:v[0],desc:v[1]}));
 const SKILL_EXTRA_11_12={
   blade:[['차원검문','전방에 검문을 열어 직선상의 적을 여러 번 베고, 문 주변에 잔류 검기를 남긴다.'],['검성강림','검성의 환영을 소환해 주변 적에게 연속 참격과 마무리 폭발을 가한다.']],
   ranger:[['봉쇄 저격진','목표 지점에 사격 표식을 깔아 적을 묶고 관통 화살을 연속 발사한다.'],['천궁 궤도비','하늘에서 궤도 화살비가 떨어져 넓은 구역을 오래 타격한다.']],
@@ -2614,7 +2764,8 @@ function showJobSelectPage(){
   openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
-  {"ver":"현재 패치 080","text":"- 패치노트 문자열 줄바꿈으로 게임 스크립트가 중단되던 문제 수정\n- 시작/진행 흐름이 멈추지 않도록 JS 파싱 오류 제거\n- 상대 유저 부드러운 이동은 안전형 보간으로 유지"},
+  {"ver":"현재 패치 081","text":"- 히든 직업을 전설의 용사 1종으로 정리\n- 모험가 Lv.100 달성 시 전설의 용사로 자동 각성\n- 오토/물약/공격/회피와 스킬 3/4/1/2 버튼을 하단 4열 배치로 재정렬\n- 채팅창을 새 버튼 위치 기준으로 아래로 내림"},
+  {"ver":"이전 패치 080","text":"- 패치노트 문자열 줄바꿈으로 게임 스크립트가 중단되던 문제 수정\n- 시작/진행 흐름이 멈추지 않도록 JS 파싱 오류 제거\n- 상대 유저 부드러운 이동은 안전형 보간으로 유지"},
   {"ver":"이전 패치 079","text":"- 상대 유저 부드러운 이동 패치를 안전형 보간으로 재정리\n- 예측 이동/추가 보간값을 제거해 게임 루프 충돌 가능성 차단\n- 큰 이동/필드 이동은 즉시 위치 보정, 일반 이동만 부드럽게 표시"},
   {"ver":"이전 패치 073","text":"- 온라인/파티 함수 참조 오류를 안전 정리\n- showPeerAction/connectOnlineFromPanel/requestPartyToPeer 전역 호출 방어\n- 버튼 클릭은 Game.safeCall 경유로 실행되도록 보강\n- 온라인 재접속 호출이 누락되어도 게임이 멈추지 않게 처리\n- 렉 완화를 위해 온라인 재접속 재시도 간격 증가"},
   {"ver":"이전 패치 072","text":"- connectOnlineFromPanel 미정의 오류 수정\n- 온라인 재접속 관련 버튼 호출을 Game 경유로 통일\n- window/globalThis에 connectOnlineFromPanel 강제 등록"}
@@ -3438,6 +3589,7 @@ function killMonster(m){
   msg(`${m.name} 처치 · +${Math.round(exp)}XP +${Math.round(gold)}G${penaltyTag}`,'combat'); effects.push({type:'ring',x:m.x,y:m.y,life:.55,r:m.boss?40:24});
   if(Math.random()<((m.boss?.95:.28)*lb.drop)){ const item=makeItem(Math.max(1,m.level+irnd(-1,2)),null,null,player.job); drops.push({x:m.x+irnd(-20,20),y:m.y+irnd(-20,20),item,life:18}); effects.push({type:'text',x:m.x,y:m.y-38,t:`${item.rarity} 장비`,life:1.1,vy:-22});}
   while(player.exp>=player.nextExp){player.exp-=player.nextExp;player.level++;player.nextExp=Math.round(player.nextExp*1.32+18);pendingLevelUps++;player.hp=player.maxHp;}
+  tryLegendaryHeroAwaken();
   if(pendingLevelUps>0 && !popupLayer.style.display.includes('flex')) openGrowth();
   if(mode==='field' && monsters.filter(x=>!x.dead).length<7 && !m.boss) spawnMonster(false);
 }
@@ -3791,6 +3943,7 @@ function confirmRouletteResult(){const outcome=$('wheel').dataset.outcome; if(ou
 function jobUnlockStatus(job){
   const u=job.unlock||{};const fail=[];
   if(u.level&&player.level<u.level)fail.push(`레벨 ${u.level}`);
+  if(u.requireCurrentJob&&player.job!==u.requireCurrentJob)fail.push(`${jobById(u.requireCurrentJob).name} 상태`);
   if(u.totalKills&&player.totalKills<u.totalKills)fail.push(`누적 처치 ${u.totalKills}`);
   if(u.bossKills&&bossKillsTotal()<u.bossKills)fail.push(`보스 처치 ${u.bossKills}`);
   if(u.gold&&player.gold<u.gold)fail.push(`보유 골드 ${u.gold}G`);
@@ -3798,10 +3951,37 @@ function jobUnlockStatus(job){
   if(Array.isArray(u.requireJobs)&&u.requireJobs.length){const hist=Array.isArray(player.jobHistory)?player.jobHistory:[];const ok=u.requireJobs.includes(player.job)||u.requireJobs.some(id=>hist.includes(id));if(!ok)fail.push('필요 직업 흔적');}
   return {ok:fail.length===0,fail,hint:u.hint||''};
 }
+
+function tryLegendaryHeroAwaken(){
+  const hero=JOBS.find(j=>j.id==='legendaryHero');
+  if(!hero||player.job!=='adventurer'||Number(player.level||1)<100)return false;
+  player.job='legendaryHero';
+  player.baseClass='adventurer';
+  player.jobTier='hidden';
+  player.firstJobChosen=true;
+  player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];
+  if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');
+  if(!player.jobHistory.includes('legendaryHero'))player.jobHistory.push('legendaryHero');
+  player.skillStars=player.skillStars||{};
+  player.skillStars.legendaryHero=Math.max(Number(player.skillStars.legendaryHero)||0,4);
+  player.skillSlots=[1,2,3,4];
+  const w=makeItem(Math.max(100,player.level||100),'전설','weapon','legendaryHero');
+  w.name=hero.weaponName||'전설의 용사검';
+  player.inventory=Array.isArray(player.inventory)?player.inventory:[];
+  player.inventory.push(w);
+  equipItem(w.id,true);
+  syncHp();
+  player.hp=player.maxHp;
+  toast('히든 직업 전설의 용사 각성');
+  msg('모험가 Lv.100 달성 · 전설의 용사로 각성했습니다. 4성 스킬까지 자동 개방됩니다.','system');
+  try{saveGame();}catch(_){ }
+  updateHud();
+  return true;
+}
 function advancementStageInfo(){const cur=jobById(player.job||'adventurer');if(cur.id==='adventurer')return {title:'1차 직업 선택',need:0,next:player.firstJobUnlocked?JOBS.filter(j=>j.tier===1&&!j.hidden):[]};if(!player.job)return {title:'1차 직업 선택',need:0,next:JOBS.filter(j=>j.tier===1&&!j.hidden)};if(cur.tier===1)return {title:'2차 전직',need:20,next:(cur.nextJobs||[]).map(jobById)};if(cur.tier===2)return {title:'3차 전직',need:50,next:(cur.nextJobs||[]).map(jobById)};return {title:'전직 완료',need:null,next:[]};}
 function hiddenJobCards(){return JOBS.filter(j=>j.hidden).map(j=>{const st=jobUnlockStatus(j);const title=st.ok?j.name:'???';const disabled=st.ok?'':'disabled';const detail=st.ok?`${j.desc}<br><span class="small">${jobBadge(j)}<br>${jobPartyLine(j)}</span>`:`히든 전직 조건 미달<br><span class="small">힌트: ${escapeHtml(st.hint||'특수 조건 필요')}<br>부족: ${st.fail.join(' / ')||'조건 확인 필요'}</span>`;return `<button class="card ${st.ok?'':'locked'}" ${disabled} onclick="Game.advanceJob('${j.id}')"><h3>${title}</h3><b>${st.ok?'히든 전직 발견':'히든 전직'}</b><br>${detail}</button>`;}).join('');}
 function showAdvancement(){
-  normalizePlayer();popupMode='advancement';zoneTag.textContent='전직';
+  normalizePlayer();tryLegendaryHeroAwaken();popupMode='advancement';zoneTag.textContent='전직';
   const cur=jobById(player.job||'warrior');const info=advancementStageInfo();const canLevel=info.need===null||player.level>=info.need;
   const currentCard=`<div class="card"><h3>현재 직업: ${cur.name}</h3><b>${jobBadge(cur)}</b><br>${cur.desc||''}<br><span class="small">레벨 ${player.level} · ${jobPartyLine(cur)}<br>전직 이력: ${(player.jobHistory||[]).map(id=>jobById(id).name).join(' → ')||'없음'}</span></div>`;
   const nextCards=(info.next||[]).filter(Boolean).map(j=>{const locked=!canLevel;const b=j.base||{};return `<button class="card" ${locked?'disabled':''} onclick="Game.advanceJob('${j.id}')"><h3>${locked?'[잠김] ':''}${j.name}</h3><b>${jobBadge(j)}</b><br>${j.desc}<br><span class="small">필요: Lv.${info.need||'-'} · 공격 ${b.atk||0} · HP ${b.hp||0} · 방어 ${b.def||0}<br>${jobPartyLine(j)}</span></button>`;}).join('') || `<div class="card"><h3>일반 전직 완료</h3>현재 단계에서 일반 전직 후보가 없습니다.<br><span class="small">히든 조건 달성 시 아래에 전직 후보가 열립니다.</span></div>`;
