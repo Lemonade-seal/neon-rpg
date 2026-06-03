@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_098_skill_graphics_equip_fix -->
+<!-- build: index6_099_graphics_full_theme_fix -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1539,6 +1539,38 @@
   /* 098: 그래픽 설정 미리보기 */
   .themePreview{height:42px;border:1px solid var(--gd);border-radius:12px;background:var(--bg);box-shadow:inset 0 0 14px var(--gb);display:flex;align-items:center;justify-content:center;color:var(--g);font-weight:900;text-shadow:0 0 8px var(--gd);}
 
+
+  /* 099: 그래픽 설정 전체 적용 - 배경색은 검은 배경 영역, 선색은 모든 네온 라인/글자 기준 */
+  html,body,#wrap,canvas,#popup,.panel,#mini,.popupCloseX,button,.neonInput,.themePreview,.updateTrack,#stick{
+    background-color:var(--bg)!important;
+    color:var(--g)!important;
+    border-color:var(--gd)!important;
+  }
+  .card,.codexLine,.resultBox,.partyMiniLine,.partyChatBox,.onlineGroupBox,.onlineUserInBox,.bootPanel,.patchNoteBox,.currencyBox{
+    border-color:var(--gd)!important;
+    background:var(--gf)!important;
+    color:var(--g)!important;
+  }
+  .log,#toast,#talkPrompt,#zoneTag,.currencyPanel,.topBtns #zoneTag,.kakaoNeonBtn,.rangeBubble,.wheelHub,.topTick:before{
+    background:var(--bg)!important;
+    color:var(--g)!important;
+    border-color:var(--gd)!important;
+  }
+  .fill,.updateFill{
+    background:linear-gradient(90deg,var(--gd),var(--g))!important;
+  }
+  .bar,.updateTrack,.neonRange::-webkit-slider-runnable-track,.neonRange::-moz-range-track{
+    border-color:var(--gd)!important;
+    background:var(--gb)!important;
+  }
+  .selected,.autoOn,button:active{
+    background:var(--gf)!important;
+  }
+  .title,.gameTitle,.blinkStart,.neonStone,.questHudText,.meterKey,.currencyBox b,.currencyPanel b,.questPanel b{
+    color:var(--g)!important;
+    text-shadow:0 0 8px var(--gd)!important;
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -2194,6 +2226,18 @@ let player = basePlayer();
 let mode='class', currentField='town', fieldSize=1800, camera={x:0,y:0}, monsters=[], drops=[], projectiles=[], effects=[], summons=[], npcs=[], monsterNameSerial=0, dungeonMap=null;
 let talkTarget=null, portalArmed=true, portalTouchKey='';
 let joystick={active:false,id:null,cx:0,cy:0,dx:0,dy:0};
+let pcInput={keys:{},mouseX:0,mouseY:0,mouseAim:false};
+function isTextEditingTarget(el){return !!(el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.isContentEditable));}
+function updateMouseAim(clientX,clientY){
+  pcInput.mouseX=clientX;pcInput.mouseY=clientY;pcInput.mouseAim=true;
+  try{
+    const r=game.getBoundingClientRect();
+    const sx=(clientX-r.left)/(r.width||1), sy=(clientY-r.top)/(r.height||1);
+    const wx=camera.x+sx*game.width/(window.devicePixelRatio||1);
+    const wy=camera.y+sy*game.height/(window.devicePixelRatio||1);
+    if(Number.isFinite(wx)&&Number.isFinite(wy))player.dir=Math.atan2(wy-player.y,wx-player.x);
+  }catch(e){}
+}
 let attackHeld=false, skillHeld=[false,false,false,false];
 let pendingLevelUps=0, growthOptions=[], growthSelectNeed=1, growthSelected=[], rouletteUsed=false, rouletteSpinning=false, popupMode='', codexOpenFields={};
 const saveKey='green_line_full_world_v1';
@@ -2882,25 +2926,25 @@ function drawRemotePlayerSprite(p){
   ctx.shadowBlur=0;
   ctx.textAlign='center';
   ctx.font='10px monospace';
-  ctx.fillStyle='rgba(0,255,114,.96)';
+  ctx.fillStyle=themeLine(.96);
   ctx.fillText(sanitizeNickname(p.name||'플레이어'),0,-58);
 
   const hpW=58,hpH=8,hpY=-49;
   ctx.save();
-  ctx.shadowColor='rgba(0,255,114,.7)';
+  ctx.shadowColor=themeLine(.7);
   ctx.shadowBlur=8;
-  ctx.fillStyle='rgba(0,0,0,.92)';
+  ctx.fillStyle=themeBg();
   ctx.fillRect(-hpW/2,hpY,hpW,hpH);
-  ctx.strokeStyle='rgba(0,255,114,.95)';
+  ctx.strokeStyle=themeLine(.95);
   ctx.lineWidth=1;
   ctx.strokeRect(-hpW/2+.5,hpY+.5,hpW-1,hpH-1);
-  ctx.fillStyle='rgba(0,255,114,.96)';
+  ctx.fillStyle=themeLine(.96);
   ctx.fillRect(-hpW/2+2,hpY+2,(hpW-4)*hpPct,hpH-4);
   ctx.restore();
 
   if(near){
     ctx.font='11px monospace';
-    ctx.fillStyle='rgba(0,255,114,.98)';
+    ctx.fillStyle=themeLine(.98);
     ctx.fillText('정보  |  파티',0,-72);
   }
   ctx.restore();
@@ -3019,8 +3063,10 @@ function toast(t){toastBox.textContent=t;toastBox.style.display='block';clearTim
 function popupAllowsCloseX(){return !['boot','title','nickname','class','update','kakaoLogin','growth','roulette','guide'].includes(String(popupMode||''));}
 function openPopup(html){const raw=String(html||'');popup.innerHTML=(popupAllowsCloseX()&&!raw.includes('popupCloseX'))?`<button class="popupCloseX" onclick="Game.safeCall('closePopup')">X</button>${raw}`:raw;popupLayer.style.display='flex';gamePaused=false;}
 function closePopup(){popupLayer.style.display='none';popup.innerHTML='';popup.style.width='';popup.style.height='';popup.style.maxWidth='';popup.style.maxHeight='';popup.style.padding='';popup.style.overflow='';gamePaused=false;popupMode='';}
-function lineStyle(alpha=1,width=2){const c=hexToRgb(themeHex('gl_theme_line','#00ff72'));ctx.strokeStyle=`rgba(${c.r},${c.g},${c.b},${alpha})`;ctx.lineWidth=width;ctx.shadowColor=`rgba(${c.r},${c.g},${c.b},.72)`;ctx.shadowBlur=8;ctx.lineCap='round';ctx.lineJoin='round';}
-function fillStyle(alpha=.12){const c=hexToRgb(themeHex('gl_theme_line','#00ff72'));ctx.fillStyle=`rgba(${c.r},${c.g},${c.b},${alpha})`;ctx.shadowColor=`rgba(${c.r},${c.g},${c.b},.5)`;ctx.shadowBlur=8;}
+function themeLine(alpha=1){const c=hexToRgb(themeHex('gl_theme_line','#00ff72'));return `rgba(${c.r},${c.g},${c.b},${alpha})`;}
+function themeBg(){return themeHex('gl_theme_bg','#000000');}
+function lineStyle(alpha=1,width=2){ctx.strokeStyle=themeLine(alpha);ctx.lineWidth=width;ctx.shadowColor=themeLine(.72);ctx.shadowBlur=8;ctx.lineCap='round';ctx.lineJoin='round';}
+function fillStyle(alpha=.12){ctx.fillStyle=themeLine(alpha);ctx.shadowColor=themeLine(.5);ctx.shadowBlur=8;}
 
 function jobById(id){return JOBS.find(j=>j.id===id)||JOBS[0];}
 function computeStats(){
@@ -4089,7 +4135,7 @@ function normalAttack(fromAuto=false){
   const st=computeStats(); if(player.atkTimer>0)return false;
   const profile=rangedAttackProfile(player.job, st);
   if(profile){
-    const target=nearestMonster(profile.range,true);
+    const target=(!fromAuto && pcInput.mouseAim)?null:nearestMonster(profile.range,true);
     if(!target && fromAuto)return false;
     player.atkTimer=Math.max(.16,.62/st.aspd); player.atkTimerMax=player.atkTimer; player.attackAnim=.22;
     if(target) spawnProjectile(target, profile);
@@ -4667,7 +4713,15 @@ function update(dt){
   if(st.hpRegen>0) player.hp=clamp(player.hp+st.hpRegen*dt,0,player.maxHp);updateStatusTimers(dt);
   if(player.autoMode) updateAuto(dt);
   if(attackHeld) normalAttack(); for(let i=0;i<4;i++)if(skillHeld[i])safeUseSkill(i+1);
-  const mag=Math.hypot(joystick.dx,joystick.dy); if(mag>.05){const px=player.x,py=player.y;player.dir=Math.atan2(joystick.dy,joystick.dx);player.x=clamp(player.x+joystick.dx*st.speed*dt,28,fieldSize-28);player.y=clamp(player.y+joystick.dy*st.speed*dt,28,fieldSize-28);resolveDungeonEntity(player,px,py,22);}
+  let moveX=joystick.dx, moveY=joystick.dy;
+  if(!joystick.active){
+    const k=pcInput.keys||{};
+    moveX=(k.KeyD?1:0)-(k.KeyA?1:0);
+    moveY=(k.KeyS?1:0)-(k.KeyW?1:0);
+    const km=Math.hypot(moveX,moveY);
+    if(km>1){moveX/=km;moveY/=km;}
+  }
+  const mag=Math.hypot(moveX,moveY); if(mag>.05){const px=player.x,py=player.y;if(!pcInput.mouseAim||joystick.active)player.dir=Math.atan2(moveY,moveX);player.x=clamp(player.x+moveX*st.speed*dt,28,fieldSize-28);player.y=clamp(player.y+moveY*st.speed*dt,28,fieldSize-28);resolveDungeonEntity(player,px,py,22);}
   if(player.dashTime>0){const px=player.x,py=player.y,dashSpeed=420;player.x=clamp(player.x+Math.cos(player.dir)*dashSpeed*dt,28,fieldSize-28);player.y=clamp(player.y+Math.sin(player.dir)*dashSpeed*dt,28,fieldSize-28);resolveDungeonEntity(player,px,py,22);}
   resolveDungeonEntity(player,oldX,oldY,22);
   autoEscapePlayerStuck(oldX,oldY,dt,mag>.05||player.autoMode||attackHeld||skillHeld.some(Boolean));
@@ -5443,7 +5497,7 @@ function drawPerspectiveBackdrop(f){
 function drawBackground(){
   const f=FIELDS.find(x=>x.id===currentField)||FIELDS[0];
   ctx.save();
-  ctx.fillStyle='#000';
+  ctx.fillStyle=themeBg();
   ctx.fillRect(0,0,W,H);
 
   // 5개 스프라이트 기반 2.5D 배경
@@ -5642,7 +5696,7 @@ function drawFieldGround(){
 }
 
 function drawWorldBounds(){lineStyle(.35,3);ctx.strokeRect(10,10,fieldSize-20,fieldSize-20);}
-function drawTown(){lineStyle(.28,1.3);for(let x=360;x<=1440;x+=180){ctx.beginPath();ctx.moveTo(x,520);ctx.lineTo(x,1340);ctx.stroke();}for(let y=560;y<=1320;y+=160){ctx.beginPath();ctx.moveTo(380,y);ctx.lineTo(1420,y);ctx.stroke();}const buildings=[{x:770,y:455,w:260,h:180,label:'마을회관',roof:'dome'},{x:430,y:760,w:250,h:190,label:'잡화점',roof:'flat'},{x:1130,y:760,w:250,h:190,label:'길드',roof:'tower'},{x:770,y:1365,w:260,h:180,label:'포털',roof:'gate'},{x:430,y:1120,w:250,h:160,label:'직업소개소',roof:'tower'},{x:1140,y:1120,w:250,h:160,label:'훈련소',roof:'dome'}];for(const b of buildings){lineStyle(.72,2);ctx.strokeRect(b.x,b.y,b.w,b.h);lineStyle(.36,1);for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(b.x+b.w*i/3,b.y+20);ctx.lineTo(b.x+b.w*i/3,b.y+b.h-20);ctx.stroke();}lineStyle(.82,1.8);ctx.beginPath();if(b.roof==='dome'){ctx.arc(b.x+b.w/2,b.y,Math.min(b.w*.45,75),Math.PI,0);}else if(b.roof==='tower'){ctx.moveTo(b.x+30,b.y);ctx.lineTo(b.x+b.w/2,b.y-70);ctx.lineTo(b.x+b.w-30,b.y);}else if(b.roof==='gate'){ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+b.w/2,b.y-65);ctx.lineTo(b.x+b.w,b.y);}else{ctx.moveTo(b.x+16,b.y-28);ctx.lineTo(b.x+b.w-16,b.y-28);ctx.lineTo(b.x+b.w,b.y);ctx.lineTo(b.x,b.y);ctx.closePath();}ctx.stroke();ctx.font='12px monospace';ctx.fillStyle='rgba(0,255,114,.72)';ctx.textAlign='center';ctx.fillText(b.label,b.x+b.w/2,b.y+b.h+18);}lineStyle(.55,1.5);ctx.beginPath();ctx.arc(900,920,120,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(900,920,58,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(780,920);ctx.lineTo(1020,920);ctx.moveTo(900,800);ctx.lineTo(900,1040);ctx.stroke();for(const n of npcs){lineStyle(.9,2);if(n.kind==='portal'){const spin=performance.now()/700;ctx.beginPath();ctx.arc(n.x,n.y,48,0,Math.PI*2);ctx.stroke();ctx.beginPath();for(let a=0;a<Math.PI*4.5;a+=.28){const r=5+a*2.7;ctx.lineTo(n.x+Math.cos(a+spin)*r,n.y+Math.sin(a+spin)*r);}ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-58,n.y+62);ctx.lineTo(n.x+58,n.y+62);ctx.stroke();}else if(n.kind==='dummy'){const sway=Math.sin(performance.now()/320)*1.5;ctx.beginPath();ctx.moveTo(n.x,n.y-38);ctx.lineTo(n.x,n.y+34);ctx.moveTo(n.x-26,n.y-16+sway);ctx.lineTo(n.x+26,n.y-16-sway);ctx.moveTo(n.x-18,n.y+34);ctx.lineTo(n.x+18,n.y+34);ctx.stroke();ctx.strokeRect(n.x-13,n.y-30,26,32);ctx.beginPath();ctx.arc(n.x,n.y-45,10,0,Math.PI*2);ctx.moveTo(n.x-18,n.y-56);ctx.lineTo(n.x+18,n.y-56);ctx.moveTo(n.x-10,n.y-62);ctx.lineTo(n.x+10,n.y-62);ctx.stroke();ctx.font='9px monospace';ctx.fillStyle='rgba(0,255,114,.75)';ctx.textAlign='center';ctx.fillText('50타',n.x,n.y-11);}else{ctx.beginPath();ctx.arc(n.x,n.y,20,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-15,n.y+27);ctx.lineTo(n.x+15,n.y+27);ctx.stroke();}ctx.font='12px monospace';ctx.fillStyle='rgba(0,255,114,.95)';ctx.textAlign='center';ctx.fillText(n.name,n.x,n.kind==='dummy'?n.y-74:(n.kind==='portal'?n.y-86:n.y-38));}}
+function drawTown(){lineStyle(.28,1.3);for(let x=360;x<=1440;x+=180){ctx.beginPath();ctx.moveTo(x,520);ctx.lineTo(x,1340);ctx.stroke();}for(let y=560;y<=1320;y+=160){ctx.beginPath();ctx.moveTo(380,y);ctx.lineTo(1420,y);ctx.stroke();}const buildings=[{x:770,y:455,w:260,h:180,label:'마을회관',roof:'dome'},{x:430,y:760,w:250,h:190,label:'잡화점',roof:'flat'},{x:1130,y:760,w:250,h:190,label:'길드',roof:'tower'},{x:770,y:1365,w:260,h:180,label:'포털',roof:'gate'},{x:430,y:1120,w:250,h:160,label:'직업소개소',roof:'tower'},{x:1140,y:1120,w:250,h:160,label:'훈련소',roof:'dome'}];for(const b of buildings){lineStyle(.72,2);ctx.strokeRect(b.x,b.y,b.w,b.h);lineStyle(.36,1);for(let i=1;i<3;i++){ctx.beginPath();ctx.moveTo(b.x+b.w*i/3,b.y+20);ctx.lineTo(b.x+b.w*i/3,b.y+b.h-20);ctx.stroke();}lineStyle(.82,1.8);ctx.beginPath();if(b.roof==='dome'){ctx.arc(b.x+b.w/2,b.y,Math.min(b.w*.45,75),Math.PI,0);}else if(b.roof==='tower'){ctx.moveTo(b.x+30,b.y);ctx.lineTo(b.x+b.w/2,b.y-70);ctx.lineTo(b.x+b.w-30,b.y);}else if(b.roof==='gate'){ctx.moveTo(b.x,b.y);ctx.lineTo(b.x+b.w/2,b.y-65);ctx.lineTo(b.x+b.w,b.y);}else{ctx.moveTo(b.x+16,b.y-28);ctx.lineTo(b.x+b.w-16,b.y-28);ctx.lineTo(b.x+b.w,b.y);ctx.lineTo(b.x,b.y);ctx.closePath();}ctx.stroke();ctx.font='12px monospace';ctx.fillStyle=themeLine(.72);ctx.textAlign='center';ctx.fillText(b.label,b.x+b.w/2,b.y+b.h+18);}lineStyle(.55,1.5);ctx.beginPath();ctx.arc(900,920,120,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(900,920,58,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(780,920);ctx.lineTo(1020,920);ctx.moveTo(900,800);ctx.lineTo(900,1040);ctx.stroke();for(const n of npcs){lineStyle(.9,2);if(n.kind==='portal'){const spin=performance.now()/700;ctx.beginPath();ctx.arc(n.x,n.y,48,0,Math.PI*2);ctx.stroke();ctx.beginPath();for(let a=0;a<Math.PI*4.5;a+=.28){const r=5+a*2.7;ctx.lineTo(n.x+Math.cos(a+spin)*r,n.y+Math.sin(a+spin)*r);}ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-58,n.y+62);ctx.lineTo(n.x+58,n.y+62);ctx.stroke();}else if(n.kind==='dummy'){const sway=Math.sin(performance.now()/320)*1.5;ctx.beginPath();ctx.moveTo(n.x,n.y-38);ctx.lineTo(n.x,n.y+34);ctx.moveTo(n.x-26,n.y-16+sway);ctx.lineTo(n.x+26,n.y-16-sway);ctx.moveTo(n.x-18,n.y+34);ctx.lineTo(n.x+18,n.y+34);ctx.stroke();ctx.strokeRect(n.x-13,n.y-30,26,32);ctx.beginPath();ctx.arc(n.x,n.y-45,10,0,Math.PI*2);ctx.moveTo(n.x-18,n.y-56);ctx.lineTo(n.x+18,n.y-56);ctx.moveTo(n.x-10,n.y-62);ctx.lineTo(n.x+10,n.y-62);ctx.stroke();ctx.font='9px monospace';ctx.fillStyle=themeLine(.75);ctx.textAlign='center';ctx.fillText('50타',n.x,n.y-11);}else{ctx.beginPath();ctx.arc(n.x,n.y,20,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(n.x-15,n.y+27);ctx.lineTo(n.x+15,n.y+27);ctx.stroke();}ctx.font='12px monospace';ctx.fillStyle=themeLine(.95);ctx.textAlign='center';ctx.fillText(n.name,n.x,n.kind==='dummy'?n.y-74:(n.kind==='portal'?n.y-86:n.y-38));}}
 function drawClassWeapon(jobId, gripX, gripY, bladeAngle, atkP, leftGripX, leftGripY){
   const jb=jobById(jobId||'blade');
   const job=jb.weaponBase||jb.skillBase||jobId||'blade';
@@ -5792,7 +5846,7 @@ function drawPlayer(){const x=player.x,y=player.y;ctx.save();ctx.translate(x,y);
   const bladeAngle=face+attackArc;
   drawClassWeapon(player.job||'blade', gripX, gripY, bladeAngle, atkP, leftGripX, leftGripY);
   ctx.shadowBlur=0;
-  ctx.fillStyle='rgba(0,255,114,.98)';
+  ctx.fillStyle=themeLine(.98);
   ctx.font='11px monospace';
   ctx.textAlign='center';
   ctx.fillText(`Lv.${player.level} ${sanitizeNickname(player.nickname||'플레이어')}`,0,-42);
@@ -5920,17 +5974,17 @@ function drawFieldPortals(){
     }
     ctx.stroke();
     ctx.font='12px monospace';
-    ctx.fillStyle='rgba(0,255,114,.96)';
+    ctx.fillStyle=themeLine(.96);
     ctx.textAlign='center';
     ctx.fillText(p.name||'포털',0,-54);
     const target=stageField(p.target);
     ctx.font='9px monospace';
-    ctx.fillStyle='rgba(0,255,114,.72)';
+    ctx.fillStyle=themeLine(.72);
     ctx.fillText(target?target.name:(p.target==='town'?'마을':''),0,52);
     ctx.restore();
   }
 }
-function drawMonsters(){for(const m of monsters){if(m.dead)continue;drawMonsterShape(m);const w=m.boss?96:42,yTop=m.y-(m.boss?88:42);ctx.shadowBlur=0;ctx.fillStyle='rgba(0,255,114,.9)';ctx.font=m.boss?'12px monospace':'10px monospace';ctx.textAlign='center';ctx.fillText(`Lv.${m.level} ${m.name}`,m.x,yTop-8);ctx.strokeStyle='rgba(0,255,114,.45)';ctx.strokeRect(m.x-w/2,yTop,w,5);ctx.fillStyle='rgba(0,255,114,.8)';ctx.fillRect(m.x-w/2,yTop,w*clamp(m.hp/m.maxHp,0,1),5);}}
+function drawMonsters(){for(const m of monsters){if(m.dead)continue;drawMonsterShape(m);const w=m.boss?96:42,yTop=m.y-(m.boss?88:42);ctx.shadowBlur=0;ctx.fillStyle=themeLine(.9);ctx.font=m.boss?'12px monospace':'10px monospace';ctx.textAlign='center';ctx.fillText(`Lv.${m.level} ${m.name}`,m.x,yTop-8);ctx.strokeStyle=themeLine(.45);ctx.strokeRect(m.x-w/2,yTop,w,5);ctx.fillStyle=themeLine(.8);ctx.fillRect(m.x-w/2,yTop,w*clamp(m.hp/m.maxHp,0,1),5);}}
 function drawProjectiles(){
   for(const p of projectiles){
     const a=p.angle||0, ux=Math.cos(a), uy=Math.sin(a), px=Math.cos(a+Math.PI/2), py=Math.sin(a+Math.PI/2);
@@ -5959,13 +6013,13 @@ function drawProjectiles(){
 }
 function drawSummons(){for(const s of summons){lineStyle(.8,2);if(s.kind==='turret'){ctx.strokeRect(s.x-14,s.y-14,28,28);ctx.beginPath();ctx.moveTo(s.x,s.y-22);ctx.lineTo(s.x,s.y+22);ctx.moveTo(s.x-22,s.y);ctx.lineTo(s.x+22,s.y);ctx.stroke();}else{ctx.beginPath();ctx.arc(s.x,s.y,14,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-8,s.y);ctx.lineTo(s.x+8,s.y);ctx.moveTo(s.x,s.y-8);ctx.lineTo(s.x,s.y+8);ctx.stroke();}}}
 function drawDrops(){const st=computeStats(),range=pickupRange(st);for(const d of drops){const pulling=Math.hypot(player.x-d.x,player.y-d.y)<range;lineStyle(pulling?.95:.8,pulling?2.4:2);ctx.strokeRect(d.x-8,d.y-8,16,16);ctx.beginPath();ctx.moveTo(d.x,d.y-13);ctx.lineTo(d.x+13,d.y);ctx.lineTo(d.x,d.y+13);ctx.lineTo(d.x-13,d.y);ctx.closePath();ctx.stroke();if(pulling){lineStyle(.28,1);ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(player.x,player.y);ctx.stroke();}}}
-function drawEffects(){for(const e of effects){if(e.type==='text'){ctx.save();ctx.globalAlpha=clamp(e.life/.7,0,1);ctx.fillStyle=e.heal?'rgba(150,255,200,.95)':'rgba(0,255,114,.95)';ctx.shadowColor='rgba(0,255,114,.9)';ctx.shadowBlur=8;ctx.font=`${e.big?17:12}px monospace`;ctx.textAlign='center';ctx.fillText(e.t,e.x,e.y);ctx.restore();}else if(e.type==='spark'){lineStyle(.8,2);for(let i=0;i<6;i++){const a=i*Math.PI/3+e.life*8;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(a)*e.r,e.y+Math.sin(a)*e.r);ctx.stroke();}}else if(e.type==='ring'||e.type==='hex'){lineStyle(.6,2);ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1-e.life*.45),0,Math.PI*2);ctx.stroke();}else if(e.type==='linepop'){lineStyle(.75,2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();}else if(e.type==='bomb'){lineStyle(.8,2);ctx.beginPath();ctx.arc(e.x,e.y,Math.max(8,e.r),0,Math.PI*2);ctx.stroke();}}
+function drawEffects(){for(const e of effects){if(e.type==='text'){ctx.save();ctx.globalAlpha=clamp(e.life/.7,0,1);ctx.fillStyle=e.heal?'rgba(150,255,200,.95)':'rgba(0,255,114,.95)';ctx.shadowColor=themeLine(.9);ctx.shadowBlur=8;ctx.font=`${e.big?17:12}px monospace`;ctx.textAlign='center';ctx.fillText(e.t,e.x,e.y);ctx.restore();}else if(e.type==='spark'){lineStyle(.8,2);for(let i=0;i<6;i++){const a=i*Math.PI/3+e.life*8;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.x+Math.cos(a)*e.r,e.y+Math.sin(a)*e.r);ctx.stroke();}}else if(e.type==='ring'||e.type==='hex'){lineStyle(.6,2);ctx.beginPath();ctx.arc(e.x,e.y,e.r*(1-e.life*.45),0,Math.PI*2);ctx.stroke();}else if(e.type==='linepop'){lineStyle(.75,2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();}else if(e.type==='bomb'){lineStyle(.8,2);ctx.beginPath();ctx.arc(e.x,e.y,Math.max(8,e.r),0,Math.PI*2);ctx.stroke();}}
 }
 function drawMiniMap(){
   const mw=Math.max(56,mini.clientWidth||80), mh=Math.max(56,mini.clientHeight||mw), pad=4;
   const iw=mw-pad*2, ih=mh-pad*2;
   mctx.clearRect(0,0,mw,mh);
-  mctx.fillStyle='rgba(0,0,0,.82)';
+  mctx.fillStyle=themeBg();
   mctx.fillRect(0,0,mw,mh);
   const tr=miniMapTransform(pad,iw,ih);
   mctx.save();
@@ -5978,14 +6032,14 @@ function drawMiniMap(){
     mctx.arc(px,py,r,0,Math.PI*2);
     mctx.stroke();
   }
-  mctx.strokeStyle='rgba(0,255,114,.95)';
+  mctx.strokeStyle=themeLine(.95);
   dot(player.x,player.y,3.4);
-  mctx.strokeStyle='rgba(0,255,114,.45)';
+  mctx.strokeStyle=themeLine(.45);
   for(const m of monsters)if(!m.dead)dot(m.x,m.y,m.boss?2.9:1.7);
-  mctx.strokeStyle='rgba(0,255,114,.75)';
+  mctx.strokeStyle=themeLine(.75);
   for(const n of npcs)dot(n.x,n.y,n.kind==='portal'?3.2:2.2);
   mctx.restore();
-  mctx.strokeStyle='rgba(0,255,114,.72)';
+  mctx.strokeStyle=themeLine(.72);
   mctx.lineWidth=1;
   mctx.strokeRect(pad+.5,pad+.5,iw-1,ih-1);
 }
@@ -6036,12 +6090,12 @@ function fullMapDot(c,x,y,r,stroke='rgba(0,255,114,.88)',fill=null){
 }
 function drawTownFullMap(c,tr){
   c.save();
-  c.strokeStyle='rgba(0,255,114,.20)';c.lineWidth=1;
+  c.strokeStyle=themeLine(.20);c.lineWidth=1;
   for(let x=360;x<=1440;x+=180){c.beginPath();c.moveTo(tr.x(x),tr.y(520));c.lineTo(tr.x(x),tr.y(1340));c.stroke();}
   for(let y=560;y<=1320;y+=160){c.beginPath();c.moveTo(tr.x(380),tr.y(y));c.lineTo(tr.x(1420),tr.y(y));c.stroke();}
   const buildings=[{x:770,y:455,w:260,h:180,label:'마을회관'},{x:430,y:760,w:250,h:190,label:'잡화점'},{x:1130,y:760,w:250,h:190,label:'길드'},{x:650,y:1365,w:500,h:180,label:'포털 광장'},{x:430,y:1120,w:250,h:160,label:'직업소개소'},{x:1140,y:1120,w:250,h:160,label:'훈련소'}];
-  c.font='11px monospace';c.textAlign='center';c.fillStyle='rgba(0,255,114,.82)';
-  for(const b of buildings){const x=tr.x(b.x),y=tr.y(b.y),w=b.w*tr.s,h=b.h*tr.s;c.strokeStyle='rgba(0,255,114,.70)';c.lineWidth=1.5;c.strokeRect(x,y,w,h);c.fillText(b.label,x+w/2,y+h+13);}
+  c.font='11px monospace';c.textAlign='center';c.fillStyle=themeLine(.82);
+  for(const b of buildings){const x=tr.x(b.x),y=tr.y(b.y),w=b.w*tr.s,h=b.h*tr.s;c.strokeStyle=themeLine(.70);c.lineWidth=1.5;c.strokeRect(x,y,w,h);c.fillText(b.label,x+w/2,y+h+13);}
   c.restore();
 }
 function renderFullMapCanvas(){
@@ -6055,23 +6109,23 @@ function renderFullMapCanvas(){
   cv.width=w;cv.height=h;c.setTransform(1,0,0,1,0,0);c.clearRect(0,0,w,h);c.fillStyle='rgba(0,0,0,.88)';c.fillRect(0,0,w,h);
   const tr=makeFullMapTransform(w,h);
   c.save();c.beginPath();c.rect(tr.pad,tr.pad,w-tr.pad*2,h-tr.pad*2);c.clip();
-  c.strokeStyle='rgba(0,255,114,.22)';c.lineWidth=1;c.strokeRect(tr.x(10),tr.y(10),(fieldSize-20)*tr.s,(fieldSize-20)*tr.s);
+  c.strokeStyle=themeLine(.22);c.lineWidth=1;c.strokeRect(tr.x(10),tr.y(10),(fieldSize-20)*tr.s,(fieldSize-20)*tr.s);
   if(dungeonActive()){
     if(!Array.isArray(dungeonMap.wallSegments)||!dungeonMap.wallSegments.length)dungeonMap.wallSegments=computeDungeonBoundarySegments(dungeonMap.walkables||[]);
     drawDungeonBoundarySegments(c,dungeonMap.wallSegments,.82,1.8,v=>tr.x(v),v=>tr.y(v),null,false);
   }else drawTownFullMap(c,tr);
-  c.strokeStyle='rgba(0,255,114,.44)';c.lineWidth=1;
+  c.strokeStyle=themeLine(.44);c.lineWidth=1;
   for(const m of monsters)if(!m.dead)fullMapDot(c,tr.x(m.x),tr.y(m.y),m.boss?5.5:3.1,m.boss?'rgba(0,255,114,.95)':'rgba(0,255,114,.46)');
   for(const n of npcs)fullMapDot(c,tr.x(n.x),tr.y(n.y),n.kind==='portal'?5:3.4,'rgba(0,255,114,.70)');
   fullMapDot(c,tr.x(player.x),tr.y(player.y),6.2,'rgba(0,255,114,.98)','rgba(0,255,114,.22)');
   if(onlineState.enabled){for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&p.field===currentField&&performance.now()-(p.seenAt||0)<6500)fullMapDot(c,tr.x(Number(p.x)||0),tr.y(Number(p.y)||0),4.6,'rgba(0,255,114,.72)','rgba(0,255,114,.12)');}}
   c.restore();
-  c.strokeStyle='rgba(0,255,114,.82)';c.lineWidth=1.4;c.strokeRect(tr.pad+.5,tr.pad+.5,w-tr.pad*2-1,h-tr.pad*2-1);
+  c.strokeStyle=themeLine(.82);c.lineWidth=1.4;c.strokeRect(tr.pad+.5,tr.pad+.5,w-tr.pad*2-1,h-tr.pad*2-1);
 }
 function showFullMap(){
   const f=FIELDS.find(x=>x.id===currentField)||{name:zoneTag.textContent||'현재 위치'};
   popupMode='fullMap';
-  openPopup(`<div class="popupCloseX" style="position:absolute;right:8px;top:8px;float:none;margin:0;display:flex;align-items:center;justify-content:center;" onclick="Game.safeCall('closePopup')">X</div><div style="position:absolute;left:10px;top:8px;z-index:4;padding:5px 9px;border:1px solid rgba(0,255,114,.45);border-radius:999px;background:rgba(0,0,0,.72);font-size:11px;line-height:1;pointer-events:none;">전체맵 / ${escapeHtml(f.name||'현재 위치')}</div><canvas id="fullMapCanvas" style="display:block;width:100%;height:100%;border:0;border-radius:17px;background:#000;box-shadow:inset 0 0 16px rgba(0,255,114,.08);"></canvas>`);
+  openPopup(`<div class="popupCloseX" style="position:absolute;right:8px;top:8px;float:none;margin:0;display:flex;align-items:center;justify-content:center;" onclick="Game.safeCall('closePopup')">X</div><div style="position:absolute;left:10px;top:8px;z-index:4;padding:5px 9px;border:1px solid var(--gd);border-radius:999px;background:var(--bg);font-size:11px;line-height:1;pointer-events:none;">전체맵 / ${escapeHtml(f.name||'현재 위치')}</div><canvas id="fullMapCanvas" style="display:block;width:100%;height:100%;border:0;border-radius:17px;background:var(--bg);box-shadow:inset 0 0 16px var(--gb);"></canvas>`);
   setTimeout(()=>{prepareFullMapCanvasSize();renderFullMapCanvas();},0);
 }
 
@@ -6353,13 +6407,13 @@ function showLogSettings(){
   openPopup(`<div class="title">로그 / 채팅 설정</div><div class="sub">하단 시스템로그창에 채팅, 시스템, 전투로그를 통합 표시합니다.</div><div class="grid">${row('system','시스템 로그')}${row('combat','전투 로그')}${row('chat','채팅')}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function toggleLogSetting(k){normalizePlayer();player.logSettings[k]=player.logSettings[k]===false;updateLogBox();updateLogToggleButtons();requestCloudSave('logSetting');showLogSettings();}
-function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
+function showStats(){const st=computeStats();openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}<br><br><button onclick="Game.showSkillSlotSettings()">스킬</button></div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.showSkillSlotSettings()">스킬</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
 function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드, 그래픽, 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showGraphicSettings()">그래픽</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
 function themeHex(key,fallback){try{return localStorage.getItem(key)||fallback;}catch(e){return fallback;}}
 function hexToRgb(hex){const h=String(hex||'').replace('#','');if(!/^[0-9a-fA-F]{6}$/.test(h))return {r:0,g:255,b:114};return {r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
 function setAlpha(hex,a){const c=hexToRgb(hex);return `rgba(${c.r},${c.g},${c.b},${a})`;}
-function applyThemeColors(){const bg=themeHex('gl_theme_bg','#000000'), line=themeHex('gl_theme_line','#00ff72');document.documentElement.style.setProperty('--bg',bg);document.documentElement.style.setProperty('--g',line);document.documentElement.style.setProperty('--gd',setAlpha(line,.55));document.documentElement.style.setProperty('--gf',setAlpha(line,.18));document.documentElement.style.setProperty('--gb',setAlpha(line,.075));document.body.style.background=bg;const wrap=$('wrap');if(wrap)wrap.style.background=bg;}
-function showGraphicSettings(){const bg=themeHex('gl_theme_bg','#000000'), line=themeHex('gl_theme_line','#00ff72');openPopup(`<div class="title">그래픽 설정</div><div class="sub">배경색과 라인색을 바꿉니다. 설정은 이 기기에 저장됩니다.</div><div class="card"><h3>미리보기</h3><div class="themePreview">GREEN LINE</div></div><div class="grid"><div class="card"><h3>배경색</h3><input class="neonInput" type="color" value="${bg}" oninput="Game.setThemeColor('bg',this.value)"></div><div class="card"><h3>라인색</h3><input class="neonInput" type="color" value="${line}" oninput="Game.setThemeColor('line',this.value)"></div></div><div class="footerBtns"><button onclick="Game.resetThemeColors()">기본값</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
+function applyThemeColors(){const bg=themeHex('gl_theme_bg','#000000'), line=themeHex('gl_theme_line','#00ff72');const root=document.documentElement;root.style.setProperty('--bg',bg);root.style.setProperty('--g',line);root.style.setProperty('--gd',setAlpha(line,.55));root.style.setProperty('--gf',setAlpha(line,.18));root.style.setProperty('--gb',setAlpha(line,.075));document.body.style.background=bg;document.body.style.color=line;const wrap=$('wrap');if(wrap)wrap.style.background=bg;const gameCanvas=$('game');if(gameCanvas)gameCanvas.style.background=bg;const miniCanvas=$('mini');if(miniCanvas)miniCanvas.style.background=bg;}
+function showGraphicSettings(){const bg=themeHex('gl_theme_bg','#000000'), line=themeHex('gl_theme_line','#00ff72');openPopup(`<div class="title">그래픽 설정</div><div class="sub">배경색은 기존 검은 화면 영역, 선색은 기존 녹색 네온 선/글자 영역 전체에 적용합니다. 설정은 이 기기에 저장됩니다.</div><div class="card"><h3>미리보기</h3><div class="themePreview">GREEN LINE</div></div><div class="grid"><div class="card"><h3>배경색</h3><input class="neonInput" type="color" value="${bg}" oninput="Game.setThemeColor('bg',this.value)"></div><div class="card"><h3>라인색</h3><input class="neonInput" type="color" value="${line}" oninput="Game.setThemeColor('line',this.value)"></div></div><div class="footerBtns"><button onclick="Game.resetThemeColors()">기본값</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
 function setThemeColor(kind,val){try{localStorage.setItem(kind==='bg'?'gl_theme_bg':'gl_theme_line',val);}catch(e){}applyThemeColors();}
 function resetThemeColors(){try{localStorage.removeItem('gl_theme_bg');localStorage.removeItem('gl_theme_line');}catch(e){}applyThemeColors();showGraphicSettings();}
 function quickToggleAuto(){
@@ -6478,6 +6532,23 @@ function bind(){
   dodgeBtn.onclick=e=>{e.preventDefault();};
   $('potionBtn').onclick=usePotion; $('talkPrompt').onclick=handleTalkPrompt; $('statBtn').onclick=showOnlineHub; $('statPanel').onclick=showStats; $('bagBtn').onclick=renderBag; $('codexBtn').onclick=()=>renderCodex(true); $('settingBtn').onclick=showSettings; const lb=$('log'); if(lb)lb.onclick=showQuickChat; $('logChatBtn').onclick=()=>toggleHudLogSetting('chat'); $('logSystemBtn').onclick=()=>toggleHudLogSetting('system'); $('logCombatBtn').onclick=()=>toggleHudLogSetting('combat'); updateLogToggleButtons(); zoneTag.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
   mini.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();showFullMap();},{passive:false});
+  game.addEventListener('mousemove',e=>{updateMouseAim(e.clientX,e.clientY);},{passive:true});
+  game.addEventListener('pointermove',e=>{if(e.pointerType==='mouse')updateMouseAim(e.clientX,e.clientY);},{passive:true});
+  game.addEventListener('mousedown',e=>{if(isTextEditingTarget(e.target))return;updateMouseAim(e.clientX,e.clientY);if(e.button===0){e.preventDefault();attackHeld=true;normalAttack(false);}else if(e.button===2){e.preventDefault();dodge(true);}}, {passive:false});
+  window.addEventListener('mouseup',e=>{if(e.button===0)attackHeld=false;}, {passive:true});
+  document.addEventListener('keydown',e=>{
+    if(isTextEditingTarget(e.target)||e.repeat)return;
+    const code=e.code;
+    if(['KeyW','KeyA','KeyS','KeyD'].includes(code)){pcInput.keys[code]=true;e.preventDefault();return;}
+    if(code==='Digit1'){e.preventDefault();safeUseSkill(1);return;}
+    if(code==='Digit2'){e.preventDefault();safeUseSkill(2);return;}
+    if(code==='Digit3'){e.preventDefault();safeUseSkill(3);return;}
+    if(code==='Digit4'){e.preventDefault();safeUseSkill(4);return;}
+    if(code==='KeyE'){e.preventDefault();quickToggleAuto();return;}
+    if(code==='KeyQ'){e.preventDefault();usePotion();return;}
+  }, {passive:false});
+  document.addEventListener('keyup',e=>{if(['KeyW','KeyA','KeyS','KeyD'].includes(e.code)){pcInput.keys[e.code]=false;e.preventDefault();}}, {passive:false});
+  window.addEventListener('blur',()=>{pcInput.keys={};attackHeld=false;skillHeld=[false,false,false,false];});
   $('autoBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();quickToggleAuto();},{passive:false});
   document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false}); document.addEventListener('contextmenu',e=>e.preventDefault()); document.addEventListener('selectstart',e=>e.preventDefault());
 }
