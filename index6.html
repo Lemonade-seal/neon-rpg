@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_073_online_reference_cleanup_safe -->
+<!-- build: index6_074_leave_online_fix -->
 <style>
   :root{--g:#00ff72;--gd:rgba(0,255,114,.55);--gf:rgba(0,255,114,.18);--gb:rgba(0,255,114,.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1910,6 +1910,37 @@ const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
 const onlineState={enabled:false,connecting:false,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,peers:{},partyId:null,invites:{},chat:[]};
 storageSet('green_line_online_pid',onlineState.playerId);
+function leaveOnline(showToast=true){
+  try{
+    const ch=onlineState.channel;
+    if(ch){
+      try{if(typeof ch.untrack==='function')ch.untrack();}catch(_){}
+      try{if(typeof ch.unsubscribe==='function')ch.unsubscribe();}catch(_){}
+    }
+    onlineState.enabled=false;
+    onlineState.connecting=false;
+    onlineState.channel=null;
+    onlineState.client=null;
+    onlineState.status='오프라인';
+    onlineState.lastConnectTry=0;
+    onlineState.lastSend=0;
+    onlineState.peers={};
+    onlineState.invites={};
+    if(showToast&&typeof toast==='function')toast('온라인 연결 해제');
+    if(typeof popupMode!=='undefined'&&popupMode==='onlineHub'&&typeof showOnlineHub==='function'){
+      setTimeout(()=>showOnlineHub(false),60);
+    }
+    return true;
+  }catch(e){
+    console.error(e);
+    onlineState.enabled=false;
+    onlineState.connecting=false;
+    onlineState.channel=null;
+    onlineState.client=null;
+    onlineState.status='오프라인 오류';
+    return false;
+  }
+}
 function myOnlineId(){return onlineState.playerId;}
 function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<8500)n++;}return n;}
 function onlineStatusText(){return onlineState.blocked?'온라인 재접속 필요':(onlineState.enabled?`온라인 · ${onlinePeerCount()}명`:`오프라인 · ${onlineState.status||'대기'}`);}
