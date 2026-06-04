@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_134_runtime_hardfix -->
+<!-- build: index6_138_runtime_repair -->
 <style>
   :root{--g:#00ff72;--obj-rgb:0,255,114;--gd:rgba(var(--obj-rgb),.55);--gf:rgba(var(--obj-rgb),.18);--gb:rgba(var(--obj-rgb),.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -1732,6 +1732,20 @@
   /* 124: 파티 버튼 4개 표시 안정화 */
   .onlineGroupBox .footerBtns button{min-width:0;font-size:10px;padding-left:4px!important;padding-right:4px!important;}
 
+
+  /* 137: 로그인 화면 카카오/개발자 버튼 좌우 배치 */
+  .loginButtonRow{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:8px;
+    align-items:center;
+    margin:8px auto 2px;
+    width:min(360px,92%);
+  }
+  .loginButtonRow button{height:52px;border-radius:16px;}
+  .loginButtonRow .kakaoNeonBtn{width:100%;max-width:none;}
+  @media (max-width:360px){.loginButtonRow{gap:6px}.loginButtonRow button{font-size:11px;padding-left:4px!important;padding-right:4px!important;}}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1955,7 +1969,7 @@ const SKILL_BOOK = {
     {name:'선검 찌르기', desc:'가까운 적을 빠르게 찌르는 1성 기본 검술'},
     {name:'전진 베기', desc:'짧게 돌진하며 전방 적을 베는 2성 검술'},
     {name:'십자참', desc:'주변 적을 십자 방향으로 베는 3성 검술'},
-    {name:'회전검', desc:'몸 주변을 넓게 베는 4성 범위 검술'},
+    {name:'회전베기', desc:'360도 회전하며 주변을 베는 4성 검술'},
     {name:'연속참', desc:'가까운 적 여러 마리를 연속 타격하는 5성 검술'},
     {name:'파쇄검', desc:'강한 단일 피해와 주변 충격파를 주는 6성 검술'},
     {name:'검기폭발', desc:'검기를 폭발시켜 넓은 적을 베는 7성 검술'},
@@ -2529,15 +2543,15 @@ async function startKakaoLogin(){
 async function showKakaoLoginPage(){
   mode='login';popupMode='kakaoLogin';zoneTag.textContent='로그인';
   if(!supabaseConfigured()){
-    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>Supabase Kakao 로그인을 설정해야 게임에 접속할 수 있습니다.</div><div class="card"><h3>Supabase 설정 필요</h3>파일 안의 <b>SUPABASE_CONFIG.url</b>, <b>SUPABASE_CONFIG.anonKey</b>를 실제 값으로 교체하고, Supabase Auth Kakao Provider와 <b>${escapeHtml(SUPABASE_CONFIG.table)}</b> 테이블/RLS 정책을 설정하십시오.</div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 바로시작</button><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
+    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>Supabase Kakao 로그인을 설정해야 게임에 접속할 수 있습니다.</div><div class="card"><h3>Supabase 설정 필요</h3>파일 안의 <b>SUPABASE_CONFIG.url</b>, <b>SUPABASE_CONFIG.anonKey</b>를 실제 값으로 교체하고, Supabase Auth Kakao Provider와 <b>${escapeHtml(SUPABASE_CONFIG.table)}</b> 테이블/RLS 정책을 설정하십시오.</div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 로그인</button><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
     return;
   }
   const client=await ensureSupabaseClient(false);
   if(!client){
-    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">Supabase SDK를 불러오지 못했습니다.<br>네트워크 또는 CDN 차단 상태를 확인하십시오.</div><div class="card"><h3>다시 시도</h3>SDK 주소를 3개 CDN으로 순차 시도하도록 보수했습니다.<br><span class="small">계속 실패하면 새로고침 후 다시 확인하십시오.</span></div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 바로시작</button><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
+    openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">Supabase SDK를 불러오지 못했습니다.<br>네트워크 또는 CDN 차단 상태를 확인하십시오.</div><div class="card"><h3>다시 시도</h3>SDK 주소를 3개 CDN으로 순차 시도하도록 보수했습니다.<br><span class="small">계속 실패하면 새로고침 후 다시 확인하십시오.</span></div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 로그인</button><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
     return;
   }
-  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="kakaoLoginCenter"><button class="kakaoNeonBtn" onclick="Game.startKakaoLogin()">카카오톡 로그인</button></div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 바로시작</button></div><div class="townNote">개발자 바로시작은 테스트/미리보기용입니다. 서버 저장과 온라인 접속자는 비활성입니다.</div></div>`);
+  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="loginButtonRow"><button class="kakaoNeonBtn" onclick="Game.startKakaoLogin()">카카오톡 로그인</button><button onclick="Game.devKakaoLogin()">개발자 로그인</button></div><div class="townNote">개발자 로그인은 테스트/미리보기용입니다. 서버 저장과 온라인 접속자는 비활성입니다.</div></div>`);
   try{const {data}=await client.auth.getSession();if(data&&data.session){showCloudLoadingPage();await loadCloudStateAndEnter();}}catch(e){console.error(e);}
 }
 async function kakaoLogout(){
@@ -2589,7 +2603,7 @@ function devKakaoLogin(){
           mode=currentField==='town'?'town':'field';
           enterField(currentField||'town');
           closePopup();
-          updateDevDummyAI(0.016);msg('개발자 미리보기로 접속했습니다. 서버 저장/온라인은 비활성입니다. AI 더미 유저가 활성화되었습니다.');
+          updateDevDummyAI(0.016);msg('개발자 로그인으로 접속했습니다. 서버 저장/온라인은 비활성입니다. AI 더미 유저가 활성화되었습니다.');
           return;
         }
       }catch(e){console.warn('dev local load skipped',e);}
@@ -2602,7 +2616,7 @@ function devKakaoLogin(){
     enterField('town');
     giveStarterItems();
     closePopup();
-    updateDevDummyAI(0.016);msg('개발자 미리보기로 접속했습니다. 서버 저장/온라인은 비활성입니다. AI 더미 유저가 활성화되었습니다.');
+    updateDevDummyAI(0.016);msg('개발자 로그인으로 접속했습니다. 서버 저장/온라인은 비활성입니다. AI 더미 유저가 활성화되었습니다.');
   }catch(e){console.error(e);toast('개발자 로그인 오류');showKakaoLoginPage();}
 }
 function requestCloudSave(reason='auto',immediate=false){
@@ -4308,20 +4322,20 @@ function showJobSelectPage(){
 }
 const PATCH_NOTES=[
   {
-    ver:'현재 패치 135',
-    text:'- 패치노트 문자열 줄바꿈 오류를 실제 파일 기준으로 수정\n- 게임 시작/진행 스크립트 파싱 중단 문제 제거\n- 133~134 패치 내용은 유지'
+    ver:'현재 패치 140',
+    text:['- 전사 1~4성 스킬 이펙트 강제 적용','- 선검 찌르기: 검 모양 검기 직선 발사','- 전진 베기: 수동 전방 이동 궤적과 베기 표시','- 십자참: 가로/세로 동시 십자 검격','- 회전베기: 캐릭터 360도 회전과 원형 참격'].join('\n')
   },
   {
-    ver:'이전 패치 134',
-    text:'- 자동거절/상점/스킬 이펙트 패치 유지\n- 업데이트 게이지와 시작 흐름 복구'
+    ver:'이전 패치 139',
+    text:['- 전사 1~4성 스킬 애니메이션 개별화','- 선검 찌르기/전진 베기/십자참/회전베기 분기 추가','- 런타임 문자열 오류 유지 보정'].join('\n')
   },
   {
-    ver:'이전 패치 133',
-    text:'- 파티 신청 자동거절 버튼을 받은 신청 제목줄 오른쪽으로 이동\n- 자동거절 중에는 신청 목록/팝업 생성 차단\n- 장비 및 스킬 구매 메뉴 통합\n- 스킬 이펙트 타입 추가 분리'
+    ver:'이전 패치 138',
+    text:['- 소환사 스킬별 소환수 외형 분리 유지','- 로그인 화면 카카오/개발자 로그인 좌우 배치 유지','- 패치노트 문자열 오류 수정'].join('\n')
   },
   {
-    ver:'이전 패치 132',
-    text:'- NPC 이름을 상인/길드마스터/면접관으로 변경\n- 포탈 글자를 포탈 오브젝트 바로 위로 이동\n- 스킬 단어 성향별 이펙트 애니메이션 분류 강화'
+    ver:'이전 패치 137',
+    text:['- 소환사 스킬별 소환수 외형 분리','- 로그인 화면 버튼 배치 정리'].join('\n')
   }
 ];
 function patchNoteHtml(){
@@ -5297,7 +5311,7 @@ function castHighTierSkill(aj,rank,st,skAtk,pow,radius,range,fromAuto=false){
   }else if(aj==='ranger'){
     const shots=high?16:10;fireSkillProjectiles('arrow',shots,range+520,skAtk*(high?2.2:1.7)*pow,860,high?86:58);damageArea(cx,cy,high?250:170,skAtk*(high?3.8:2.5)*pow,'arrowzone');effects.push({type:'ring',x:cx,y:cy,life:1,r:high?250:170});
   }else if(aj==='summoner'){
-    const count=high?10:6;for(let i=0;i<count;i++)summons.push({x:player.x+rnd(-90,90),y:player.y+rnd(-90,90),life:high?16:11,atk:skAtk*(high?.95:.7)*st.summonPower,cd:rnd(0,.25),kind:i%2?'turret':'spirit'});damageArea(player.x,player.y,high?260:190,skAtk*(high?2.6:1.7)*st.summonPower,'legion',false);effects.push({type:'ring',x:player.x,y:player.y,life:1,r:high?260:190});
+    const count=high?10:6;for(let i=0;i<count;i++){const skind=summonerKindByRank(rank,i,skillByRank(player.job,rank)?.name||'초월 소환진');summons.push({x:player.x+rnd(-90,90),y:player.y+rnd(-90,90),life:high?16:11,atk:skAtk*(high?.95:.7)*st.summonPower,cd:rnd(0,.25),kind:skind,variant:i,skillRank:rank,skillName:skillByRank(player.job,rank)?.name||'초월 소환진'});}damageArea(player.x,player.y,high?260:190,skAtk*(high?2.6:1.7)*st.summonPower,'legion',false);effects.push({type:'ring',x:player.x,y:player.y,life:1,r:high?260:190});
   }else if(aj==='mage'){
     damageArea(cx,cy,high?310:220,skAtk*(high?5.1:3.2)*pow,'gravitycore');for(const m of monsters)if(!m.dead&&Math.hypot(m.x-cx,m.y-cy)<(high?330:240)){m.slow=Math.max(m.slow||0,high?3.2:2.2);m.weak=Math.max(m.weak||0,high?2.0:1.2);}effects.push({type:'bomb',x:cx,y:cy,life:high?.95:.75,r:30,damage:skAtk*(high?2.0:1.25)*pow,range:high?190:135});effects.push({type:'ring',x:cx,y:cy,life:1.05,r:high?310:220});
   }else if(aj==='hexer'){
@@ -5360,13 +5374,110 @@ function skillCooldownFactor(aj,slot,rank,jobId){
   const powerTax=(rank*rank)*0.006;
   return Math.max(.55,factor*(rankTier+powerTax));
 }
+
+function summonerKindByRank(rank,index=0,skillName=''){
+  rank=clamp(Math.floor(Number(rank)||1),1,MAX_SKILL_STAR||12);
+  const map={
+    1:'clone',2:'twin',3:'guardian',4:'familiar',5:'swarm',6:'beast',
+    7:'soulCircle',8:'legion',9:'contract',10:'transcend',11:'dragon',12:'celestial'
+  };
+  let kind=map[rank]||'spirit';
+  // 같은 스킬 안에서 여러 마리가 나와도 기본 형태는 유지하되 위치 장식만 다르게 쓸 수 있게 번호를 보존한다.
+  return kind;
+}
+function summonFollowsOwner(s){
+  const k=String(s&&s.kind||'');
+  return !['turret','guardian','contract'].includes(k);
+}
+
 function summonAttackCooldown(s){
   if(!s)return .85;
   if(Number.isFinite(Number(s.attackCd)))return Math.max(.18,Number(s.attackCd));
-  const base=s.kind==='turret'?.58:.88;
+  const k=String(s.kind||'spirit');
+  const baseMap={
+    turret:.58,spirit:.88,clone:.82,twin:.72,guardian:1.10,familiar:.62,swarm:.46,
+    beast:.96,soulCircle:.78,legion:.70,contract:1.05,transcend:.64,dragon:1.14,celestial:.90
+  };
+  const base=baseMap[k]||.84;
   const power=Math.max(.5,Math.min(2.4,Number(s.atk)||1));
-  return Math.max(.28,base*(s.kind==='turret'?1:1.06)*(power>80?.92:1));
+  const heavy=['guardian','beast','contract','dragon'].includes(k)?1.08:1;
+  const quick=['swarm','familiar','transcend'].includes(k)?.92:1;
+  return Math.max(.24,base*heavy*quick*(power>80?.92:1));
 }
+
+function linePointDistance(px,py,ax,ay,bx,by){
+  const vx=bx-ax,vy=by-ay, wx=px-ax,wy=py-ay;
+  const len2=vx*vx+vy*vy||1;
+  const t=clamp((wx*vx+wy*vy)/len2,0,1);
+  const cx=ax+vx*t, cy=ay+vy*t;
+  return {d:Math.hypot(px-cx,py-cy),t,cx,cy};
+}
+function damageBladeLine(ax,ay,bx,by,width,damage,label='bladeLine'){
+  let hit=0;
+  for(const m of monsters){
+    if(!m||m.dead)continue;
+    const p=linePointDistance(m.x,m.y,ax,ay,bx,by);
+    if(p.d<=width && dungeonLineWalkable(ax,ay,m.x,m.y,8)){
+      doDamage(m,damage,label,false);
+      hit++;
+    }
+  }
+  return hit;
+}
+function safeBladeDash(actor,angle,len,rad=22){
+  const ox=actor.x,oy=actor.y;
+  let best={x:ox,y:oy};
+  for(let f=1;f>=.18;f-=.12){
+    const nx=clamp(ox+Math.cos(angle)*len*f,rad+6,fieldSize-rad-6);
+    const ny=clamp(oy+Math.sin(angle)*len*f,rad+6,fieldSize-rad-6);
+    if(!dungeonActive() || (dungeonPointWalkable(nx,ny,rad)&&dungeonLineWalkable(ox,oy,nx,ny,rad))){best={x:nx,y:ny};break;}
+  }
+  actor.x=best.x; actor.y=best.y;
+  try{resolveDungeonEntity(actor,ox,oy,rad);}catch(_){ }
+  return {ox,oy,x:actor.x,y:actor.y};
+}
+
+function warriorSkillAnimRank(skillName='',fallbackRank=0){
+  const n=String(skillName||'').replace(/\s+/g,'');
+  if(n.includes('선검')||n.includes('찌르기'))return 1;
+  if(n.includes('전진')&&n.includes('베기'))return 2;
+  if(n.includes('십자참')||n.includes('십자'))return 3;
+  if(n.includes('회전베기')||n.includes('회전검')||n.includes('회전'))return 4;
+  return Number(fallbackRank)>=1&&Number(fallbackRank)<=4?Number(fallbackRank):0;
+}
+function pushWarriorSkillVisual(rank,actor,damageBase=1,fromAuto=false,extra={}){
+  actor=actor||player;
+  const x=Number(actor.x)||0,y=Number(actor.y)||0;
+  const dir=Number.isFinite(Number(actor.dir))?Number(actor.dir):0;
+  const nx=Math.cos(dir), ny=Math.sin(dir), px=-ny, py=nx;
+  rank=warriorSkillAnimRank((extra&&extra.name)||'',rank);
+  if(rank===1){
+    const sx=x+nx*18, sy=y+ny*18-7;
+    const ex=x+nx*260, ey=y+ny*260-7;
+    effects.push({type:'warriorSwordProjectile',x:sx,y:sy,tx:ex,ty:ey,life:.62,maxLife:.62,a:dir,r:34,rank,kind:'warriorPierce'});
+    effects.push({type:'skillBeam',x:sx-px*6,y:sy-py*6,tx:ex-px*6,ty:ey-py*6,life:.34,maxLife:.34,width:1.4,rank,kind:'warriorPierceTrail'});
+    effects.push({type:'skillBeam',x:sx+px*6,y:sy+py*6,tx:ex+px*6,ty:ey+py*6,life:.34,maxLife:.34,width:1.4,rank,kind:'warriorPierceTrail'});
+    effects.push({type:'skillPierceTip',x:ex,y:ey,life:.42,maxLife:.42,a:dir,r:38,rank,kind:'warriorPierce'});
+  }else if(rank===2){
+    const ox=Number(extra.ox ?? extra.beforeX ?? (x-nx*(fromAuto?70:118)))||x-nx*(fromAuto?70:118);
+    const oy=Number(extra.oy ?? extra.beforeY ?? (y-ny*(fromAuto?70:118)))||y-ny*(fromAuto?70:118);
+    effects.push({type:'warriorDashTrail',x:ox,y:oy,tx:x,ty:y,life:.52,maxLife:.52,a:dir,rank,kind:'warriorForwardDash'});
+    effects.push({type:'warriorForwardSlash',x:x+nx*44,y:y+ny*44,a:dir,life:.56,maxLife:.56,r:98,rank,kind:'warriorForwardSlash'});
+    effects.push({type:'skillBeam',x:x-nx*12,y:y-ny*12,tx:x+nx*132,ty:y+ny*132,life:.28,maxLife:.28,width:3.8,rank,kind:'warriorForwardCutLine'});
+  }else if(rank===3){
+    const cx=x+nx*92, cy=y+ny*92;
+    effects.push({type:'warriorCrossSlash',x:cx,y:cy,a:dir,life:.62,maxLife:.62,r:102,rank,kind:'warriorCrossSlash'});
+    effects.push({type:'skillBeam',x:cx-px*86,y:cy-py*86,tx:cx+px*86,ty:cy+py*86,life:.40,maxLife:.40,width:3.6,rank,kind:'warriorCrossH'});
+    effects.push({type:'skillBeam',x:cx-nx*92,y:cy-ny*92,tx:cx+nx*92,ty:cy+ny*92,life:.40,maxLife:.40,width:3.6,rank,kind:'warriorCrossV'});
+  }else if(rank===4){
+    actor.spinAnim=Math.max(Number(actor.spinAnim)||0,.72);
+    actor.attackAnim=Math.max(Number(actor.attackAnim)||0,.30);
+    effects.push({type:'warriorSpin360',x,y,life:.76,maxLife:.76,r:118,a:dir,rank,kind:'warriorSpin360'});
+    effects.push({type:'skillSpinSlash',x,y,life:.62,maxLife:.62,r:116,rank,kind:'spinSlash',a:dir});
+    for(let i=0;i<6;i++)effects.push({type:'skillSlash',x,y,life:.48+i*.035,maxLife:.64,r:76+i*9,a:dir+i*Math.PI/3,spread:.42,rank,kind:'spinSlashArc'});
+  }
+}
+
 function useSkill(slot=1,fromAuto=false){
   slot=clamp(Number(slot)||1,1,4); const idx=slot-1;
   const st=computeStats(); if((player.skillTimers&&player.skillTimers[idx]>0)||player.skillTimer>0)return;
@@ -5390,15 +5501,45 @@ function useSkill(slot=1,fromAuto=false){
   player.skillTimerMax[idx]=cd;
   effects.push({type:'text',x:player.x,y:player.y-52,t:`${rank}성 ${info.name}`,life:.8,vy:-18,big:true});
   const visualTarget=nearestMonster(range+360,true)||nearestMonster(range+220,false);
-  pushSkillVisual(player,info.name,rank,j,visualTarget);
+  const warriorAnimRank=(aj==='blade')?warriorSkillAnimRank(info.name,rank):0;
+  if(!(aj==='blade' && warriorAnimRank>=1 && warriorAnimRank<=4)){
+    pushSkillVisual(player,info.name,rank,j,visualTarget);
+  }
 
   if(castHighTierSkill(aj,rank,st,skAtk,pow,radius,range,fromAuto))return;
 
   if(aj==='blade'){
-    const t=nearestMonster(range);
-    if(rank<=2){
-      if(t){const a=Math.atan2(t.y-player.y,t.x-player.x);player.x=clamp(player.x+Math.cos(a)*(70+rank*18),40,fieldSize-40);player.y=clamp(player.y+Math.sin(a)*(70+rank*18),40,fieldSize-40);doDamage(t,skAtk*(1.7+rank*.42),'blade');damageArea(player.x,player.y,50+rank*8,skAtk*(.42+rank*.075),'bladewave');}
-    }else if(rank<=4){damageArea(player.x,player.y,radius,skAtk*(1.15+rank*.26)*pow,'cross');effects.push({type:'ring',x:player.x,y:player.y,life:.45,r:radius});
+    const t=nearestMonster(range+180,true)||nearestMonster(range+180,false);
+    if(t)player.dir=Math.atan2(t.y-player.y,t.x-player.x);
+    const a=Number.isFinite(Number(player.dir))?Number(player.dir):0;
+    if(rank===1){
+      player.attackAnim=Math.max(player.attackAnim||0,.24);
+      const sx=player.x+Math.cos(a)*18, sy=player.y+Math.sin(a)*18-6;
+      const ex=player.x+Math.cos(a)*(range+150), ey=player.y+Math.sin(a)*(range+150)-6;
+      const hit=damageBladeLine(sx,sy,ex,ey,28,skAtk*1.85,'swordpierce');
+      if(!hit&&t)doDamage(t,skAtk*1.45,'swordpierce');
+      pushWarriorSkillVisual(1,player,skAtk,fromAuto,{name:info.name});
+    }else if(rank===2){
+      const before={x:player.x,y:player.y};
+      if(!fromAuto)safeBladeDash(player,a,92+rank*16,22);
+      const hitX=player.x+Math.cos(a)*44, hitY=player.y+Math.sin(a)*44;
+      damageArea(hitX,hitY,66,skAtk*2.35,'forwardslash');
+      if(t&&dist(player,t)<130)doDamage(t,skAtk*1.65,'forwardslash');
+      player.attackAnim=Math.max(player.attackAnim||0,.24);
+      pushWarriorSkillVisual(2,player,skAtk,fromAuto,{ox:before.x,oy:before.y,name:info.name});
+      if(!fromAuto)effects.push({type:'skillAfterimage',x:before.x,y:before.y,tx:player.x,ty:player.y,life:.30,maxLife:.30,rank,kind:'dashTrace'});
+    }else if(rank===3){
+      const cx=player.x+Math.cos(a)*86, cy=player.y+Math.sin(a)*86;
+      const halfH=82, halfV=90;
+      damageBladeLine(cx-Math.cos(a+Math.PI/2)*halfH,cy-Math.sin(a+Math.PI/2)*halfH,cx+Math.cos(a+Math.PI/2)*halfH,cy+Math.sin(a+Math.PI/2)*halfH,34,skAtk*2.45*pow,'crosscutH');
+      damageBladeLine(cx-Math.cos(a)*halfV,cy-Math.sin(a)*halfV,cx+Math.cos(a)*halfV,cy+Math.sin(a)*halfV,34,skAtk*2.45*pow,'crosscutV');
+      damageArea(cx,cy,52,skAtk*.75*pow,'crosscore');
+      player.attackAnim=Math.max(player.attackAnim||0,.26);
+      pushWarriorSkillVisual(3,player,skAtk,fromAuto,{name:info.name});
+    }else if(rank===4){
+      damageArea(player.x,player.y,116,skAtk*2.85*pow,'spinslash');
+      player.attackAnim=Math.max(player.attackAnim||0,.34);
+      pushWarriorSkillVisual(4,player,skAtk,fromAuto,{name:info.name});
     }else if(rank<=8){damageNearestMany(2+rank,range+80,skAtk*(1.05+rank*.22)*pow,'combo');damageArea(player.x,player.y,radius+25,skAtk*(.7+rank*.11)*pow,'swordstorm');effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:radius+25});
     }else{damageArea(player.x,player.y,230+rank*12,skAtk*(2.25+rank*.36)*pow,'heavensword');effects.push({type:'ring',x:player.x,y:player.y,life:.9,r:230+rank*12});}
   } else if(aj==='ranger'){
@@ -5408,7 +5549,7 @@ function useSkill(slot=1,fromAuto=false){
   } else if(aj==='summoner'){
     const count=Math.min(9,rank+1);
     const life=(5+rank*1.4)*sc.duration;
-    for(let i=0;i<count;i++)summons.push({x:player.x+rnd(-55,55),y:player.y+rnd(-55,55),life,atk:skAtk*(.42+rank*.095)*st.summonPower,cd:rnd(0,.45),kind:rank>=6&&i%3===0?'turret':'spirit'});
+    for(let i=0;i<count;i++){const skind=summonerKindByRank(rank,i,info.name);summons.push({x:player.x+rnd(-55,55),y:player.y+rnd(-55,55),life,atk:skAtk*(.42+rank*.095)*st.summonPower,cd:rnd(0,.45),kind:skind,variant:i,skillRank:rank,skillName:info.name});}
     if(rank>=4)fireSkillProjectiles('spirit',Math.ceil(rank/2),range+80,skAtk*(.85+rank*.15)*st.summonPower,460,20+rank*4);
     if(rank>=7)damageArea(player.x,player.y,95+rank*16,skAtk*(.95+rank*.18)*st.summonPower,'contract',false);
     effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:80+rank*13});
@@ -5866,7 +6007,7 @@ function saveGame(){requestCloudSave('event',true);}
 async function loadGame(){return await loadCloudStateAndEnter();}
 
 function update(dt){
-  if(!player.classChosen)return; const oldX=player.x, oldY=player.y; const st=syncHp(); player.atkTimer=Math.max(0,player.atkTimer-dt);player.skillTimers=player.skillTimers||[player.skillTimer||0,0,0];for(let i=0;i<4;i++)player.skillTimers[i]=Math.max(0,(player.skillTimers[i]||0)-dt);player.skillTimer=0;player.potionTimer=Math.max(0,player.potionTimer-dt);player.dodgeTimer=Math.max(0,player.dodgeTimer-dt);player.dashTime=Math.max(0,player.dashTime-dt);player.attackAnim=Math.max(0,player.attackAnim-dt);player.hurt=Math.max(0,player.hurt-dt);player.shield=Math.max(0,player.shield-dt);
+  if(!player.classChosen)return; const oldX=player.x, oldY=player.y; const st=syncHp(); player.atkTimer=Math.max(0,player.atkTimer-dt);player.skillTimers=player.skillTimers||[player.skillTimer||0,0,0];for(let i=0;i<4;i++)player.skillTimers[i]=Math.max(0,(player.skillTimers[i]||0)-dt);player.skillTimer=0;player.potionTimer=Math.max(0,player.potionTimer-dt);player.dodgeTimer=Math.max(0,player.dodgeTimer-dt);player.dashTime=Math.max(0,player.dashTime-dt);player.attackAnim=Math.max(0,player.attackAnim-dt);player.spinAnim=Math.max(0,(Number(player.spinAnim)||0)-dt);player.hurt=Math.max(0,player.hurt-dt);player.shield=Math.max(0,player.shield-dt);
   if(st.hpRegen>0) player.hp=clamp(player.hp+st.hpRegen*dt,0,player.maxHp);updateStatusTimers(dt);
   if(player.autoMode) updateAuto(dt);
   if(attackHeld) normalAttack(); for(let i=0;i<4;i++)if(skillHeld[i])safeUseSkill(i+1);
@@ -6341,7 +6482,7 @@ function updateProjectiles(dt){
   projectiles=projectiles.filter(p=>p.life>0);
 }
 function updateSummons(dt){
-  for(const s of summons){s.life-=dt;s.cd-=dt;if(s.kind==='spirit'){const a=Math.atan2(player.y-s.y,player.x-s.x);if(Math.hypot(player.x-s.x,player.y-s.y)>80){s.x+=Math.cos(a)*120*dt;s.y+=Math.sin(a)*120*dt;}}
+  for(const s of summons){s.life-=dt;s.cd-=dt;if(summonFollowsOwner(s)){const a=Math.atan2(player.y-s.y,player.x-s.x);const followDist=s.kind==='swarm'?58:s.kind==='dragon'?118:80;if(Math.hypot(player.x-s.x,player.y-s.y)>followDist){const mv=s.kind==='swarm'?155:s.kind==='dragon'?105:120;s.x+=Math.cos(a)*mv*dt;s.y+=Math.sin(a)*mv*dt;}}
     if(s.cd<=0){const t=nearestFrom(s,220);if(t){s.cd=summonAttackCooldown(s);projectiles.push({x:s.x,y:s.y,target:t.id,speed:420,damage:s.atk,life:1.2,kind:'summon'});}}
   } summons=summons.filter(s=>s.life>0);
 }
@@ -7139,6 +7280,9 @@ function drawPlayer(){const x=player.x,y=player.y;ctx.save();ctx.translate(x,y);
   const wind=player.attackAnim>0?Math.sin(atkP*Math.PI*2)*1.75:0;
 
   ctx.translate(0,-bob);
+  const spinTotal=.48;
+  const spinRot=player.spinAnim>0?((spinTotal-player.spinAnim)/spinTotal)*Math.PI*2:0;
+  if(spinRot)ctx.rotate(spinRot);
 
   // 머리: 더 낮게 내려 목이 짧아 보이도록 조정.
   lineStyle(hurt,1.8);
@@ -7172,6 +7316,7 @@ function drawPlayer(){const x=player.x,y=player.y;ctx.save();ctx.translate(x,y);
   const attackArc=player.attackAnim>0?(-.72+atkP*1.24)*Math.PI:0;
   const bladeAngle=face+attackArc;
   drawClassWeapon(player.job||'blade', gripX, gripY, bladeAngle, atkP, leftGripX, leftGripY);
+  if(spinRot)ctx.rotate(-spinRot);
   ctx.shadowBlur=0;
   ctx.fillStyle=themeLine(.98);
   ctx.font='11px monospace';
@@ -7338,7 +7483,43 @@ function drawProjectiles(){
     }
   }
 }
-function drawSummons(){for(const s of summons){lineStyle(.8,2);if(s.kind==='turret'){ctx.strokeRect(s.x-14,s.y-14,28,28);ctx.beginPath();ctx.moveTo(s.x,s.y-22);ctx.lineTo(s.x,s.y+22);ctx.moveTo(s.x-22,s.y);ctx.lineTo(s.x+22,s.y);ctx.stroke();}else{ctx.beginPath();ctx.arc(s.x,s.y,14,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-8,s.y);ctx.lineTo(s.x+8,s.y);ctx.moveTo(s.x,s.y-8);ctx.lineTo(s.x,s.y+8);ctx.stroke();}}}
+function drawSummons(){
+  const poly=(x,y,r,n,rot=0)=>{ctx.beginPath();for(let i=0;i<n;i++){const a=rot+i*Math.PI*2/n;const px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);}ctx.closePath();ctx.stroke();};
+  for(const s of summons){
+    const k=String(s.kind||'spirit');
+    const pulse=1+Math.sin(performance.now()/180+(Number(s.variant)||0))*.08;
+    lineStyle(.85,2);
+    if(k==='turret'){
+      ctx.strokeRect(s.x-14,s.y-14,28,28);ctx.beginPath();ctx.moveTo(s.x,s.y-22);ctx.lineTo(s.x,s.y+22);ctx.moveTo(s.x-22,s.y);ctx.lineTo(s.x+22,s.y);ctx.stroke();
+    }else if(k==='clone'){
+      ctx.beginPath();ctx.arc(s.x,s.y-10,6*pulse,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x,s.y-4);ctx.lineTo(s.x,s.y+14);ctx.moveTo(s.x-10,s.y+2);ctx.lineTo(s.x+10,s.y+2);ctx.moveTo(s.x,s.y+14);ctx.lineTo(s.x-8,s.y+25);ctx.moveTo(s.x,s.y+14);ctx.lineTo(s.x+8,s.y+25);ctx.stroke();
+    }else if(k==='twin'){
+      ctx.beginPath();ctx.arc(s.x-8,s.y,9*pulse,0,Math.PI*2);ctx.arc(s.x+8,s.y,9*pulse,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-15,s.y);ctx.lineTo(s.x+15,s.y);ctx.moveTo(s.x,s.y-11);ctx.lineTo(s.x,s.y+11);ctx.stroke();
+    }else if(k==='guardian'){
+      poly(s.x,s.y,18*pulse,5,-Math.PI/2);ctx.beginPath();ctx.moveTo(s.x,s.y-18);ctx.lineTo(s.x,s.y+17);ctx.moveTo(s.x-14,s.y-3);ctx.lineTo(s.x+14,s.y-3);ctx.stroke();
+    }else if(k==='familiar'){
+      poly(s.x,s.y,16*pulse,4,Math.PI/4);ctx.beginPath();ctx.arc(s.x,s.y,4,0,Math.PI*2);ctx.moveTo(s.x-18,s.y-10);ctx.lineTo(s.x-7,s.y-2);ctx.moveTo(s.x+18,s.y-10);ctx.lineTo(s.x+7,s.y-2);ctx.stroke();
+    }else if(k==='swarm'){
+      for(let i=0;i<5;i++){const a=i*Math.PI*2/5+performance.now()/340;ctx.beginPath();ctx.arc(s.x+Math.cos(a)*13,s.y+Math.sin(a)*9,3.6,0,Math.PI*2);ctx.stroke();}
+    }else if(k==='beast'){
+      ctx.beginPath();ctx.ellipse(s.x,s.y,18,10,0,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(s.x+15,s.y-6,7,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-10,s.y+8);ctx.lineTo(s.x-16,s.y+18);ctx.moveTo(s.x+2,s.y+9);ctx.lineTo(s.x-2,s.y+19);ctx.moveTo(s.x+10,s.y+7);ctx.lineTo(s.x+16,s.y+17);ctx.stroke();
+    }else if(k==='soulCircle'){
+      ctx.beginPath();ctx.arc(s.x,s.y,15*pulse,Math.PI*.15,Math.PI*1.55);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-4,s.y-10);ctx.quadraticCurveTo(s.x+14,s.y,s.x-2,s.y+15);ctx.stroke();
+    }else if(k==='legion'){
+      ctx.beginPath();ctx.moveTo(s.x-12,s.y+18);ctx.lineTo(s.x-12,s.y-20);ctx.lineTo(s.x+14,s.y-14);ctx.lineTo(s.x-12,s.y-7);ctx.stroke();ctx.beginPath();ctx.arc(s.x+6,s.y+5,8,0,Math.PI*2);ctx.stroke();
+    }else if(k==='contract'){
+      poly(s.x,s.y,20*pulse,5,-Math.PI/2);ctx.beginPath();for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*4/5;const px=s.x+Math.cos(a)*17,py=s.y+Math.sin(a)*17;if(i)ctx.lineTo(px,py);else ctx.moveTo(px,py);}ctx.closePath();ctx.stroke();
+    }else if(k==='transcend'){
+      poly(s.x,s.y,22*pulse,8,Math.PI/8);ctx.beginPath();ctx.arc(s.x,s.y,9,0,Math.PI*2);ctx.moveTo(s.x-24,s.y);ctx.lineTo(s.x+24,s.y);ctx.moveTo(s.x,s.y-24);ctx.lineTo(s.x,s.y+24);ctx.stroke();
+    }else if(k==='dragon'){
+      ctx.beginPath();ctx.moveTo(s.x-22,s.y+8);ctx.quadraticCurveTo(s.x-4,s.y-18,s.x+18,s.y-7);ctx.quadraticCurveTo(s.x+28,s.y-2,s.x+16,s.y+6);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-4,s.y-8);ctx.lineTo(s.x-22,s.y-20);ctx.lineTo(s.x-15,s.y-2);ctx.moveTo(s.x+5,s.y-8);ctx.lineTo(s.x+26,s.y-20);ctx.lineTo(s.x+17,s.y-1);ctx.stroke();
+    }else if(k==='celestial'){
+      ctx.beginPath();ctx.ellipse(s.x,s.y-3,22,8,0,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.arc(s.x,s.y,13*pulse,0,Math.PI*2);ctx.moveTo(s.x-18,s.y);ctx.lineTo(s.x+18,s.y);ctx.moveTo(s.x,s.y-18);ctx.lineTo(s.x,s.y+18);ctx.stroke();
+    }else{
+      ctx.beginPath();ctx.arc(s.x,s.y,14,0,Math.PI*2);ctx.stroke();ctx.beginPath();ctx.moveTo(s.x-8,s.y);ctx.lineTo(s.x+8,s.y);ctx.moveTo(s.x,s.y-8);ctx.lineTo(s.x,s.y+8);ctx.stroke();
+    }
+  }
+}
 function drawDrops(){const st=computeStats(),range=pickupRange(st);for(const d of drops){const pulling=Math.hypot(player.x-d.x,player.y-d.y)<range;lineStyle(pulling?.95:.8,pulling?2.4:2);ctx.strokeRect(d.x-8,d.y-8,16,16);ctx.beginPath();ctx.moveTo(d.x,d.y-13);ctx.lineTo(d.x+13,d.y);ctx.lineTo(d.x,d.y+13);ctx.lineTo(d.x-13,d.y);ctx.closePath();ctx.stroke();if(pulling){lineStyle(.28,1);ctx.beginPath();ctx.moveTo(d.x,d.y);ctx.lineTo(player.x,player.y);ctx.stroke();}}}
 function drawEffects(){for(const e of effects){
   const max=e.maxLife||.9;
@@ -7359,6 +7540,18 @@ function drawEffects(){for(const e of effects){
     lineStyle(.86,2.0+(e.rank>=9?1.1:0));ctx.beginPath();const rr=(e.r||70)*(0.72+p*.36);ctx.arc(e.x,e.y,rr,(e.a||0)-(e.spread||.8),(e.a||0)+(e.spread||.8));ctx.stroke();lineStyle(.38,1);ctx.beginPath();ctx.arc(e.x,e.y,rr*.72,(e.a||0)-(e.spread||.8)*.7,(e.a||0)+(e.spread||.8)*.7);ctx.stroke();
   }else if(e.type==='skillBeam'){
     lineStyle(.74,Number(e.width)||2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();lineStyle(.28,1);ctx.beginPath();const dx=e.tx-e.x,dy=e.ty-e.y;for(let i=0;i<4;i++){const t=(i+p)%4/4;const x=e.x+dx*t,y=e.y+dy*t;ctx.moveTo(x-5,y-5);ctx.lineTo(x+5,y+5);}ctx.stroke();
+  }else if(e.type==='skillSpinSlash'){
+    const rr=(e.r||104)*(0.78+p*.28);lineStyle(.9,2.4);for(let i=0;i<4;i++){const a=(e.a||0)+p*Math.PI*2+i*Math.PI/2;ctx.beginPath();ctx.arc(e.x,e.y,rr-i*10,a-.72,a+.72);ctx.stroke();}lineStyle(.32,1);ctx.beginPath();ctx.arc(e.x,e.y,rr*.55,0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='warriorSwordProjectile'){
+    const x=e.x+(e.tx-e.x)*p,y=e.y+(e.ty-e.y)*p,a=e.a||Math.atan2(e.ty-e.y,e.tx-e.x);ctx.save();ctx.translate(x,y);ctx.rotate(a);lineStyle(.96,2.2);ctx.beginPath();ctx.moveTo(32,0);ctx.lineTo(2,-6);ctx.lineTo(-26,-6);ctx.lineTo(-32,0);ctx.lineTo(-26,6);ctx.lineTo(2,6);ctx.closePath();ctx.stroke();lineStyle(.48,1.1);ctx.beginPath();ctx.moveTo(-24,0);ctx.lineTo(28,0);ctx.moveTo(-18,-11);ctx.lineTo(-18,11);ctx.stroke();ctx.restore();
+  }else if(e.type==='warriorDashTrail'){
+    const a=e.a||Math.atan2(e.ty-e.y,e.tx-e.x),nx=Math.cos(a),ny=Math.sin(a),px=-ny,py=nx;lineStyle(.70,2.2);ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo(e.tx,e.ty);ctx.stroke();for(let i=0;i<3;i++){const t=(p+i*.18)%1, bx=e.x+(e.tx-e.x)*t, by=e.y+(e.ty-e.y)*t;lineStyle(.36,1.1);ctx.beginPath();ctx.moveTo(bx-px*12-nx*20,by-py*12-ny*20);ctx.lineTo(bx+px*12,by+py*12);ctx.stroke();}
+  }else if(e.type==='warriorForwardSlash'){
+    const rr=(e.r||96)*(0.70+p*.35),a=e.a||0;lineStyle(.96,2.8);ctx.beginPath();ctx.arc(e.x,e.y,rr,a-1.05,a+.22);ctx.stroke();lineStyle(.45,1.2);ctx.beginPath();ctx.arc(e.x,e.y,rr*.68,a-.86,a+.08);ctx.stroke();
+  }else if(e.type==='warriorCrossSlash'){
+    const a=e.a||0,rr=e.r||96,nx=Math.cos(a),ny=Math.sin(a),px=-ny,py=nx,scale=.55+p*.55;lineStyle(.96,2.7);ctx.beginPath();ctx.moveTo(e.x-px*rr*scale,e.y-py*rr*scale);ctx.lineTo(e.x+px*rr*scale,e.y+py*rr*scale);ctx.moveTo(e.x-nx*rr*scale,e.y-ny*rr*scale);ctx.lineTo(e.x+nx*rr*scale,e.y+ny*rr*scale);ctx.stroke();lineStyle(.36,1);ctx.beginPath();ctx.arc(e.x,e.y,rr*.22+rr*.18*p,0,Math.PI*2);ctx.stroke();
+  }else if(e.type==='warriorSpin360'){
+    const rr=(e.r||116)*(0.75+p*.22),a0=(e.a||0)+p*Math.PI*2;lineStyle(.96,2.8);for(let i=0;i<5;i++){const a=a0+i*Math.PI*2/5;ctx.beginPath();ctx.arc(e.x,e.y,rr-i*9,a-.68,a+.68);ctx.stroke();}lineStyle(.34,1.2);ctx.beginPath();ctx.arc(e.x,e.y,rr*.72,0,Math.PI*2);ctx.stroke();
   }else if(e.type==='skillArrow'){
     lineStyle(.88,1.6);const x=e.x+(e.tx-e.x)*p,y=e.y+(e.ty-e.y)*p;const a=Math.atan2(e.ty-e.y,e.tx-e.x);ctx.beginPath();ctx.moveTo(x-Math.cos(a)*18,y-Math.sin(a)*18);ctx.lineTo(x+Math.cos(a)*20,y+Math.sin(a)*20);ctx.lineTo(x+Math.cos(a)*12+Math.cos(a+2.45)*8,y+Math.sin(a)*12+Math.sin(a+2.45)*8);ctx.moveTo(x+Math.cos(a)*20,y+Math.sin(a)*20);ctx.lineTo(x+Math.cos(a)*12+Math.cos(a-2.45)*8,y+Math.sin(a)*12+Math.sin(a-2.45)*8);ctx.stroke();
   }else if(e.type==='skillMeteor'){
