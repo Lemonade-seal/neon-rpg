@@ -3066,6 +3066,47 @@ const SUPABASE_CONFIG={
   table:'game_user_state',
   redirectTo:(location.origin+(location.pathname.endsWith('/')?location.pathname+'index6.html':location.pathname.replace(/\/[^\/]*$/,'/index6.html'))+'?v=059')
 };
+const DEV_LOGIN_OWNER_EMAILS=['8vr9rdwb58@privaterelay.appleid.com'];
+const DEV_LOGIN_OWNER_IDS=[];
+function normalizeOwnerEmail(v){return String(v||'').trim().toLowerCase();}
+function cloudUserEmail(u){return normalizeOwnerEmail(u&&(u.email||(u.user_metadata&&(u.user_metadata.email||u.user_metadata.kakao_account_email))));}
+function isDevLoginOwnerUser(u){
+  if(!u)return false;
+  const email=cloudUserEmail(u);
+  const id=String(u.id||'');
+  return DEV_LOGIN_OWNER_EMAILS.map(normalizeOwnerEmail).includes(email)||DEV_LOGIN_OWNER_IDS.map(String).includes(id);
+}
+async function getCurrentOwnerSession(){
+  const client=await ensureSupabaseClient(false);
+  if(!client)return null;
+  const {data,error}=await client.auth.getSession();
+  if(error)throw error;
+  const session=data&&data.session?data.session:null;
+  if(session&&session.user){cloudState.session=session;cloudState.user=session.user;}
+  return session;
+}
+async function verifyDevLoginOwner(){
+  if(!supabaseConfigured()){
+    openPopup(`<div class="title">개발자 로그인 차단</div><div class="card">개발자 로그인은 등록된 소유자 계정 인증 후에만 사용할 수 있습니다.<br><span class="small">Supabase 설정이 없으면 개발자 로그인을 사용할 수 없습니다.</span></div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">확인</button></div>`);
+    return false;
+  }
+  try{
+    const session=await getCurrentOwnerSession();
+    if(!session||!session.user){
+      openPopup(`<div class="title">개발자 로그인 인증 필요</div><div class="card">개발자 로그인은 등록된 소유자 계정만 사용할 수 있습니다.<br>먼저 카카오/Supabase 로그인을 완료한 뒤 다시 시도하십시오.</div><div class="footerBtns"><button onclick="Game.startKakaoLogin()">카카오톡 로그인</button><button onclick="Game.showKakaoLoginPage()">닫기</button></div>`);
+      return false;
+    }
+    if(!isDevLoginOwnerUser(session.user)){
+      openPopup(`<div class="title">개발자 로그인 차단</div><div class="card">현재 로그인 계정은 개발자 권한이 없습니다.<br><span class="small">일반 계정은 카카오 로그인으로만 접속할 수 있습니다.</span></div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">확인</button></div>`);
+      return false;
+    }
+    return true;
+  }catch(e){
+    console.error(e);
+    openPopup(`<div class="title">개발자 로그인 확인 실패</div><div class="card">계정 권한 확인 중 오류가 발생했습니다.<br><span class="small">${escapeHtml(e.message||String(e))}</span></div><div class="footerBtns"><button onclick="Game.showKakaoLoginPage()">확인</button></div>`);
+    return false;
+  }
+}
 let memorySave='';
 function storageGet(k){try{return window.localStorage?localStorage.getItem(k):memorySave;}catch(e){return memorySave||null;}}
 function storageSet(k,v){memorySave=String(v);try{if(window.localStorage)localStorage.setItem(k,v);return true;}catch(e){return false;}}
@@ -3187,7 +3228,7 @@ async function showKakaoLoginPage(){
     openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">Supabase SDK를 불러오지 못했습니다.<br>네트워크 또는 CDN 차단 상태를 확인하십시오.</div><div class="card"><h3>다시 시도</h3>SDK 주소를 3개 CDN으로 순차 시도하도록 보수했습니다.<br><span class="small">계속 실패하면 새로고침 후 다시 확인하십시오.</span></div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 로그인</button><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
     return;
   }
-  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="loginButtonRow"><button class="kakaoNeonBtn" onclick="Game.startKakaoLogin()">카카오톡 로그인</button><button onclick="Game.devKakaoLogin()">개발자 로그인</button></div><div class="townNote">개발자 로그인은 테스트/미리보기용입니다. Lv.100 모험가 상태로 시작합니다.</div></div>`);
+  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="loginButtonRow"><button class="kakaoNeonBtn" onclick="Game.startKakaoLogin()">카카오톡 로그인</button><button onclick="Game.devKakaoLogin()">개발자 로그인</button></div><div class="townNote">개발자 로그인은 등록된 소유자 계정만 사용할 수 있습니다. 인증 후 Lv.100 모험가 상태로 시작합니다.</div></div>`);
   try{const {data}=await client.auth.getSession();if(data&&data.session){showCloudLoadingPage();await loadCloudStateAndEnter();}}catch(e){console.error(e);}
 }
 async function kakaoLogout(){
@@ -3229,8 +3270,10 @@ function applyDevWarriorSkillPreset(){
   player.hp=player.maxHp;
 }
 
-function devKakaoLogin(){
+async function devKakaoLogin(){
   try{
+    const ownerOk=await verifyDevLoginOwner();
+    if(!ownerOk)return;
     leaveOnline(false);
     cloudState.devPreview=true;
     storageSet('green_line_dev_dummy_enabled','1');
