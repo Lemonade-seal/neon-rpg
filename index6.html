@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>GREEN LINE NEON RPG - FULL WORLD</title>
-<!-- build: index6_138_runtime_repair -->
+<!-- build: index6_162_action_slot_no_potion_option -->
 <style>
   :root{--g:#00ff72;--obj-rgb:0,255,114;--gd:rgba(var(--obj-rgb),.55);--gf:rgba(var(--obj-rgb),.18);--gb:rgba(var(--obj-rgb),.075);--bg:#000;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-user-drag:none;caret-color:transparent;}
@@ -343,6 +343,166 @@
   .neonRange:active::-moz-range-thumb{
     transform:scale(1.08);
     box-shadow:0 0 12px rgba(var(--obj-rgb),.75);
+  }
+
+  /* 151: 물약 설정 게이지 직접 드래그 보정 + 설정 버튼 2열 고정 */
+  .neonRangeWrap.smoothRange{
+    padding:18px 4px 8px;
+    touch-action:none!important;
+    cursor:pointer;
+  }
+  .smoothRange .neonRange{
+    height:42px;
+    padding:19px 0;
+    touch-action:none!important;
+  }
+  .smoothRange .neonRange::-webkit-slider-runnable-track{height:4px;}
+  .smoothRange .neonRange::-moz-range-track{height:4px;}
+  .smoothRange .neonRange::-webkit-slider-thumb{
+    width:22px;
+    height:24px;
+    margin-top:-10px;
+    border-radius:6px;
+  }
+  .smoothRange .neonRange::-moz-range-thumb{
+    width:22px;
+    height:24px;
+    border-radius:6px;
+  }
+  .smoothRange.dragging .rangeBubble{
+    box-shadow:0 0 14px rgba(var(--obj-rgb),.55), inset 0 0 8px rgba(var(--obj-rgb),.12);
+  }
+  .settingsGrid{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  .settingsGrid button{min-height:44px;}
+
+
+  /* 152: 물약 게이지 완전 스무스 커스텀 트랙 */
+  .neonRangeWrap.smoothRange{
+    --potion-pct:42%;
+    position:relative!important;
+    padding:22px 8px 10px!important;
+    touch-action:none!important;
+    cursor:pointer;
+  }
+  .smoothRange .neonRange{
+    position:absolute!important;
+    width:1px!important;
+    height:1px!important;
+    opacity:0!important;
+    pointer-events:none!important;
+    left:-9999px!important;
+  }
+  .smoothTrack{
+    position:relative;
+    height:34px;
+    margin:8px 2px 7px;
+    touch-action:none;
+  }
+  .smoothTrack::before{
+    content:"";
+    position:absolute;
+    left:0;right:0;top:50%;
+    height:3px;
+    transform:translateY(-50%);
+    border-radius:999px;
+    background:rgba(var(--obj-rgb),.18);
+    box-shadow:0 0 8px rgba(var(--obj-rgb),.20), inset 0 0 6px rgba(var(--obj-rgb),.08);
+  }
+  .smoothTrackFill{
+    position:absolute;
+    left:0;top:50%;
+    width:var(--potion-pct);
+    height:3px;
+    transform:translateY(-50%);
+    border-radius:999px;
+    background:rgba(var(--obj-rgb),.95);
+    box-shadow:0 0 10px rgba(var(--obj-rgb),.65);
+    pointer-events:none;
+    transition:none!important;
+    will-change:width;
+  }
+  .smoothTrackThumb{
+    position:absolute;
+    left:var(--potion-pct);
+    top:50%;
+    width:22px;
+    height:22px;
+    transform:translate(-50%,-50%);
+    border:1px solid rgba(var(--obj-rgb),.95);
+    border-radius:7px;
+    background:#000;
+    box-shadow:0 0 12px rgba(var(--obj-rgb),.62), inset 0 0 8px rgba(var(--obj-rgb),.08);
+    pointer-events:none;
+    transition:none!important;
+    will-change:left;
+  }
+  .smoothRange .rangeBubble{
+    left:var(--potion-pct)!important;
+    transition:none!important;
+    will-change:left;
+  }
+  .smoothRange.dragging .smoothTrackThumb{
+    box-shadow:0 0 18px rgba(var(--obj-rgb),.78), inset 0 0 10px rgba(var(--obj-rgb),.12);
+  }
+
+
+
+  /* 153: 물약 게이지 우측 숫자 입력칸 */
+  .potionPctLine{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 74px;
+    gap:8px;
+    align-items:center;
+  }
+  .potionPctLine .neonRangeWrap.smoothRange{
+    min-width:0;
+  }
+  .potionPctInputBox{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    align-items:center;
+    gap:4px;
+    height:38px;
+    padding:0 7px;
+    border:1px solid rgba(var(--obj-rgb),.55);
+    border-radius:10px;
+    background:rgba(0,0,0,.84);
+    box-shadow:0 0 10px rgba(var(--obj-rgb),.16), inset 0 0 8px rgba(var(--obj-rgb),.055);
+  }
+  .potionPctNumberInput{
+    width:100%;
+    min-width:0;
+    height:30px;
+    padding:0;
+    border:0;
+    outline:0;
+    background:transparent;
+    color:var(--g);
+    font:inherit;
+    font-size:14px;
+    font-weight:900;
+    text-align:right;
+    user-select:text!important;
+    -webkit-user-select:text!important;
+    caret-color:var(--g)!important;
+  }
+  .potionPctNumberInput::-webkit-outer-spin-button,
+  .potionPctNumberInput::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
+  .potionPctInputBox span{
+    font-size:11px;
+    opacity:.9;
+  }
+  @media (max-width:374px) and (orientation:portrait){
+    .potionPctLine{grid-template-columns:minmax(0,1fr) 66px;gap:6px;}
+    .potionPctInputBox{padding:0 5px;}
+    .potionPctNumberInput{font-size:13px;}
   }
 
   /* 룰렛 원판: 원판 안에 확률 구간 표시 + 상단 고정 눈금 */
@@ -761,6 +921,19 @@
   .partyMiniLine{border:1px solid rgba(var(--obj-rgb),.32);border-radius:10px;padding:7px 8px;background:rgba(var(--obj-rgb),.035);font-size:11px;line-height:1.35;}
   .partyChatBox{max-height:120px;overflow:auto;border:1px solid rgba(var(--obj-rgb),.32);border-radius:10px;padding:8px;background:rgba(var(--obj-rgb),.025);font-size:11px;line-height:1.35;margin-top:8px;}
   .neonInput{width:100%;font:inherit;padding:10px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:10px;user-select:text;-webkit-user-select:text;caret-color:var(--g);}
+  .neonInput, input.neonInput, textarea.neonInput{
+    -webkit-appearance:none!important;
+    appearance:none!important;
+    outline:none!important;
+  }
+  .neonInput:focus, input.neonInput:focus, textarea.neonInput:focus, #quickChatInput:focus, #partyChatInput:focus{
+    outline:none!important;
+    border-color:var(--g)!important;
+    box-shadow:0 0 12px rgba(var(--obj-rgb),.22), inset 0 0 8px rgba(var(--obj-rgb),.06)!important;
+  }
+  input:focus, textarea:focus, select:focus{
+    outline:none!important;
+  }
 
 
   /* patch 046: quest plain text under currency + live user label */
@@ -1746,6 +1919,287 @@
   .loginButtonRow .kakaoNeonBtn{width:100%;max-width:none;}
   @media (max-width:360px){.loginButtonRow{gap:6px}.loginButtonRow button{font-size:11px;padding-left:4px!important;padding-right:4px!important;}}
 
+
+  /* 145: 액션 1~6 커스텀 버튼 */
+  :root{
+    --action-slot-cols:3;
+    --action-dock-w:calc(var(--dock-btn-w) * 3 + var(--dock-gap) * 2);
+    --action-dock-h:calc(var(--dock-row-h) * 2 + var(--dock-gap));
+    --action-group-w:var(--action-dock-w);
+    --action-group-h:var(--action-dock-h);
+  }
+  #actions{
+    width:var(--action-dock-w)!important;
+    height:var(--action-dock-h)!important;
+    grid-template-columns:repeat(3,var(--dock-btn-w))!important;
+    grid-template-rows:repeat(2,var(--dock-row-h))!important;
+    grid-template-areas:
+      "slot1 slot2 slot3"
+      "slot4 slot5 slot6"!important;
+  }
+  #skillBtn1{grid-area:slot1!important;}
+  #skillBtn2{grid-area:slot2!important;}
+  #skillBtn3{grid-area:slot3!important;}
+  #skillBtn4{grid-area:slot4!important;}
+  #attackBtn{grid-area:slot5!important;}
+  #dodgeBtn{grid-area:slot6!important;}
+  #actions .actionSlotBtn{
+    display:grid!important;
+    grid-template-rows:12px 1fr 10px!important;
+    align-items:center!important;
+    justify-items:center!important;
+    gap:0!important;
+    width:var(--dock-btn-w)!important;
+    height:var(--dock-row-h)!important;
+    padding:2px!important;
+    overflow:hidden!important;
+  }
+  #actions .slotNo{
+    display:block;
+    width:100%;
+    font-size:9px;
+    line-height:1;
+    font-weight:900;
+    opacity:.9;
+    text-shadow:0 0 7px rgba(var(--obj-rgb),.65);
+  }
+  #actions .actionName{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-height:14px!important;
+    max-height:18px!important;
+    white-space:normal!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+    animation:none!important;
+    transform:none!important;
+    font-size:8.5px!important;
+    line-height:1.02!important;
+    letter-spacing:-.5px!important;
+    word-break:keep-all!important;
+    overflow-wrap:anywhere!important;
+  }
+  #actions .actionSlotBtn.emptySlot{opacity:.45;}
+  .actionSlotChoiceGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px;}
+  .actionSlotChoiceGrid .card{min-height:58px;text-align:left;}
+  .actionSlotChoiceGrid .selected{outline:2px solid var(--g);}
+  @media (max-width:374px) and (orientation:portrait){
+    #actions .slotNo{font-size:8px;}
+    #actions .actionName{font-size:7.8px!important;}
+  }
+
+
+  /* 146: 물약은 오토 위, 기존 물약 위치는 4번 단축 슬롯 */
+  #leftQuick{
+    right:calc(var(--control-side) + var(--safe-right) + var(--action-dock-w) + var(--dock-gap))!important;
+    bottom:calc(var(--control-bottom) + var(--safe-bottom))!important;
+    width:calc(var(--dock-btn-w) * 2 + var(--dock-gap))!important;
+    height:var(--action-dock-h)!important;
+    display:grid!important;
+    grid-template-columns:repeat(2,var(--dock-btn-w))!important;
+    grid-template-rows:repeat(2,var(--dock-row-h))!important;
+    grid-template-areas:
+      "potion empty"
+      "auto slot4"!important;
+    gap:var(--dock-gap)!important;
+    align-items:stretch!important;
+    justify-items:stretch!important;
+  }
+  #potionBtn{grid-area:potion!important;}
+  #autoBtn{grid-area:auto!important;}
+  #leftQuick #skillBtn4{grid-area:slot4!important;}
+  #actions{
+    grid-template-areas:
+      "slot1 slot2 slot3"
+      "slot5 slot6 ."!important;
+  }
+  #actions .actionSlotBtn,#leftQuick .actionSlotBtn{
+    display:grid!important;
+    grid-template-rows:12px 1fr 10px!important;
+    align-items:center!important;
+    justify-items:center!important;
+    gap:0!important;
+    width:var(--dock-btn-w)!important;
+    min-width:0!important;
+    max-width:var(--dock-btn-w)!important;
+    height:var(--dock-row-h)!important;
+    min-height:0!important;
+    padding:2px!important;
+    overflow:hidden!important;
+  }
+  #actions .slotNo,#leftQuick .slotNo{
+    display:block;
+    width:100%;
+    font-size:9px;
+    line-height:1;
+    font-weight:900;
+    opacity:.9;
+    text-shadow:0 0 7px rgba(var(--obj-rgb),.65);
+  }
+  #actions .actionName,#leftQuick .actionName{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-height:14px!important;
+    max-height:18px!important;
+    white-space:normal!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+    animation:none!important;
+    transform:none!important;
+    font-size:8.5px!important;
+    line-height:1.02!important;
+    letter-spacing:-.5px!important;
+    word-break:keep-all!important;
+    overflow-wrap:anywhere!important;
+  }
+  #actions .actionSlotBtn.emptySlot,#leftQuick .actionSlotBtn.emptySlot{opacity:.45;}
+  @media (max-width:374px) and (orientation:portrait){
+    #actions .slotNo,#leftQuick .slotNo{font-size:8px;}
+    #actions .actionName,#leftQuick .actionName{font-size:7.8px!important;}
+  }
+
+
+
+  /* 147: 요청 배치 고정 - 윗줄 물약 1 2 3 / 아랫줄 오토 4 5 6 */
+  #leftQuick{
+    right:calc(var(--control-side) + var(--safe-right) + var(--action-dock-w) + var(--dock-gap))!important;
+    bottom:calc(var(--control-bottom) + var(--safe-bottom))!important;
+    width:var(--dock-btn-w)!important;
+    height:var(--action-dock-h)!important;
+    display:grid!important;
+    grid-template-columns:var(--dock-btn-w)!important;
+    grid-template-rows:repeat(2,var(--dock-row-h))!important;
+    grid-template-areas:
+      "potion"
+      "auto"!important;
+    gap:var(--dock-gap)!important;
+    align-items:stretch!important;
+    justify-items:stretch!important;
+  }
+  #potionBtn{grid-area:potion!important;width:var(--dock-btn-w)!important;height:var(--dock-row-h)!important;}
+  #autoBtn{grid-area:auto!important;width:var(--dock-btn-w)!important;height:var(--dock-row-h)!important;}
+  #actions{
+    right:calc(var(--control-side) + var(--safe-right))!important;
+    bottom:calc(var(--control-bottom) + var(--safe-bottom))!important;
+    width:var(--action-dock-w)!important;
+    height:var(--action-dock-h)!important;
+    display:grid!important;
+    grid-template-columns:repeat(3,var(--dock-btn-w))!important;
+    grid-template-rows:repeat(2,var(--dock-row-h))!important;
+    grid-template-areas:
+      "slot1 slot2 slot3"
+      "slot4 slot5 slot6"!important;
+    gap:var(--dock-gap)!important;
+    align-items:stretch!important;
+    justify-items:stretch!important;
+  }
+  #skillBtn1{grid-area:slot1!important;}
+  #skillBtn2{grid-area:slot2!important;}
+  #skillBtn3{grid-area:slot3!important;}
+  #skillBtn4{grid-area:slot4!important;}
+  #attackBtn{grid-area:slot5!important;}
+  #dodgeBtn{grid-area:slot6!important;}
+  #actions .actionSlotBtn{
+    display:grid!important;
+    grid-template-rows:12px 1fr 10px!important;
+    align-items:center!important;
+    justify-items:center!important;
+    gap:0!important;
+    width:var(--dock-btn-w)!important;
+    min-width:0!important;
+    max-width:var(--dock-btn-w)!important;
+    height:var(--dock-row-h)!important;
+    min-height:0!important;
+    padding:2px!important;
+    overflow:hidden!important;
+  }
+  #actions .slotNo{
+    display:block;
+    width:100%;
+    font-size:9px;
+    line-height:1;
+    font-weight:900;
+    opacity:.9;
+    text-shadow:0 0 7px rgba(var(--obj-rgb),.65);
+  }
+  #actions .actionName{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-height:14px!important;
+    max-height:18px!important;
+    white-space:normal!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+    animation:none!important;
+    transform:none!important;
+    font-size:8.5px!important;
+    line-height:1.02!important;
+    letter-spacing:-.5px!important;
+    word-break:keep-all!important;
+    overflow-wrap:anywhere!important;
+  }
+  @media (max-width:374px) and (orientation:portrait){
+    #actions .slotNo{font-size:8px;}
+    #actions .actionName{font-size:7.8px!important;}
+  }
+
+  /* 149: 물약 30초 쿨타임 표시 + 긴 물약명 대응 */
+  #leftQuick button{
+    position:relative!important;
+    overflow:hidden!important;
+    --cdp:0%;
+  }
+  #leftQuick button::before{
+    content:"";
+    position:absolute;
+    left:0;right:0;bottom:0;
+    height:var(--cdp,0%);
+    background:rgba(var(--obj-rgb),.20);
+    box-shadow:inset 0 0 12px rgba(var(--obj-rgb),.18);
+    pointer-events:none;
+    transition:height .12s linear;
+    z-index:0;
+  }
+  #leftQuick button span,#leftQuick button{
+    line-height:1.02;
+  }
+  #leftQuick button span{position:relative;z-index:1;}
+  #potName{
+    display:block;
+    width:100%;
+    max-width:100%;
+    white-space:normal;
+    word-break:keep-all;
+    overflow:hidden;
+    font-size:8px;
+    letter-spacing:-.7px;
+  }
+
+
+
+  /* 156: 포션(하/중/상) 표기 + 개발자 신규 모험가 시작 */
+  #potionBtn #potName{
+    font-size:8px!important;
+    letter-spacing:-.8px!important;
+    word-break:keep-all!important;
+    white-space:normal!important;
+    line-height:1.02!important;
+  }
+  #quickChatInput, #partyChatInput{
+    -webkit-appearance:none!important;
+    appearance:none!important;
+    outline:none!important;
+    border-color:var(--gd)!important;
+  }
+  #quickChatInput:focus, #partyChatInput:focus{
+    outline:none!important;
+    border-color:var(--g)!important;
+    box-shadow:0 0 12px rgba(var(--obj-rgb),.22), inset 0 0 8px rgba(var(--obj-rgb),.06)!important;
+  }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -1768,17 +2222,17 @@
     </div>
   </div>
   <div id="leftQuick">
+    <button id="potionBtn"><span id="potName">물약</span><span class="cool" id="potCount">0</span></button>
     <button id="autoBtn">오토<span class="cool" id="autoCool">OFF</span></button>
-    <button id="potionBtn">물약<span class="cool" id="potCount">0</span></button>
   </div>
   <div id="joy"><div id="stick"></div></div>
   <div id="actions">
-    <button id="skillBtn4"><span class="skillName" id="skName4">스킬4</span><span class="cool" id="skCool4">-</span></button>
-    <button id="skillBtn3"><span class="skillName" id="skName3">스킬3</span><span class="cool" id="skCool3">-</span></button>
-    <button id="skillBtn1"><span class="skillName" id="skName1">스킬1</span><span class="cool" id="skCool1">-</span></button>
-    <button id="skillBtn2"><span class="skillName" id="skName2">스킬2</span><span class="cool" id="skCool2">-</span></button>
-    <button id="attackBtn">공격<span class="cool" id="atkCool">READY</span></button>
-    <button id="dodgeBtn">회피<span class="cool" id="dodgeCool">READY</span></button>
+    <button id="skillBtn1" class="actionSlotBtn" data-action-slot="1"><span class="slotNo">1</span><span class="actionName" id="actionName1">스킬1</span><span class="cool" id="actionCool1">-</span></button>
+    <button id="skillBtn2" class="actionSlotBtn" data-action-slot="2"><span class="slotNo">2</span><span class="actionName" id="actionName2">스킬2</span><span class="cool" id="actionCool2">-</span></button>
+    <button id="skillBtn3" class="actionSlotBtn" data-action-slot="3"><span class="slotNo">3</span><span class="actionName" id="actionName3">빈칸</span><span class="cool" id="actionCool3">-</span></button>
+    <button id="skillBtn4" class="actionSlotBtn" data-action-slot="4"><span class="slotNo">4</span><span class="actionName" id="actionName4">빈칸</span><span class="cool" id="actionCool4">-</span></button>
+    <button id="attackBtn" class="actionSlotBtn" data-action-slot="5"><span class="slotNo">5</span><span class="actionName" id="actionName5">공격</span><span class="cool" id="actionCool5">READY</span></button>
+    <button id="dodgeBtn" class="actionSlotBtn" data-action-slot="6"><span class="slotNo">6</span><span class="actionName" id="actionName6">회피</span><span class="cool" id="actionCool6">READY</span></button>
   </div>
   <button id="talkPrompt">말걸기</button>
   <div class="log" id="log" title="터치하면 채팅 입력"></div>
@@ -1844,10 +2298,14 @@ const ITEM_TYPES = [
 const STAT_LABEL = {atk:'공격력', aspd:'공속', speed:'이속', crit:'크리', critDmg:'치피', hp:'체력', def:'방어', lifesteal:'흡혈', hpRegen:'재생', skillPower:'스킬', range:'사거리', dodge:'회피', reflect:'반사', expBonus:'경험치', goldBonus:'골드', summonPower:'소환', cooldown:'쿨감', mpRegen:'마력재생', magnet:'흡입', all:'전체'};
 const SLOT_LABEL = {weapon:'무기', armor:'갑옷', helmet:'투구', boots:'신발', ring:'반지', amulet:'목걸이', relic:'유물'};
 const PERCENT_STATS=new Set(['aspd','crit','critDmg','lifesteal','dodge','reflect','expBonus','goldBonus','cooldown','skillPower','summonPower','mpRegen']);
-const CONSUMABLES={potion:{name:'소형 물약',cost:35,heal:.28,desc:'최대 체력 28% 회복'},potionL:{name:'대형 물약',cost:95,heal:.55,desc:'최대 체력 55% 회복'},elixir:{name:'재생 엘릭서',cost:160,heal:.25,buff:{name:'재생',duration:8,hpRegen:4},desc:'즉시 회복 + 8초 재생'},shield:{name:'보호막 물약',cost:180,heal:.12,buff:{name:'보호막',duration:5,shield:1},desc:'회복 + 보호막'},haste:{name:'가속 시약',cost:140,heal:0,buff:{name:'가속',duration:7,speed:.22,aspd:.16},desc:'7초 이속/공속 증가'},bomb:{name:'휴대 폭탄',cost:130,heal:0,active:'bomb',desc:'전방 폭발'}};
+const POTION_COOLDOWN=30;
+const CONSUMABLES={potion:{name:'포션(하)',short:'포션(하)',cost:35,heal:.28,desc:'최대 체력 28% 회복'},potionM:{name:'포션(중)',short:'포션(중)',cost:90,heal:.45,desc:'최대 체력 45% 회복'},potionL:{name:'포션(상)',short:'포션(상)',cost:160,heal:.65,desc:'최대 체력 65% 회복'}};
+const POTION_ORDER=['potionL','potionM','potion'];
+function potionCount(key){return Number((player&&player.consumables&&player.consumables[key])||0)||0;}
+function totalPotionCount(){return Object.keys(CONSUMABLES).reduce((sum,k)=>sum+potionCount(k),0);}
 
 const JOBS = [
-  {id:'blade', name:'검투사', type:'근접전투형', desc:'검으로 빠르게 붙어 싸우며 흡혈 성장 효율이 높다.', base:{atk:8,hp:120,def:4,speed:132,aspd:1.05,crit:.05,lifesteal:.02}, skill:'돌진참', effect:'전방 짧은 돌진 + 근접 폭딜'},
+  {id:'blade', name:'검투사', type:'근접전투형', desc:'검으로 빠르게 붙어 싸우며 흡혈 성장 효율이 높다.', base:{atk:8,hp:120,def:4,speed:132,aspd:1.05,crit:.05,lifesteal:.008}, skill:'돌진참', effect:'전방 짧은 돌진 + 근접 폭딜'},
   {id:'ranger', name:'레인저', type:'원거리형', desc:'먼 거리에서 네온 화살을 쏘며 안전하게 사냥한다.', base:{atk:7,hp:95,def:2,speed:142,aspd:1.18,crit:.09,range:150}, skill:'삼연사', effect:'가장 가까운 적에게 3발 투사체'},
   {id:'summoner', name:'소환사', type:'소환형', desc:'소환체가 함께 공격한다. 장기전이 강하다.', base:{atk:5,hp:105,def:2,speed:124,aspd:.95,crit:.04,summonPower:1.25}, skill:'네온 분신', effect:'일정 시간 소환체 추가'},
   {id:'mage', name:'마도사', type:'마법형', desc:'광역 파동과 스킬 피해가 강하다.', base:{atk:9,hp:88,def:1,speed:118,aspd:.85,crit:.06,skillPower:1.35}, skill:'마력폭발', effect:'원형 광역 피해'},
@@ -1866,7 +2324,7 @@ JOBS.push(
   {id:'gunner',name:'거너',type:'원거리형',weaponName:'초록 권총',skillBase:'ranger',weaponBase:'mechanic',attackBase:'mechanic',desc:'탄환과 미사일을 쓰는 원거리 화력형.',base:{atk:8,hp:98,def:2,speed:136,aspd:1.2,crit:.09,range:185},growthStats:['atk','aspd','range','crit','critDmg','speed','goldBonus']},
   {id:'druid',name:'정령술사',type:'소환/회복형',weaponName:'초록 정령봉',skillBase:'summoner',weaponBase:'summoner',attackBase:'summoner',desc:'정령 소환과 재생에 특화됐다.',base:{atk:5,hp:118,def:3,speed:126,aspd:.95,crit:.04,summonPower:1.22,hpRegen:1.1},growthStats:['summonPower','hpRegen','hp','def','skillPower','cooldown','expBonus']},
   {id:'chronomancer',name:'시간술사',type:'쿨타임형',weaponName:'초록 시계지팡이',skillBase:'mage',weaponBase:'mage',attackBase:'mage',desc:'쿨타임 감소와 빠른 스킬 순환에 강하다.',base:{atk:7,hp:90,def:1,speed:130,aspd:1.02,crit:.06,skillPower:1.18,cooldown:.08,range:150},growthStats:['cooldown','skillPower','speed','aspd','range','dodge','mpRegen']},
-  {id:'berserker',name:'광전사',type:'고위험근접형',weaponName:'초록 대검',skillBase:'blade',weaponBase:'blade',attackBase:'blade',desc:'높은 체력과 공격력, 낮은 속도. 흡혈로 버틴다.',base:{atk:12,hp:150,def:3,speed:108,aspd:.82,crit:.08,critDmg:.65,lifesteal:.035},growthStats:['atk','hp','lifesteal','critDmg','def','crit','speed']},
+  {id:'berserker',name:'광전사',type:'고위험근접형',weaponName:'초록 대검',skillBase:'blade',weaponBase:'blade',attackBase:'blade',desc:'높은 체력과 공격력, 낮은 속도. 흡혈로 버틴다.',base:{atk:12,hp:150,def:3,speed:108,aspd:.82,crit:.08,critDmg:.65,lifesteal:.012},growthStats:['atk','hp','lifesteal','critDmg','def','crit','speed']},
   {id:'sniper',name:'저격수',type:'장거리형',weaponName:'초록 장궁',skillBase:'ranger',weaponBase:'ranger',attackBase:'ranger',desc:'긴 사거리와 높은 한 방 피해.',base:{atk:10,hp:84,def:1,speed:118,aspd:.72,crit:.18,critDmg:.95,range:250},growthStats:['atk','range','crit','critDmg','cooldown','dodge','expBonus']},
   {id:'necromancer',name:'사령술사',type:'소환/디버프형',weaponName:'초록 사령낫',skillBase:'hexer',weaponBase:'hexer',attackBase:'hexer',desc:'저주와 소환 보조를 함께 사용한다.',base:{atk:6,hp:102,def:2,speed:116,aspd:.95,crit:.04,skillPower:1.18,summonPower:1.15},growthStats:['skillPower','summonPower','cooldown','hp','hpRegen','range','goldBonus']},
   {id:'engineer',name:'공병',type:'설치/폭발형',weaponName:'초록 공구총',skillBase:'mechanic',weaponBase:'mechanic',attackBase:'mechanic',desc:'설치물과 폭발 범위가 강하다.',base:{atk:8,hp:118,def:4,speed:112,aspd:.9,crit:.05,summonPower:1.12,skillPower:1.08},growthStats:['atk','skillPower','summonPower','def','hp','cooldown','goldBonus']},
@@ -1958,12 +2416,12 @@ function applyJobAdvancementData(){
 }
 applyJobAdvancementData();
 if(!JOBS.some(j=>j.id==='adventurer')){
-  JOBS.unshift({id:'adventurer',name:'모험가',type:'초보 모험가',desc:'아직 정식 직업을 갖기 전의 기본 상태입니다. 장로의 모험가 퀘스트를 완료하면 직업소개소에서 1차 직업을 선택할 수 있습니다.',base:{atk:5,hp:105,def:2,speed:124,aspd:1.0,crit:.03,range:78},skillBase:'blade',weaponBase:'blade',attackBase:'blade',weaponName:'나뭇가지',tier:0,baseClass:'adventurer',role:'meleeDps',subRoles:['starter','quest'],nextJobs:['warrior','archer','mageRoot','acolyte','summonist','engineer'],party:{threat:.8},growthStats:['atk','hp','def','speed','aspd','crit']});
+  JOBS.unshift({id:'adventurer',name:'모험가',type:'초보 모험가',desc:'아직 정식 직업을 갖기 전의 기본 상태입니다. 장로의 모험가 퀘스트를 완료하면 Lv.10부터 직업소개소에서 1차 직업을 선택할 수 있습니다.',base:{atk:5,hp:105,def:2,speed:124,aspd:1.0,crit:.03,range:78},skillBase:'blade',weaponBase:'blade',attackBase:'blade',weaponName:'나뭇가지',tier:0,baseClass:'adventurer',role:'meleeDps',subRoles:['starter','quest'],nextJobs:['warrior','archer','mageRoot','acolyte','summonist','engineer'],party:{threat:.8},growthStats:['atk','hp','def','speed','aspd','crit']});
 }
 for(const j of JOBS){if(!j.growthStats)j.growthStats=BASE_GROWTH[j.id]||BASE_GROWTH[j.skillBase]||['atk','hp','def','speed','aspd','crit'];if(j.id!=='mirror')j.growthStats=j.growthStats.filter(s=>s==='reflect'?j.role==='tank':true);}
 
-const MAX_SKILL_STAR = 12;
-const SKILL_COSTS = [120,240,450,800,1300,2100,3300,5100,7600,11000,15800,22400];
+const MAX_SKILL_STAR = 6;
+const SKILL_COSTS = [120,240,450,800,1300,2100];
 const SKILL_BOOK = {
   blade:[
     {name:'선검 찌르기', desc:'가까운 적을 빠르게 찌르는 1성 기본 검술'},
@@ -2155,18 +2613,43 @@ function compactHighTierSkillDescriptions(){
   }
 }
 compactHighTierSkillDescriptions();
-function skillRequiredLevel(rank){
-  const table=[1,3,5,8,12,16,22,30,40,55,75,95];
-  return table[clamp(Math.floor(Number(rank)||1),1,MAX_SKILL_STAR)-1]||1;
+
+// 144: 직업 구조 재정리 패치 - 0차/1차/2차 고정 트리
+const JOB_TREE_ORDER={"adventurer":0,"warrior":10,"mageRoot":11,"archer":12,"thief":13,"blade":20,"paladin":21,"monk":22,"mage":30,"priest":31,"summoner":32,"sniper":40,"gunner":41,"engineer":42,"assassin":50,"hunter":51,"bloodPact":52};
+Object.assign(BASE_CLASS_LABEL,{adventurer:'모험가',warrior:'전사',mage:'마법사',archer:'궁수',thief:'도적'});
+function resetJobTree144(){
+  const jobs=[{"id":"adventurer","name":"모험가","type":"0차 기본직업","desc":"정식 전직 전의 기본 직업. 기본 조작은 공격/회피이고, 전투 스킬은 강한 일격을 사용한다.","base":{"atk":5,"hp":105,"def":2,"speed":124,"aspd":1.0,"crit":0.03,"range":78},"skillBase":"adventurer","weaponBase":"blade","attackBase":"blade","tier":0,"baseClass":"adventurer","role":"meleeDps","weaponName":"나뭇가지","growthStats":["atk","hp","def","speed","aspd","crit"],"skillMax":1,"order":0,"nextJobs":["warrior","mageRoot","archer","thief"],"party":{"threat":0.8}},{"id":"warrior","name":"전사","type":"1차 전사계열","desc":"근접 전투와 생존을 익히는 1차 전사 계열. 2차에서 검사, 성기사, 무투가로 전직한다.","base":{"atk":8,"hp":132,"def":5,"speed":122,"aspd":1.0,"crit":0.04},"skillBase":"warrior","weaponBase":"blade","attackBase":"blade","tier":1,"baseClass":"warrior","role":"meleeDps","weaponName":"초록 수련검","growthStats":["atk","hp","def","aspd","crit","lifesteal"],"skillMax":2,"order":10,"nextJobs":["blade","paladin","monk"]},{"id":"mageRoot","name":"마법사","type":"1차 마법사계열","desc":"마나 공격과 기초 회복을 익히는 1차 마법 계열. 2차에서 소서러, 힐러, 소환사로 전직한다.","base":{"atk":7,"hp":94,"def":1,"speed":120,"aspd":0.92,"crit":0.05,"skillPower":1.18,"range":145},"skillBase":"mageRoot","weaponBase":"mage","attackBase":"mage","tier":1,"baseClass":"mage","role":"magicDps","weaponName":"초록 수련지팡이","growthStats":["atk","skillPower","cooldown","range","mpRegen","hp"],"skillMax":2,"order":11,"nextJobs":["mage","priest","summoner"]},{"id":"archer","name":"궁수","type":"1차 궁수계열","desc":"다중 사격과 빠른 공격을 익히는 1차 원거리 계열. 2차에서 스나이퍼, 거너, 기술자로 전직한다.","base":{"atk":7,"hp":100,"def":2,"speed":142,"aspd":1.12,"crit":0.08,"range":155},"skillBase":"archer","weaponBase":"ranger","attackBase":"ranger","tier":1,"baseClass":"archer","role":"rangeDps","weaponName":"초록 수련활","growthStats":["atk","range","aspd","crit","speed","dodge"],"skillMax":2,"order":12,"nextJobs":["sniper","gunner","engineer"]},{"id":"thief","name":"도적","type":"1차 도적계열","desc":"후방 급습과 투명화를 쓰는 1차 기습 계열. 2차에서 어쌔신, 사냥꾼, 피의계약자로 전직한다.","base":{"atk":8,"hp":96,"def":1,"speed":158,"aspd":1.24,"crit":0.14,"critDmg":0.55,"dodge":0.08},"skillBase":"thief","weaponBase":"assassin","attackBase":"blade","tier":1,"baseClass":"thief","role":"meleeDps","weaponName":"초록 단검","growthStats":["atk","aspd","speed","crit","critDmg","dodge"],"skillMax":2,"order":13,"nextJobs":["assassin","hunter","bloodPact"]},{"id":"blade","name":"검사","type":"2차 전사계열","desc":"검술 연계와 돌진 베기에 특화된 전사 2차 직업.","base":{"atk":11,"hp":150,"def":6,"speed":130,"aspd":1.08,"crit":0.07,"lifesteal":0.025},"skillBase":"blade","weaponBase":"blade","attackBase":"blade","tier":2,"baseClass":"warrior","role":"meleeDps","weaponName":"초록 장검","growthStats":["atk","aspd","speed","crit","critDmg","hp","def","lifesteal"],"skillMax":6,"order":20,"previousJob":"warrior","party":{"threat":1.0}},{"id":"paladin","name":"성기사","type":"2차 전사계열","desc":"방어, 보호막, 신성 회복을 함께 쓰는 전사 2차 직업.","base":{"atk":8,"hp":165,"def":8,"speed":116,"aspd":0.96,"crit":0.04,"hpRegen":1.4,"skillPower":1.08},"skillBase":"paladin","weaponBase":"paladin","attackBase":"blade","tier":2,"baseClass":"warrior","role":"tank","weaponName":"초록 성검","growthStats":["hp","def","hpRegen","skillPower","atk","cooldown"],"skillMax":6,"order":21,"previousJob":"warrior","party":{"threat":1.35,"healPower":0.7,"buffPower":0.45,"shieldPower":0.9}},{"id":"monk","name":"무투가","type":"2차 전사계열","desc":"권격, 돌진, 연타로 붙어서 싸우는 전사 2차 직업.","base":{"atk":10,"hp":136,"def":4,"speed":150,"aspd":1.36,"crit":0.09,"dodge":0.08},"skillBase":"assassin","weaponBase":"assassin","attackBase":"blade","tier":2,"baseClass":"warrior","role":"meleeDps","weaponName":"초록 권갑","growthStats":["atk","aspd","speed","dodge","crit","hp","lifesteal"],"skillMax":6,"order":22,"previousJob":"warrior","party":{"threat":1.0}},{"id":"mage","name":"소서러","type":"2차 마법사계열","desc":"화염, 얼음, 번개, 대형 광역 마법을 쓰는 마법사 2차 직업.","base":{"atk":10,"hp":96,"def":1,"speed":120,"aspd":0.88,"crit":0.06,"skillPower":1.38,"range":165,"mpRegen":0.08},"skillBase":"mage","weaponBase":"mage","attackBase":"mage","tier":2,"baseClass":"mage","role":"magicDps","weaponName":"초록 소서러 지팡이","growthStats":["atk","skillPower","cooldown","range","crit","critDmg","mpRegen"],"skillMax":6,"order":30,"previousJob":"mageRoot","party":{"threat":0.85,"debuffPower":0.2}},{"id":"priest","name":"힐러","type":"2차 마법사계열","desc":"회복, 정화, 보호막을 담당하는 마법사 2차 지원 직업.","base":{"atk":5,"hp":122,"def":3,"speed":116,"aspd":0.9,"crit":0.03,"hpRegen":1.9,"skillPower":1.22,"mpRegen":0.1},"skillBase":"paladin","weaponBase":"paladin","attackBase":"mage","tier":2,"baseClass":"mage","role":"healer","weaponName":"초록 치유서","growthStats":["hpRegen","skillPower","cooldown","hp","def","mpRegen"],"skillMax":6,"order":31,"previousJob":"mageRoot","party":{"threat":0.55,"healPower":1.4,"buffPower":0.45,"shieldPower":0.55}},{"id":"summoner","name":"소환사","type":"2차 마법사계열","desc":"소환수와 정령을 부려 장기전에 강한 마법사 2차 직업.","base":{"atk":7,"hp":112,"def":2,"speed":122,"aspd":0.95,"crit":0.04,"summonPower":1.28,"hpRegen":0.5},"skillBase":"summoner","weaponBase":"summoner","attackBase":"summoner","tier":2,"baseClass":"mage","role":"summonDps","weaponName":"초록 소환봉","growthStats":["summonPower","skillPower","hp","def","hpRegen","cooldown"],"skillMax":6,"order":32,"previousJob":"mageRoot","party":{"threat":0.75,"buffPower":0.15}},{"id":"sniper","name":"스나이퍼","type":"2차 궁수계열","desc":"긴 사거리와 높은 단일 피해에 특화된 궁수 2차 직업.","base":{"atk":11,"hp":88,"def":1,"speed":120,"aspd":0.76,"crit":0.2,"critDmg":1.0,"range":255},"skillBase":"ranger","weaponBase":"ranger","attackBase":"ranger","tier":2,"baseClass":"archer","role":"rangeDps","weaponName":"초록 저격활","growthStats":["atk","range","crit","critDmg","cooldown","dodge"],"skillMax":6,"order":40,"previousJob":"archer","party":{"threat":0.75}},{"id":"gunner","name":"거너","type":"2차 궁수계열","desc":"연사, 산탄, 수류탄을 쓰는 궁수 2차 화력 직업.","base":{"atk":9,"hp":102,"def":2,"speed":136,"aspd":1.22,"crit":0.1,"range":190},"skillBase":"mechanic","weaponBase":"mechanic","attackBase":"mechanic","tier":2,"baseClass":"archer","role":"rangeDps","weaponName":"초록 권총","growthStats":["atk","aspd","range","crit","critDmg","speed"],"skillMax":6,"order":41,"previousJob":"archer","party":{"threat":0.9}},{"id":"engineer","name":"기술자","type":"2차 궁수계열","desc":"터렛, 지뢰, 전기장판 등 장치를 다루는 궁수 2차 설치 직업.","base":{"atk":8,"hp":118,"def":4,"speed":112,"aspd":0.94,"crit":0.05,"summonPower":1.16,"skillPower":1.08},"skillBase":"mechanic","weaponBase":"mechanic","attackBase":"mechanic","tier":2,"baseClass":"archer","role":"installDps","weaponName":"초록 공구총","growthStats":["atk","skillPower","summonPower","def","hp","cooldown"],"skillMax":6,"order":42,"previousJob":"archer","party":{"threat":0.85,"buffPower":0.15,"shieldPower":0.1}},{"id":"assassin","name":"어쌔신","type":"2차 도적계열","desc":"치명타와 순간 암살에 특화된 도적 2차 직업.","base":{"atk":11,"hp":98,"def":1,"speed":166,"aspd":1.34,"crit":0.2,"critDmg":0.9,"dodge":0.12},"skillBase":"assassin","weaponBase":"assassin","attackBase":"blade","tier":2,"baseClass":"thief","role":"meleeDps","weaponName":"초록 암살단검","growthStats":["atk","aspd","speed","crit","critDmg","dodge","cooldown"],"skillMax":6,"order":50,"previousJob":"thief","party":{"threat":0.95,"debuffPower":0.1}},{"id":"hunter","name":"사냥꾼","type":"2차 도적계열","desc":"덫, 표식, 야수 호출로 적을 추적하는 도적 2차 직업.","base":{"atk":9,"hp":108,"def":2,"speed":146,"aspd":1.16,"crit":0.12,"range":170,"dodge":0.07},"skillBase":"ranger","weaponBase":"ranger","attackBase":"ranger","tier":2,"baseClass":"thief","role":"rangeDps","weaponName":"초록 사냥활","growthStats":["atk","range","speed","crit","dodge","cooldown"],"skillMax":6,"order":51,"previousJob":"thief","party":{"threat":0.8,"debuffPower":0.35}},{"id":"bloodPact","name":"피의계약자","type":"2차 도적계열","desc":"체력을 대가로 강한 공격과 흡혈을 얻는 도적 2차 직업.","base":{"atk":12,"hp":128,"def":2,"speed":142,"aspd":1.12,"crit":0.12,"critDmg":0.75,"lifesteal":0.05,"skillPower":1.12},"skillBase":"hexer","weaponBase":"hexer","attackBase":"blade","tier":2,"baseClass":"thief","role":"hybrid","weaponName":"초록 혈단검","growthStats":["atk","lifesteal","critDmg","hp","skillPower","cooldown"],"skillMax":6,"order":52,"previousJob":"thief","party":{"threat":1.05,"debuffPower":0.45,"healPower":0.2}}];
+  JOBS.length=0;
+  for(const j of jobs)JOBS.push(j);
+}
+resetJobTree144();
+Object.assign(SKILL_BOOK,{"adventurer":[{"name":"강한 일격","desc":"기본 공격보다 강한 단일 타격. 공격/회피는 기본 버튼으로 사용한다."}],"warrior":[{"name":"강타","desc":"가까운 적에게 강한 근접 피해를 준다."},{"name":"철벽 태세","desc":"일정 시간 방어력이 증가한다."}],"mageRoot":[{"name":"마나볼","desc":"마나 구체를 발사해 마법 피해를 준다."},{"name":"라이트 힐","desc":"자신의 체력을 소량 회복한다."}],"archer":[{"name":"멀티샷","desc":"여러 발의 화살을 빠르게 발사한다."},{"name":"속공","desc":"일정 시간 공격속도가 증가한다."}],"thief":[{"name":"백스텝","desc":"적 뒤로 순간이동해 베며 기본 데미지의 2.5배 피해를 준다."},{"name":"투명화","desc":"적에게 보이지 않는다. 공격 시 해제되며 투명 상태 공격 피해가 1.8배가 된다. 백스텝과 중첩된다."}],"blade":[{"name":"연속베기","desc":"빠르게 3연속 베기"},{"name":"검기참","desc":"전방 검기 발사"},{"name":"돌진베기","desc":"앞으로 돌진하며 베기"},{"name":"반월참","desc":"넓은 반원 범위 공격"},{"name":"집중호흡","desc":"일정 시간 치명타 확률 증가"},{"name":"일섬","desc":"강력한 단일 검격"}],"paladin":[{"name":"신성타격","desc":"신성 속성 근접 공격"},{"name":"방패강타","desc":"적을 밀쳐내는 방패 공격"},{"name":"보호의 오라","desc":"일정 시간 방어력 증가"},{"name":"축복","desc":"공격력과 방어력 소폭 증가"},{"name":"신성회복","desc":"체력 회복"},{"name":"심판의 검","desc":"강력한 신성 범위 공격"}],"monk":[{"name":"연타","desc":"빠른 주먹 연속 공격"},{"name":"발차기","desc":"적을 밀쳐내는 공격"},{"name":"기합","desc":"일정 시간 공격력 증가"},{"name":"철산고","desc":"짧은 돌진 타격"},{"name":"회전각","desc":"주변 범위 공격"},{"name":"폭렬권","desc":"강력한 연속 타격"}],"mage":[{"name":"파이어볼","desc":"화염 구체 발사"},{"name":"아이스스피어","desc":"얼음 창 발사"},{"name":"라이트닝","desc":"번개 공격"},{"name":"마력폭발","desc":"주변 마법 폭발"},{"name":"마나증폭","desc":"일정 시간 마법 공격력 증가"},{"name":"메테오","desc":"강력한 광역 마법"}],"priest":[{"name":"힐","desc":"체력 회복"},{"name":"큐어","desc":"상태이상 해제"},{"name":"보호막","desc":"일정 피해 흡수"},{"name":"재생","desc":"일정 시간 지속 회복"},{"name":"신성파동","desc":"주변 적에게 신성 피해"},{"name":"부활의 빛","desc":"큰 회복 또는 전투불능 방지형 버프"}],"summoner":[{"name":"늑대 소환","desc":"근접 소환수 소환"},{"name":"정령 소환","desc":"원거리 마법 소환수 소환"},{"name":"골렘 소환","desc":"방어형 소환수 소환"},{"name":"소환 강화","desc":"소환수 공격력과 체력 증가"},{"name":"희생 명령","desc":"소환수를 폭발시켜 피해"},{"name":"군단 소환","desc":"여러 소환수를 일시 소환"}],"sniper":[{"name":"조준사격","desc":"강한 단일 원거리 공격"},{"name":"관통화살","desc":"직선 관통 공격"},{"name":"약점포착","desc":"일정 시간 치명타 확률 증가"},{"name":"헤드샷","desc":"높은 배율 단일 공격"},{"name":"은신사격","desc":"짧은 은신 후 공격"},{"name":"죽음의 표식","desc":"대상에게 받는 피해 증가 디버프"}],"gunner":[{"name":"연사","desc":"빠른 총탄 발사"},{"name":"산탄사격","desc":"전방 부채꼴 공격"},{"name":"수류탄","desc":"폭발 범위 공격"},{"name":"재장전","desc":"일정 시간 공격속도 증가"},{"name":"관통탄","desc":"직선 관통 탄환"},{"name":"난사","desc":"넓은 범위 연속 사격"}],"engineer":[{"name":"터렛 설치","desc":"자동 공격 장치 설치"},{"name":"지뢰 설치","desc":"밟으면 폭발하는 지뢰 설치"},{"name":"전기장판","desc":"범위 지속 피해"},{"name":"수리 드론","desc":"체력 소량 회복 또는 보조"},{"name":"강화장치","desc":"일정 시간 공격력 증가"},{"name":"폭격 요청","desc":"지정 범위 폭발 공격"}],"assassin":[{"name":"암습","desc":"적 뒤에서 강한 공격"},{"name":"그림자베기","desc":"순간 이동형 베기"},{"name":"독바르기","desc":"일정 시간 공격에 독 피해 추가"},{"name":"급소찌르기","desc":"치명타 확률 높은 공격"},{"name":"연막","desc":"적 명중률 감소 또는 은신 보조"},{"name":"처형","desc":"체력이 낮은 적에게 큰 피해"}],"hunter":[{"name":"덫 설치","desc":"적 이동 방해"},{"name":"추적 표식","desc":"대상에게 받는 피해 증가"},{"name":"야수 호출","desc":"짧은 시간 야수 공격"},{"name":"올가미","desc":"적 속도 감소"},{"name":"독화살","desc":"지속 피해 원거리 공격"},{"name":"포획 사격","desc":"강한 제어형 사격"}],"bloodPact":[{"name":"피의 칼날","desc":"체력을 일부 소모해 강한 공격"},{"name":"흡혈","desc":"피해량 일부 회복"},{"name":"혈폭발","desc":"주변 피의 폭발 공격"},{"name":"피의 계약","desc":"일정 시간 공격력 증가, 체력 지속 감소"},{"name":"붉은 낙인","desc":"대상에게 지속 피해"},{"name":"금단해방","desc":"짧은 시간 폭발적 강화"}]});
+
+function maxSkillRankForJob(jobId=player.job){
+  const job=jobById(jobId||player.job||'adventurer')||{};
+  const direct=SKILL_BOOK[job.id]||SKILL_BOOK[jobId];
+  const listLen=Array.isArray(direct)?direct.length:MAX_SKILL_STAR;
+  const configured=Number(job.skillMax)||listLen||MAX_SKILL_STAR;
+  return clamp(Math.floor(configured),1,MAX_SKILL_STAR);
+}
+function skillRequiredLevel(rank,jobId=player.job){
+  const job=jobById(jobId||player.job||'adventurer')||{};
+  const maxRank=maxSkillRankForJob(job.id||jobId);
+  const r=clamp(Math.floor(Number(rank)||1),1,maxRank);
+  if(job.id==='adventurer')return 1;
+  if(job.tier===1)return [10,14][r-1]||14;
+  if(job.tier===2)return [30,33,36,39,42,45][r-1]||45;
+  return [1,3,5,8,12,16][r-1]||1;
 }
 function canUseSkillRank(rank){return Number(player.level||1)>=skillRequiredLevel(rank);}
 function skillList(jobId=player.job){const direct=SKILL_BOOK[jobId];if(direct)return direct;const jb=jobById(jobId||'blade');if(jb&&jb.skillBase&&SKILL_BOOK[jb.skillBase])return SKILL_BOOK[jb.skillBase];return SKILL_BOOK.blade;}
 function skillStar(jobId=player.job){
   player.skillStars = player.skillStars || {};
-  return clamp(Number(player.skillStars[jobId]||0),0,MAX_SKILL_STAR);
+  const id=jobId||player.job||'adventurer';
+  return clamp(Number(player.skillStars[id]||0),0,maxSkillRankForJob(id));
 }
 function skillByRank(jobId=player.job, rank=skillStar(jobId)){
-  const list=skillList(jobId); const r=clamp(Number(rank)||1,1,MAX_SKILL_STAR);
+  const list=skillList(jobId); const r=clamp(Number(rank)||1,1,maxSkillRankForJob(jobId));
   return list[r-1] || list[0];
 }
 function skillInfo(jobId=player.job){
@@ -2401,15 +2884,168 @@ const AUTO_BATTLE_DESCS={
 
 const basePlayer = () => ({
   x:900,y:900,vx:0,vy:0,dir:-Math.PI/2,hp:100,maxHp:100,level:1,exp:0,nextExp:32,gold:160,potions:5,nickname:'플레이어',
-  job:'adventurer', baseClass:'adventurer', jobTier:0, classChosen:true, firstJobUnlocked:false, firstJobChosen:false, adventurerQuest:{accepted:false,done:false,dummyHits:0,completed:false}, jobHistory:['adventurer'], unlockedHidden:{}, atkTimer:0, atkTimerMax:0, skillTimer:0, skillTimers:[0,0,0,0], skillTimerMax:[0,0,0,0], potionTimer:0, dodgeTimer:0, dashTime:0, attackAnim:0, hurt:0, shield:0, autoMode:false, autoBattleType:'smart', activeBuffs:[], activeDebuffs:[], consumables:{potion:5,potionL:0,elixir:0,shield:0,haste:0,bomb:0}, potionSlot:'potion', autoPotionPct:.42, skillSlots:[1,2,3,4],
+  job:'adventurer', baseClass:'adventurer', jobTier:0, classChosen:true, firstJobUnlocked:false, firstJobChosen:false, adventurerQuest:{accepted:false,done:false,dummyHits:0,completed:false}, jobHistory:['adventurer'], unlockedHidden:{}, atkTimer:0, atkTimerMax:0, skillTimer:0, skillTimers:[0,0,0,0,0,0], skillTimerMax:[0,0,0,0,0,0], potionTimer:0, dodgeTimer:0, dashTime:0, attackAnim:0, hurt:0, shield:0, autoMode:false, autoBattleType:'smart', activeBuffs:[], activeDebuffs:[], consumables:{potion:5,potionM:0,potionL:0}, potionSlot:'potion', autoPotionPct:.42, skillSlots:[1,0,0,0,0,0], actionSlots:[{type:'skill',rank:1},{type:'empty'},{type:'empty'},{type:'empty'},{type:'attack'},{type:'dodge'}],
   growths:[], inventory:[], equip:{weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},
-  quest:0, questKills:0, guildRank:'신입', guildTokens:0, neonStone:0, skillStars:{}, codex:makeMonsterBook(), discoveredItems:{}, totalKills:0, logSettings:{system:true,combat:true,chat:true}
+  quest:0, questKills:0, guildRank:'신입', guildTokens:0, neonStone:0, skillStars:{adventurer:1}, codex:makeMonsterBook(), discoveredItems:{}, totalKills:0, logSettings:{system:true,combat:true,chat:true}
 });
 let player = basePlayer();
 let mode='class', currentField='town', fieldSize=1800, camera={x:0,y:0}, monsters=[], drops=[], projectiles=[], effects=[], summons=[], npcs=[], monsterNameSerial=0, dungeonMap=null;
 let talkTarget=null, portalArmed=true, portalTouchKey='';
 let joystick={active:false,id:null,cx:0,cy:0,dx:0,dy:0};
 let pcInput={keys:{},mouseX:0,mouseY:0,mouseAim:false};
+
+const ACTION_SLOT_COUNT=6;
+function defaultActionSlots(jobId=(player&&player.job)||'adventurer'){
+  const id=String(jobId||'adventurer');
+  if(id==='adventurer')return [{type:'skill',rank:1},{type:'empty'},{type:'empty'},{type:'empty'},{type:'attack'},{type:'dodge'}];
+  return [{type:'skill',rank:1},{type:'skill',rank:2},{type:'empty'},{type:'empty'},{type:'attack'},{type:'dodge'}];
+}
+function isTwoSkillDefaultActionSlots(slots){
+  if(!Array.isArray(slots)||slots.length<6)return false;
+  const spec=[['skill',1],['skill',2],['empty',0],['empty',0],['attack',0],['dodge',0]];
+  for(let i=0;i<6;i++){
+    const a=slots[i]||{};
+    if(String(a.type||'')!==spec[i][0])return false;
+    if(spec[i][0]==='skill'&&Number(a.rank)!==spec[i][1])return false;
+  }
+  return true;
+}
+function applyDefaultActionSlotsOnly(){
+  if(!player) return;
+  const keepStars = (player.skillStars && typeof player.skillStars === 'object') ? Object.assign({}, player.skillStars) : {};
+  player.actionSlots = defaultActionSlots();
+  player.skillSlots = actionSlotsToSkillSlots(player.actionSlots);
+  player.skillStars = Object.assign(keepStars, player.skillStars || {});
+}
+function isLegacyDefaultActionSlots(slots){
+  if(!Array.isArray(slots)||slots.length<6)return false;
+  const spec=[['skill',1],['skill',2],['skill',3],['skill',4],['attack',0],['dodge',0]];
+  for(let i=0;i<6;i++){
+    const a=slots[i]||{};
+    if(String(a.type||'')!==spec[i][0])return false;
+    if(spec[i][0]==='skill'&&Number(a.rank)!==spec[i][1])return false;
+  }
+  return true;
+}
+function sanitizeActionSlot(raw,fallback){
+  const fb=fallback&&typeof fallback==='object'?fallback:{type:'empty'};
+  const type=String((raw&&raw.type)||fb.type||'empty');
+  if(type==='skill')return {type:'skill',rank:clamp(Math.floor(Number(raw&&raw.rank)||Number(fb.rank)||0),0,MAX_SKILL_STAR)};
+  if(type==='attack'||type==='dodge'||type==='potion'||type==='empty')return {type};
+  return {type:'empty'};
+}
+function normalizeActionSlotList(list,legacySkillSlots){
+  const defaults=defaultActionSlots();
+  let src=Array.isArray(list)?list:null;
+  if(!src){
+    src=defaults.map((v,i)=>{
+      if(i<4 && Array.isArray(legacySkillSlots))return {type:'skill',rank:clamp(Math.floor(Number(legacySkillSlots[i])||0),0,MAX_SKILL_STAR)};
+      return v;
+    });
+  }
+  if(isLegacyDefaultActionSlots(src))src=defaults;
+  if(((player&&player.job)||'adventurer')==='adventurer'&&isTwoSkillDefaultActionSlots(src))src=defaults;
+  const out=[];
+  for(let i=0;i<ACTION_SLOT_COUNT;i++)out.push(sanitizeActionSlot(src[i],defaults[i]));
+  return out;
+}
+function actionSlotsToSkillSlots(slots){
+  const out=[];
+  for(let i=0;i<ACTION_SLOT_COUNT;i++){
+    const a=slots&&slots[i];
+    out.push(a&&a.type==='skill'?clamp(Math.floor(Number(a.rank)||0),0,MAX_SKILL_STAR):0);
+  }
+  return out;
+}
+function normalizeActionSlots(){
+  if(!player)return;
+  player.actionSlots=normalizeActionSlotList(player.actionSlots,player.skillSlots);
+  player.skillSlots=actionSlotsToSkillSlots(player.actionSlots);
+  player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers.slice(0,ACTION_SLOT_COUNT):[player.skillTimer||0,0,0,0,0,0];
+  while(player.skillTimers.length<ACTION_SLOT_COUNT)player.skillTimers.push(0);
+  player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax.slice(0,ACTION_SLOT_COUNT):[0,0,0,0,0,0];
+  while(player.skillTimerMax.length<ACTION_SLOT_COUNT)player.skillTimerMax.push(0);
+}
+function actionSlotButtonId(slot){return slot<=4?`skillBtn${slot}`:(slot===5?'attackBtn':'dodgeBtn');}
+function getActionSlot(slot){
+  normalizeActionSlots();
+  slot=clamp(Math.floor(Number(slot)||1),1,ACTION_SLOT_COUNT);
+  return player.actionSlots[slot-1]||{type:'empty'};
+}
+function actionSlotDisplay(slot){
+  const a=getActionSlot(slot);
+  if(a.type==='skill'){
+    const rank=clamp(Math.floor(Number(a.rank)||0),0,MAX_SKILL_STAR);
+    const learned=skillStar();
+    const sk=rank>0&&rank<=learned?skillByRank(player.job,rank):null;
+    return {name:sk?sk.name:`스킬${rank||''}`,cool:rank>0&&rank<=learned?`${rank}성`:'미습득',rank};
+  }
+  if(a.type==='attack')return {name:'공격',cool:player.atkTimer>0?'쿨타임':'READY'};
+  if(a.type==='dodge')return {name:'회피',cool:player.dodgeTimer>0?'쿨타임':'READY'};
+  if(a.type==='potion'){
+    const totalPot=totalPotionCount();
+    const slotPot=potionCount(player.potionSlot);
+    const pot=CONSUMABLES[player.potionSlot]||CONSUMABLES.potion;
+    return {name:pot.short||'포션(하)',cool:player.potionTimer>0?`${Math.ceil(player.potionTimer)}초`:`${slotPot}/${totalPot}`};
+  }
+  return {name:'빈칸',cool:'-'};
+}
+function executeActionSlot(slot,fromAuto=false){
+  const a=getActionSlot(slot);
+  if(a.type==='empty'){toast(`${slot}번 빈칸`);return false;}
+  if(a.type==='attack'){normalAttack(false);return true;}
+  if(a.type==='dodge'){dodge(true);return true;}
+  if(a.type==='potion'){usePotion();return true;}
+  if(a.type==='skill'){return safeUseSkill(slot,fromAuto);}
+  return false;
+}
+function setActionSlotType(slot,type,rank=0){
+  normalizeActionSlots();
+  slot=clamp(Math.floor(Number(slot)||1),1,ACTION_SLOT_COUNT);
+  type=String(type||'empty');
+  let next={type:'empty'};
+  if(type==='skill'){
+    rank=clamp(Math.floor(Number(rank)||0),0,maxSkillRankForJob(player.job));
+    const learned=skillStar();
+    if(rank>learned){toast('아직 배우지 않은 스킬');return;}
+    if(rank<=0)next={type:'empty'};
+    else{
+      for(let i=0;i<player.actionSlots.length;i++){
+        const a=player.actionSlots[i];
+        if(i!==slot-1&&a&&a.type==='skill'&&Number(a.rank)===rank)player.actionSlots[i]={type:'empty'};
+      }
+      next={type:'skill',rank};
+    }
+  }else if(['attack','dodge','potion','empty'].includes(type))next={type};
+  player.actionSlots[slot-1]=next;
+  player.skillSlots=actionSlotsToSkillSlots(player.actionSlots);
+  const label=actionSlotDisplay(slot).name;
+  toast(`${slot}번: ${label}`);
+  requestCloudSave('actionSlots');
+  showActionSlotSettings(slot);
+  updateHud();
+}
+function showActionSlotSettings(slot=1){
+  normalizePlayer();
+  popupMode='actionSlotSettings';
+  slot=clamp(Math.floor(Number(slot)||1),1,ACTION_SLOT_COUNT);
+  const cur=getActionSlot(slot);
+  const pick=(type,label,desc,rank=0)=>`<button class="card ${(cur.type===type&&(type!=='skill'||Number(cur.rank)===Number(rank)))?'selected':''}" onclick="Game.setActionSlotType(${slot},'${type}',${rank})"><h3>${escapeHtml(label)}</h3>${escapeHtml(desc||'')}</button>`;
+  const base=[
+    pick('empty','빈칸','이 번호 버튼을 비워둡니다.'),
+    pick('attack','공격','기본 공격을 실행합니다.'),
+    pick('dodge','회피','현재 방향으로 회피합니다.')
+  ].join('');
+  const learned=skillStar();
+  let skillRows='';
+  for(let r=1;r<=learned;r++){
+    const sk=skillByRank(player.job,r)||{name:'스킬',desc:''};
+    skillRows+=pick('skill',`${r}성 ${sk.name}`,sk.desc,r);
+  }
+  if(!skillRows)skillRows='<div class="card"><h3>보유 스킬 없음</h3>스킬 상점에서 먼저 스킬을 배워야 합니다.</div>';
+  openPopup(`<div class="title">${slot}번 버튼 설정</div><div class="sub">버튼을 짧게 누르면 실행하고, 길게 누르면 이 설정창이 열립니다.</div><h3>기본 기능</h3><div class="actionSlotChoiceGrid">${base}</div><h3>스킬</h3><div class="actionSlotChoiceGrid">${skillRows}</div><div class="footerBtns"><button onclick="Game.clearSkillSlots()">스킬 배치만 비우기</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+}
+
 function isTextEditingTarget(el){return !!(el&&(el.tagName==='INPUT'||el.tagName==='TEXTAREA'||el.isContentEditable));}
 function updateMouseAim(clientX,clientY){
   pcInput.mouseX=clientX;pcInput.mouseY=clientY;pcInput.mouseAim=true;
@@ -2421,7 +3057,7 @@ function updateMouseAim(clientX,clientY){
     if(Number.isFinite(wx)&&Number.isFinite(wy))player.dir=Math.atan2(wy-player.y,wx-player.x);
   }catch(e){}
 }
-let attackHeld=false, skillHeld=[false,false,false,false];
+let attackHeld=false, skillHeld=[false,false,false,false,false,false];
 let pendingLevelUps=0, growthOptions=[], growthSelectNeed=1, growthSelected=[], rouletteUsed=false, rouletteSpinning=false, popupMode='', codexOpenFields={};
 const saveKey='green_line_full_world_v1';
 const SUPABASE_CONFIG={
@@ -2551,38 +3187,54 @@ async function showKakaoLoginPage(){
     openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">Supabase SDK를 불러오지 못했습니다.<br>네트워크 또는 CDN 차단 상태를 확인하십시오.</div><div class="card"><h3>다시 시도</h3>SDK 주소를 3개 CDN으로 순차 시도하도록 보수했습니다.<br><span class="small">계속 실패하면 새로고침 후 다시 확인하십시오.</span></div><div class="footerBtns"><button onclick="Game.devKakaoLogin()">개발자 로그인</button><button onclick="Game.showKakaoLoginPage()">다시 확인</button></div></div>`);
     return;
   }
-  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="loginButtonRow"><button class="kakaoNeonBtn" onclick="Game.startKakaoLogin()">카카오톡 로그인</button><button onclick="Game.devKakaoLogin()">개발자 로그인</button></div><div class="townNote">개발자 로그인은 테스트/미리보기용입니다. 서버 저장과 온라인 접속자는 비활성입니다.</div></div>`);
+  openPopup(`<div class="bootScreen"><div class="gameTitle">카카오 로그인</div><div class="bootPanel">업데이트 확인이 끝났습니다.<br>로그인하면 서버에서 유저 정보를 자동으로 불러옵니다.</div><div class="loginButtonRow"><button class="kakaoNeonBtn" onclick="Game.startKakaoLogin()">카카오톡 로그인</button><button onclick="Game.devKakaoLogin()">개발자 로그인</button></div><div class="townNote">개발자 로그인은 테스트/미리보기용입니다. Lv.100 모험가 상태로 시작합니다.</div></div>`);
   try{const {data}=await client.auth.getSession();if(data&&data.session){showCloudLoadingPage();await loadCloudStateAndEnter();}}catch(e){console.error(e);}
 }
 async function kakaoLogout(){
   savePersistentParty('logout');cloudState.devPreview=false;leaveOnline(false);const client=await ensureSupabaseClient(false);try{if(client)await client.auth.signOut();}catch(e){console.error(e);}cloudState.ready=false;cloudState.user=null;cloudState.session=null;cloudState.status='로그아웃';toast('로그아웃');showKakaoLoginPage();
 }
 
+function devNextExpForLevel(level){
+  let next=32;
+  const target=Math.max(1,Math.floor(Number(level)||1));
+  for(let lv=1;lv<target;lv++)next=Math.round(next*1.32+18);
+  return Math.max(32,next);
+}
+
 function applyDevWarriorSkillPreset(){
   normalizePlayer();
   player.nickname=sanitizeNickname(player.nickname||'DEV');
-  player.job='warrior';
-  player.baseClass='warrior';
-  player.jobTier=1;
+  player.job='adventurer';
+  player.baseClass='adventurer';
+  player.jobTier=0;
   player.classChosen=true;
-  player.firstJobUnlocked=true;
-  player.firstJobChosen=true;
-  player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];
-  if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');
-  if(!player.jobHistory.includes('warrior'))player.jobHistory.push('warrior');
-  player.level=Math.max(Number(player.level)||1,8);
-  player.exp=Math.max(Number(player.exp)||0,0);
-  player.gold=Math.max(Number(player.gold)||0,5000);
-  player.skillStars=player.skillStars&&typeof player.skillStars==='object'?player.skillStars:{};
-  player.skillStars.warrior=Math.max(Number(player.skillStars.warrior)||0,4);
-  player.skillSlots=[1,2,3,4];
+  player.firstJobUnlocked=false;
+  player.firstJobChosen=false;
+  player.adventurerQuest={accepted:false,done:false,dummyHits:0,completed:false};
+  player.jobHistory=['adventurer'];
+  player.level=100;
+  player.exp=0;
+  player.nextExp=devNextExpForLevel(player.level);
+  player.gold=160;
+  player.skillStars={adventurer:1};
+  player.skillSlots=[1,0,0,0,0,0];
+  player.actionSlots=defaultActionSlots('adventurer');
+  player.skillTimers=[0,0,0,0,0,0];
+  player.skillTimerMax=[0,0,0,0,0,0];
+  player.potionTimer=0;
+  player.autoMode=false;
+  player.autoBattleType='smart';
+  player.unlockedHidden={};
   syncHp();
+  player.hp=player.maxHp;
 }
+
 function devKakaoLogin(){
   try{
     leaveOnline(false);
     cloudState.devPreview=true;
     storageSet('green_line_dev_dummy_enabled','1');
+    try{storageRemove(saveKey);}catch(_){ }
     cloudState.ready=false;
     cloudState.loading=false;
     cloudState.user=null;
@@ -2590,35 +3242,20 @@ function devKakaoLogin(){
     cloudState.status='개발자 미리보기';
     onlineState.enabled=false;
     onlineState.status='개발자 모드';
-    const saved=storageGet(saveKey);
-    if(saved){
-      try{
-        const data=JSON.parse(saved);
-        if(data&&data.player){
-          player=Object.assign(basePlayer(),data.player);
-          normalizePlayer();syncHp();
-          applyDevWarriorSkillPreset();
-          restorePersistentParty();
-          currentField=data.currentField||data.field||'town';
-          mode=currentField==='town'?'town':'field';
-          enterField(currentField||'town');
-          closePopup();
-          updateDevDummyAI(0.016);msg('개발자 로그인으로 접속했습니다. 서버 저장/온라인은 비활성입니다. AI 더미 유저가 활성화되었습니다.');
-          return;
-        }
-      }catch(e){console.warn('dev local load skipped',e);}
-    }
     player=basePlayer();
-    player.nickname=sanitizeNickname(player.nickname||'DEV');
+    player.nickname='DEV';
     applyDevWarriorSkillPreset();
     restorePersistentParty();
     mode='town';
     enterField('town');
     giveStarterItems();
     closePopup();
-    updateDevDummyAI(0.016);msg('개발자 로그인으로 접속했습니다. 서버 저장/온라인은 비활성입니다. AI 더미 유저가 활성화되었습니다.');
+    updateDevDummyAI(0.016);
+    requestCloudSave('devFreshStart',true);
+    msg('개발자 로그인: Lv.100 모험가로 시작합니다. AI 더미 유저는 테스트용으로 유지됩니다.');
   }catch(e){console.error(e);toast('개발자 로그인 오류');showKakaoLoginPage();}
 }
+
 function requestCloudSave(reason='auto',immediate=false){
   if(cloudState.deleting||cloudState.accountResetting)return false;
   try{storageSet(saveKey,JSON.stringify(serializeCloudState(reason)));}catch(e){}
@@ -3028,6 +3665,25 @@ function smoothPeerPosition(p,dt){
 
 
 function devDummyModeActive(){return !!(cloudState&&cloudState.devPreview)||storageGet('green_line_dev_dummy_enabled')==='1';}
+
+function devPreviewMode(){return !!(cloudState&&cloudState.devPreview)||storageGet('green_line_dev_dummy_enabled')==='1';}
+function unlockAllSkillsForDev(){
+  if(!player) return false;
+  player.skillStars=player.skillStars&&typeof player.skillStars==='object'?player.skillStars:{};
+  if(Array.isArray(JOBS)){
+    for(const j of JOBS){
+      if(!j||!j.id||j.id==='adventurer')continue;
+      player.skillStars[j.id]=maxSkillRankForJob(j.id);
+      if(j.skillBase)player.skillStars[j.skillBase]=maxSkillRankForJob(j.id);
+    }
+  }
+  for(const id in SKILL_BOOK){player.skillStars[id]=MAX_SKILL_STAR;}
+  normalizeActionSlots();
+  player.firstJobUnlocked=true;
+  player.firstJobChosen=(player.job||'adventurer')!=='adventurer';
+  player.classChosen=true;
+  return true;
+}
 function dummySpawnOffset(i){const a=(i/Math.max(1,DEV_DUMMY_PROFILES.length))*Math.PI*2;return {x:Math.cos(a)*82,y:Math.sin(a)*58};}
 const DEV_DUMMY_WORLD_STATE_KEY='green_line_dev_dummy_world_state_v2';
 let devDummyWorldLastSave=0;
@@ -3050,7 +3706,7 @@ function writeDevDummyWorldState(force=false){
       data[id]={
         id:d.id,field:d.field||'town',x:Number(d.x)||0,y:Number(d.y)||0,targetX:Number(d.targetX)||Number(d.x)||0,targetY:Number(d.targetY)||Number(d.y)||0,drawX:Number(d.drawX)||Number(d.x)||0,drawY:Number(d.drawY)||Number(d.y)||0,dir:Number(d.dir)||0,
         level:Math.max(1,Math.floor(Number(d.level)||1)),exp:Math.max(0,Math.floor(Number(d.exp)||0)),nextExp:Math.max(60,Math.floor(Number(d.nextExp)||120)),gold:Math.max(0,Math.floor(Number(d.gold)||0)),
-        hp:Math.max(1,Number(d.hp)||1),maxHp:Math.max(1,Number(d.maxHp)||1),equip:d.equip||{},skillStars:d.skillStars||{},skillSlots:Array.isArray(d.skillSlots)?d.skillSlots:[1,2,3,4],
+        hp:Math.max(1,Number(d.hp)||1),maxHp:Math.max(1,Number(d.maxHp)||1),equip:d.equip||{},skillStars:d.skillStars||{},skillSlots:Array.isArray(d.skillSlots)?d.skillSlots:[1,2,0,0,0,0],
         aiState:d.aiState||'',aiCleared:d.aiCleared||{},aiDiscovered:d.aiDiscovered||{},aiTargetField:d.aiTargetField||d.field||'plain',aiPortalTarget:d.aiPortalTarget||null,aiPortalTravel:Number(d.aiPortalTravel)||0,t:Date.now()
       };
     }
@@ -3084,7 +3740,7 @@ function makeDevDummyPeer(profile=DEV_DUMMY_PROFILES[0],idx=0){
   const stars=Math.max(2,Math.min(7,Math.floor(lv/5)+Number(profile.skillBase||1)));
   const d={
     id:profile.id,userId:profile.id,name:devDummyNickname(profile),job:profile.job,jobName:profile.jobName,level:lv,exp:0,nextExp:Math.round(90+lv*28),gold:360+idx*80,
-    skillStars:{[profile.job]:stars},skillSlots:[1,2,3,4],
+    skillStars:{[profile.job]:stars},skillSlots:[1,2,3,4,0,0],
     equip:{weapon:{name:profile.weapon||'AI 훈련무기',slot:'weapon',rarity:'일반',level:Math.max(1,lv)}},
     field:currentField,x:px+off.x,y:py+off.y,targetX:px+off.x,targetY:py+off.y,drawX:px+off.x,drawY:py+off.y,dir:0,hp:260,maxHp:260,
     moving:false,visualMoving:false,partyId:onlineState.partyId||'',partyOwnerId:onlineState.partyOwnerId||'',seenAt:performance.now(),ts:Date.now(),
@@ -3567,7 +4223,7 @@ function updateOneDevDummyAI(d,dt,profile,idx){
   d.name=devDummyNickname(profile);d.job=profile.job;d.jobName=profile.jobName;d.profileId=profile.id;d.devDummy=true;d.userId=profile.id;
   d.skillStars=d.skillStars&&typeof d.skillStars==='object'?d.skillStars:{[profile.job]:3};
   if(!d.skillStars[profile.job])d.skillStars[profile.job]=Math.max(2,Math.min(7,Math.floor((Number(d.level)||8)/5)+Number(profile.skillBase||1)));
-  d.skillSlots=Array.isArray(d.skillSlots)?d.skillSlots:[1,2,3,4];
+  d.skillSlots=Array.isArray(d.skillSlots)?d.skillSlots:[1,2,0,0,0,0];
   const party=devDummyInParty(d);
   if(party){
     d.partyId=onlineState.partyId||d.partyId||'';d.partyOwnerId=onlineState.partyOwnerId||d.partyOwnerId||'';
@@ -4086,7 +4742,7 @@ function showPeerInfo(id){
 }
 function connectOnline(url,key,room){return connectOnlineFromPanel();}
 function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
-function normalizePlayer(){player.weaponFace=Number.isFinite(player.weaponFace)?player.weaponFace:(Number.isFinite(player.dir)?player.dir:-Math.PI/2);const b=basePlayer();player=Object.assign(b,player||{});player.logSettings=Object.assign({system:true,combat:true,chat:true},player.logSettings||{});if(!player.job)player.job='adventurer';const jb=jobById(player.job||'adventurer');player.baseClass=player.baseClass||jb.baseClass||'adventurer';player.jobTier=player.job?jb.tier||0:0;player.classChosen=true;player.firstJobUnlocked=!!player.firstJobUnlocked;player.firstJobChosen=!!player.firstJobChosen;player.adventurerQuest=(player.adventurerQuest&&typeof player.adventurerQuest==='object')?Object.assign({accepted:false,done:false,dummyHits:0,completed:false},player.adventurerQuest):{accepted:false,done:false,dummyHits:0,completed:false};player.adventurerQuest.dummyHits=clamp(Math.floor(Number(player.adventurerQuest.dummyHits)||0),0,50);if(player.adventurerQuest.done||player.adventurerQuest.completed)player.firstJobUnlocked=true;if(player.job&&player.job!=='adventurer')player.firstJobChosen=true;player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');if(player.job&&!player.jobHistory.includes(player.job))player.jobHistory.push(player.job);player.unlockedHidden=(player.unlockedHidden&&typeof player.unlockedHidden==='object')?player.unlockedHidden:{};player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionL:0,elixir:0,shield:0,haste:0,bomb:0},player.consumables||{});player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0];while(player.skillTimers.length<4)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,4);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];while(player.skillTimerMax.length<4)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,4);player.atkTimerMax=Number(player.atkTimerMax)||0;player.skillStars=player.skillStars||{};player.skillSlots=Array.isArray(player.skillSlots)?player.skillSlots.slice(0,4):[1,2,3,4];while(player.skillSlots.length<4)player.skillSlots.push(player.skillSlots.length+1);player.skillSlots=player.skillSlots.map(v=>clamp(Math.floor(Number(v)||0),0,MAX_SKILL_STAR));if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=clamp(Number(player.autoPotionPct)||.42,.05,.95);if(!AUTO_BATTLE_TYPES[player.autoBattleType])player.autoBattleType='smart';const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign({},player.codex[fid][i]||{},fresh[fid][i],{seen:(player.codex[fid][i]&&player.codex[fid][i].seen)||0,kills:(player.codex[fid][i]&&player.codex[fid][i].kills)||0});}player.neonStone=Math.max(0,Math.floor(Number(player.neonStone)||0));for(const fid in player.codex){if(Array.isArray(player.codex[fid])){for(const e of player.codex[fid]){if(e&&typeof e==='object'&&(!e.neonRewards||typeof e.neonRewards!=='object'))e.neonRewards={};}}}normalizeStageProgress();player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
+function normalizePlayer(){player.weaponFace=Number.isFinite(player.weaponFace)?player.weaponFace:(Number.isFinite(player.dir)?player.dir:-Math.PI/2);const b=basePlayer();player=Object.assign(b,player||{});player.logSettings=Object.assign({system:true,combat:true,chat:true},player.logSettings||{});if(!player.job)player.job='adventurer';const jb=jobById(player.job||'adventurer');player.baseClass=player.baseClass||jb.baseClass||'adventurer';player.jobTier=player.job?jb.tier||0:0;player.classChosen=true;player.firstJobUnlocked=!!player.firstJobUnlocked;player.firstJobChosen=!!player.firstJobChosen;player.adventurerQuest=(player.adventurerQuest&&typeof player.adventurerQuest==='object')?Object.assign({accepted:false,done:false,dummyHits:0,completed:false},player.adventurerQuest):{accepted:false,done:false,dummyHits:0,completed:false};player.adventurerQuest.dummyHits=clamp(Math.floor(Number(player.adventurerQuest.dummyHits)||0),0,50);if(player.adventurerQuest.done||player.adventurerQuest.completed)player.firstJobUnlocked=true;if(player.job&&player.job!=='adventurer')player.firstJobChosen=true;player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');if(player.job&&!player.jobHistory.includes(player.job))player.jobHistory.push(player.job);player.unlockedHidden=(player.unlockedHidden&&typeof player.unlockedHidden==='object')?player.unlockedHidden:{};player.nickname=sanitizeNickname(player.nickname||'플레이어');player.consumables=Object.assign({potion:player.potions||0,potionM:0,potionL:0},player.consumables||{});if(player.consumables.elixir){player.consumables.potionM=(player.consumables.potionM||0)+Math.floor(Number(player.consumables.elixir)||0);delete player.consumables.elixir;}if(player.consumables.shield){player.consumables.potionM=(player.consumables.potionM||0)+Math.floor(Number(player.consumables.shield)||0);delete player.consumables.shield;}if(player.consumables.haste){player.consumables.potion=(player.consumables.potion||0)+Math.floor(Number(player.consumables.haste)||0);delete player.consumables.haste;}if(player.consumables.bomb){player.consumables.potion=(player.consumables.potion||0)+Math.floor(Number(player.consumables.bomb)||0);delete player.consumables.bomb;}for(const k of Object.keys(player.consumables||{})){if(!CONSUMABLES[k])delete player.consumables[k];else player.consumables[k]=Math.max(0,Math.floor(Number(player.consumables[k])||0));}player.potions=player.consumables.potion||player.potions||0;player.activeBuffs=Array.isArray(player.activeBuffs)?player.activeBuffs:[];player.activeDebuffs=Array.isArray(player.activeDebuffs)?player.activeDebuffs:[];player.skillTimers=Array.isArray(player.skillTimers)?player.skillTimers:[player.skillTimer||0,0,0,0,0,0];while(player.skillTimers.length<ACTION_SLOT_COUNT)player.skillTimers.push(0);player.skillTimers=player.skillTimers.slice(0,ACTION_SLOT_COUNT);player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0,0,0];while(player.skillTimerMax.length<ACTION_SLOT_COUNT)player.skillTimerMax.push(0);player.skillTimerMax=player.skillTimerMax.slice(0,ACTION_SLOT_COUNT);player.atkTimerMax=Number(player.atkTimerMax)||0;player.skillStars=player.skillStars||{};normalizeActionSlots();if((player.job||'adventurer')==='adventurer')player.skillStars.adventurer=Math.max(Number(player.skillStars.adventurer)||0,1);if(!CONSUMABLES[player.potionSlot])player.potionSlot='potion';player.autoPotionPct=Number.isFinite(Number(player.autoPotionPct))?clamp(Number(player.autoPotionPct),0,1):.42;if(!AUTO_BATTLE_TYPES[player.autoBattleType])player.autoBattleType='smart';normalizeActionSlots();const fresh=makeMonsterBook();player.codex=player.codex||{};for(const fid in fresh){if(!player.codex[fid])player.codex[fid]=fresh[fid];for(let i=0;i<fresh[fid].length;i++)player.codex[fid][i]=Object.assign({},player.codex[fid][i]||{},fresh[fid][i],{seen:(player.codex[fid][i]&&player.codex[fid][i].seen)||0,kills:(player.codex[fid][i]&&player.codex[fid][i].kills)||0});}player.neonStone=Math.max(0,Math.floor(Number(player.neonStone)||0));for(const fid in player.codex){if(Array.isArray(player.codex[fid])){for(const e of player.codex[fid]){if(e&&typeof e==='object'&&(!e.neonRewards||typeof e.neonRewards!=='object'))e.neonRewards={};}}}normalizeStageProgress();player.equip=Object.assign({weapon:null,armor:null,helmet:null,boots:null,ring:null,amulet:null,relic:null},player.equip||{});}
 function addBuff(name,duration=2,mods={}){const old=player.activeBuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);Object.assign(old,mods);return;}player.activeBuffs.push(Object.assign({name,time:duration},mods));}
 function addDebuff(name,duration=2){const old=player.activeDebuffs.find(b=>b.name===name);if(old){old.time=Math.max(old.time,duration);return;}player.activeDebuffs.push({name,time:duration});}
 function updateStatusTimers(dt){for(const b of player.activeBuffs||[]){b.time-=dt;if(b.hpRegen)player.hp=clamp(player.hp+b.hpRegen*dt,0,player.maxHp);}for(const d of player.activeDebuffs||[])d.time-=dt;player.activeBuffs=(player.activeBuffs||[]).filter(b=>b.time>0);player.activeDebuffs=(player.activeDebuffs||[]).filter(d=>d.time>0);}
@@ -4169,7 +4825,7 @@ function computeStats(){
   for(const g of player.growths) applyStat(s,g.stat,g.value);
   for(const slot in player.equip){const item=player.equip[slot]; if(item) for(const k in item.stats) applyStat(s,k,item.stats[k]);}
   s.speed*=1+buffMod('speed'); s.aspd+=buffMod('aspd'); s.skillPower+=buffMod('skillPower'); s.def+=buffMod('def');
-  s.maxHp=Math.max(1,Math.round(s.hp)); s.speed=clamp(s.speed,80,260); s.aspd=clamp(s.aspd,.45,3.8); s.crit=clamp(s.crit,0,.85); s.lifesteal=clamp(s.lifesteal,0,.65); s.dodge=clamp(s.dodge,0,.55); s.reflect=clamp(s.reflect,0,1.2); s.cooldown=clamp(s.cooldown,0,.55); s.magnet=clamp(s.magnet||80,40,520);
+  s.maxHp=Math.max(1,Math.round(s.hp)); s.speed=clamp(s.speed,80,260); s.aspd=clamp(s.aspd,.45,3.8); s.crit=clamp(s.crit,0,.85); s.lifesteal=clamp(s.lifesteal,0,.25); s.dodge=clamp(s.dodge,0,.55); s.reflect=clamp(s.reflect,0,1.2); s.cooldown=clamp(s.cooldown,0,.55); s.magnet=clamp(s.magnet||80,40,520);
   return s;
 }
 function applyStat(s,k,v){
@@ -4189,8 +4845,9 @@ function repairSkillSlotDuplicates(){
     if(n<=0||used.has(n))return 0;
     used.add(n);return n;
   });
-  while(player.skillSlots.length<4)player.skillSlots.push(0);
-  player.skillSlots=player.skillSlots.slice(0,4);
+  while(player.skillSlots.length<ACTION_SLOT_COUNT)player.skillSlots.push(0);
+  player.skillSlots=player.skillSlots.slice(0,ACTION_SLOT_COUNT);
+  player.actionSlots=normalizeActionSlotList(player.actionSlots,player.skillSlots);
 }
 function repairEquipmentRuntime(){
   normalizePlayer();
@@ -4308,6 +4965,61 @@ function roleText(job){return ROLE_LABEL[job?.role]||job?.type||'전투';}
 function baseClassText(job){return BASE_CLASS_LABEL[job?.baseClass]||job?.baseClass||'공통';}
 function jobBadge(job){return `${tierText(job)} · ${roleText(job)} · ${baseClassText(job)}`;}
 function jobPartyLine(job){const p=job.party||{};const parts=[];if(p.threat)parts.push(`어그로 ${p.threat.toFixed(2)}`);if(p.healPower)parts.push(`회복 ${p.healPower.toFixed(2)}`);if(p.buffPower)parts.push(`버프 ${p.buffPower.toFixed(2)}`);if(p.debuffPower)parts.push(`디버프 ${p.debuffPower.toFixed(2)}`);if(p.shieldPower)parts.push(`보호 ${p.shieldPower.toFixed(2)}`);return parts.join(' · ')||'개인 전투형';}
+function devJobSortValue(j){
+  if(!j)return 999999;
+  if(Number.isFinite(Number(j.order)))return Number(j.order);
+  const t=j&&j.hidden?99:(Number(j&&j.tier)||0);
+  return t*1000+String(j&&j.name||'').charCodeAt(0);
+}
+function showDevJobFreeSelect(){
+  normalizePlayer();
+  unlockAllSkillsForDev();
+  popupMode='devJobSelect';
+  zoneTag.textContent='직업소개소';
+  const current=player.job||'adventurer';
+  const list=(Array.isArray(JOBS)?JOBS:[]).filter(j=>j&&j.id).slice().sort((a,b)=>devJobSortValue(a)-devJobSortValue(b));
+  const cards=list.map(j=>{
+    const b=j.base||{};
+    const tag=j.hidden?'히든':(j.tier?`${j.tier}차`:'0차');
+    const maxRank=maxSkillRankForJob(j.id);
+    const skillName=(skillByRank(j.id,maxRank)||skillByRank(j.id,1)||{}).name||'스킬';
+    const skillNote=j.id==='adventurer'?'모험가 기본 스킬':`${maxRank}개 스킬 활성`;
+    return `<button class="card ${current===j.id?'selected':''}" onclick="Game.pickDevJob('${escapeHtml(j.id)}')"><h3>${current===j.id?'[현재] ':''}${escapeHtml(j.name)}</h3><b>개발자 자유선택 · ${escapeHtml(tag)} · ${escapeHtml(skillNote)}</b><br>${escapeHtml(j.desc||'')}<br><span class="small">공격 ${b.atk||0} · HP ${b.hp||0} · 방어 ${b.def||0} · 이속 ${b.speed||0}<br>대표 스킬: ${escapeHtml(skillName)}</span></button>`;
+  }).join('')||'<div class="card">선택 가능한 직업 정보가 없습니다.</div>';
+  openPopup(`<div class="title">개발자 직업 자유 선택</div><div class="sub">개발자 로그인 상태에서는 조건 없이 모험가 포함 모든 직업을 선택합니다. 선택한 직업의 보유 가능 스킬이 활성화됩니다.</div><div class="grid">${cards}</div><div class="footerBtns"><button onclick="Game.showSkillInfoPanel()">스킬정보</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+}
+function pickDevJob(id){
+  normalizePlayer();
+  if(!devPreviewMode()){pickJob(id);return;}
+  const job=jobById(id);
+  if(!job||!job.id){toast('직업 정보 오류');showDevJobFreeSelect();return;}
+  const prevId=player.job||'adventurer';
+  player.job=job.id;
+  player.baseClass=job.baseClass||job.id;
+  player.jobTier=job.tier||1;
+  player.classChosen=true;
+  player.firstJobUnlocked=true;
+  player.firstJobChosen=job.id!=='adventurer';
+  player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];
+  if(!player.jobHistory.includes('adventurer'))player.jobHistory.unshift('adventurer');
+  if(prevId&&!player.jobHistory.includes(prevId))player.jobHistory.push(prevId);
+  if(!player.jobHistory.includes(job.id))player.jobHistory.push(job.id);
+  unlockAllSkillsForDev();
+  player.skillStars[job.id]=maxSkillRankForJob(job.id);
+  if(job.skillBase)player.skillStars[job.skillBase]=maxSkillRankForJob(job.id);
+  applyDefaultActionSlotsOnly();
+  const w=makeItem(Math.max(1,player.level||1),job.id==='adventurer'?'일반':'희귀','weapon',job.id);
+  w.name=job.weaponName||`개발자 ${job.name} 무기`;
+  player.inventory=Array.isArray(player.inventory)?player.inventory:[];
+  player.inventory.push(w);
+  equipItem(w.id,true);
+  syncHp();
+  saveGame();
+  toast(`${job.name} 선택 · 전체 스킬 활성`);
+  msg(`개발자 모드: ${job.name} 직업으로 변경하고 모든 스킬을 활성화했습니다.`,'system');
+  updateHud();
+  showDevJobFreeSelect();
+}
 function showJobSelectPage(){
   mode='class'; popupMode='class'; zoneTag.textContent='직업소개소';
   if((player.job||'adventurer')==='adventurer'&&!player.firstJobUnlocked){showJobAgency();return;}
@@ -4318,11 +5030,19 @@ function showJobSelectPage(){
     const skillName=(skillByRank(j.id,1)||{}).name || j.skill || '기본 스킬';
     return `<button class="card ${current===j.id?'selected':''}" onclick="Game.pickJob('${j.id}')"><h3>${current===j.id?'[현재] ':''}${j.name}</h3><b>${jobBadge(j)}</b><br>${j.desc}<br><span class="small">공격 ${b.atk||0} · HP ${b.hp||0} · 이속 ${b.speed||0} · 공속 ${(b.aspd||1).toFixed(2)}<br>전직 후보: ${(j.nextJobs||[]).map(id=>jobById(id).name).join(' / ')}<br>1성 스킬: ${skillName}</span></button>`;
   }).join('');
-  openPopup(`<div class="title">1차 직업 선택 (6계열)</div><div class="sub">나중에 레벨 20에서 2차 전직, 레벨 50에서 3차 전직을 진행합니다. 히든 직업은 조건 달성 후 전직 메뉴에 표시됩니다.</div><div class="grid">${cards}</div>`);
+  openPopup(`<div class="title">1차 직업 선택 (4계열)</div><div class="sub">1차 전직은 Lv.10, 2차 전직은 Lv.30부터 진행합니다.</div><div class="grid">${cards}</div>`);
 }
 const PATCH_NOTES=[
   {
-    ver:'현재 패치 140',
+    ver:'현재 패치 161',
+    text:['- 면접관 개발자 직업선택에 모험가 추가','- 모험가 선택 시 Lv.100 모험가/기본 슬롯 유지','- 1차/2차 직업 선택 구조 유지'].join('\n')
+  },
+  {
+    ver:'이전 패치 142',
+    text:['- 개발자 로그인 Lv.100 모험가 시작','- 패치노트 줄바꿈 오류 수정','- 실행 시작 단계 안정화'].join('\n')
+  },
+  {
+    ver:'이전 패치 140',
     text:['- 전사 1~4성 스킬 이펙트 강제 적용','- 선검 찌르기: 검 모양 검기 직선 발사','- 전진 베기: 수동 전방 이동 궤적과 베기 표시','- 십자참: 가로/세로 동시 십자 검격','- 회전베기: 캐릭터 360도 회전과 원형 참격'].join('\n')
   },
   {
@@ -4348,8 +5068,10 @@ function showPatchNotes(){
 
 function pickJob(id){
   normalizePlayer();
+  if(devPreviewMode()){pickDevJob(id);return;}
   if((player.job||'adventurer')==='adventurer'&&!player.firstJobUnlocked){toast('장로의 모험가 퀘스트를 먼저 완료해야 합니다');showJobAgency();return;}
   const job=jobById(id);
+  if(job.tier===1&&Number(player.level||1)<10){toast('1차 전직은 Lv.10부터 가능합니다');showJobAgency();return;}
   const nickEl=$('nickInput');
   if(nickEl) player.nickname=sanitizeNickname(nickEl.value);
   else player.nickname=sanitizeNickname(player.nickname||'플레이어');
@@ -4362,7 +5084,7 @@ function pickJob(id){
   player.jobHistory=Array.isArray(player.jobHistory)?player.jobHistory:[];
   if(!player.jobHistory.includes(id))player.jobHistory.push(id);
   if(!player.skillStars)player.skillStars={};
-  if(!player.skillSlots)player.skillSlots=[1,2,3,4];
+  if(!player.skillSlots)applyDefaultActionSlotsOnly();
   syncHp();
   const hasEquippedWeapon=!!player.equip?.weapon;
   const hasInventory=Array.isArray(player.inventory)&&player.inventory.length>0;
@@ -5029,12 +5751,12 @@ function itemScore(it){
   if(!it)return -1;
   const job=jobById(player.job||'blade');
   const base=job.attackBase||job.weaponBase||job.skillBase||job.id;
-  const weights={atk:3,hp:.28,def:2.2,speed:1.1,aspd:28,crit:38,critDmg:25,lifesteal:34,hpRegen:5,skillPower:32,range:1.2,dodge:26,reflect:20,expBonus:8,goldBonus:8,summonPower:30,cooldown:34,mpRegen:10,magnet:.85,all:18};
+  const weights={atk:3,hp:.28,def:2.2,speed:1.1,aspd:28,crit:38,critDmg:25,lifesteal:18,hpRegen:5,skillPower:32,range:1.2,dodge:26,reflect:20,expBonus:8,goldBonus:8,summonPower:30,cooldown:34,mpRegen:10,magnet:.85,all:18};
   if(['ranger','sniper','gunner'].includes(base)){weights.range=2.2;weights.crit=48;weights.aspd=34;}
   if(['mage','hexer','psion','chronomancer','alchemist'].includes(base)){weights.skillPower=48;weights.cooldown=42;weights.range=1.6;}
   if(['summoner','druid','mechanic','engineer'].includes(base)){weights.summonPower=48;weights.cooldown=34;}
   if(['mirror'].includes(base)||job.id==='mirror'){weights.reflect=62;weights.hp=0.45;weights.def=3;}
-  if(['blade','assassin','monk','berserker'].includes(base)||['blade','assassin','monk','berserker'].includes(job.id)){weights.atk=3.7;weights.lifesteal=42;weights.aspd=35;}
+  if(['blade','assassin','monk','berserker'].includes(base)||['blade','assassin','monk','berserker'].includes(job.id)){weights.atk=3.7;weights.lifesteal=22;weights.aspd=35;}
   let score=(it.level||1)*8 + (RARITIES.find(r=>r.name===it.rarity)?.mult||1)*30;
   for(const [k,v] of Object.entries(it.stats||{})) score+=(weights[k]||1)*(Number(v)||0);
   if(it.slot==='weapon' && jobPreferredWeaponType(job.id).name && it.name.includes(jobPreferredWeaponType(job.id).name)) score+=18;
@@ -5057,7 +5779,8 @@ function makeItem(level=1,rarityName=null,slot=null,jobId=null){
     else if(st==='def') val=Math.max(.5,fmt(base*rnd(.32,.82)));
     else if(st==='speed') val=Math.max(2,fmt(rnd(4,10)*rarity.mult));
     else if(st==='aspd') val=Math.max(.02,fmtSmall(rnd(.025,.075)*rarity.mult));
-    else if(st==='crit'||st==='lifesteal'||st==='dodge'||st==='reflect'||st==='expBonus'||st==='goldBonus'||st==='cooldown') val=Math.max(.01,fmtSmall(rnd(.02,.06)*rarity.mult));
+    else if(st==='lifesteal') val=Math.max(.002,fmtSmall(rnd(.003,.012)*rarity.mult));
+    else if(st==='crit'||st==='dodge'||st==='reflect'||st==='expBonus'||st==='goldBonus'||st==='cooldown') val=Math.max(.01,fmtSmall(rnd(.02,.06)*rarity.mult));
     else if(st==='critDmg') val=Math.max(.05,fmtSmall(rnd(.08,.22)*rarity.mult));
     else if(st==='hpRegen') val=Math.max(.2,fmt(rnd(.5,1.6)*rarity.mult));
     else if(st==='skillPower'||st==='summonPower'||st==='mpRegen') val=Math.max(.04,fmtSmall(rnd(.08,.24)*rarity.mult));
@@ -5190,6 +5913,14 @@ function killMonster(m){
   if(mode==='field' && monsters.filter(x=>!x.dead).length<7 && !m.boss) spawnMonster(false);
 }
 
+function consumeStealthAttackMult(){
+  if((Number(player.stealthTime)||0)>0){
+    player.stealthTime=0;
+    effects.push({type:'text',x:player.x,y:player.y-46,t:'투명 해제 x1.8',life:.8,vy:-18,big:true});
+    return 1.8;
+  }
+  return 1;
+}
 function rangedAttackProfile(jobId, st){
   const jb=jobById(jobId||'blade'); const job=jb.attackBase||jobId||'blade';
   const baseRange=st.range||82;
@@ -5239,11 +5970,13 @@ function projectileHit(p,t){
 function normalAttack(fromAuto=false){
   if(currentField==='town')return hitTrainingDummy(fromAuto);
   const st=computeStats(); if(player.atkTimer>0)return false;
-  const profile=rangedAttackProfile(player.job, st);
+  let profile=rangedAttackProfile(player.job, st);
   if(profile){
     const target=(!fromAuto && pcInput.mouseAim)?null:nearestMonster(profile.range,true);
     if(!target && fromAuto)return false;
     player.atkTimer=Math.max(.16,.62/st.aspd); player.atkTimerMax=player.atkTimer; player.attackAnim=.22;
+    const stealthMult=consumeStealthAttackMult();
+    if(stealthMult!==1)profile=Object.assign({},profile,{damage:profile.damage*stealthMult});
     if(target) spawnProjectile(target, profile);
     else spawnFreeProjectile(profile);
     effects.push({type:'spark',x:player.x,y:player.y-8,life:.12,r:profile.kind==='missile'?13:8});
@@ -5253,7 +5986,8 @@ function normalAttack(fromAuto=false){
   const hits=monsters.filter(m=>!m.dead&&dist(player,m)<range&&dungeonLineWalkable(player.x,player.y,m.x,m.y,8));
   if(fromAuto && hits.length===0)return false;
   player.atkTimer=Math.max(.16,.62/st.aspd); player.atkTimerMax=player.atkTimer; player.attackAnim=.22;
-  for(const m of hits)doDamage(m,st.atk,'sword');
+  const stealthMult=consumeStealthAttackMult();
+  for(const m of hits)doDamage(m,st.atk*stealthMult,'sword');
   return hits.length>0;
 }
 function damageArea(cx,cy,radius,damage,kind='skill',canCrit=true){
@@ -5279,7 +6013,7 @@ function fireSkillProjectiles(kind,count,range,damage,speed=520,radius=0,debuff=
   }
   return fired;
 }
-function skillRankForSlot(slot=1){normalizePlayer();const learned=skillStar();const idx=clamp(Number(slot)||1,1,4)-1;const rank=clamp(Number(player.skillSlots[idx])||0,0,MAX_SKILL_STAR);return rank>=1&&rank<=learned?rank:0;}
+function skillRankForSlot(slot=1){const a=getActionSlot(slot);if(!a||a.type!=='skill')return 0;const learned=skillStar();const rank=clamp(Number(a.rank)||0,0,maxSkillRankForJob(player.job));return rank>=1&&rank<=learned?rank:0;}
 
 function autoSkillCanCast(aj,rank,st,radius,range){
   if(currentField==='town')return false;
@@ -5334,7 +6068,7 @@ function castHighTierSkill(aj,rank,st,skAtk,pow,radius,range,fromAuto=false){
   return true;
 }
 function skillCooldownFactor(aj,slot,rank,jobId){
-  slot=clamp(Number(slot)||1,1,4);
+  slot=clamp(Number(slot)||1,1,ACTION_SLOT_COUNT);
   rank=clamp(Number(rank)||1,1,MAX_SKILL_STAR);
   const job=jobById(jobId||player.job||aj)||{};
   const base=job.skillBase||aj||'blade';
@@ -5479,7 +6213,7 @@ function pushWarriorSkillVisual(rank,actor,damageBase=1,fromAuto=false,extra={})
 }
 
 function useSkill(slot=1,fromAuto=false){
-  slot=clamp(Number(slot)||1,1,4); const idx=slot-1;
+  slot=clamp(Number(slot)||1,1,ACTION_SLOT_COUNT); const idx=slot-1;
   const st=computeStats(); if((player.skillTimers&&player.skillTimers[idx]>0)||player.skillTimer>0)return;
   const rank=skillRankForSlot(slot);
   if(rank<=0){toast(`스킬${slot} 미습득`);return;}
@@ -5497,7 +6231,7 @@ function useSkill(slot=1,fromAuto=false){
   if(fromAuto && !autoSkillCanCast(aj,rank,st,radius,range))return;
   const cd=Math.max(1.05,cdBase*(1-st.cooldown)*sc.cooldown*skillCooldownFactor(aj,slot,rank,j));
   player.skillTimers[idx]=cd;
-  player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0];
+  player.skillTimerMax=Array.isArray(player.skillTimerMax)?player.skillTimerMax:[0,0,0,0,0,0];
   player.skillTimerMax[idx]=cd;
   effects.push({type:'text',x:player.x,y:player.y-52,t:`${rank}성 ${info.name}`,life:.8,vy:-18,big:true});
   const visualTarget=nearestMonster(range+360,true)||nearestMonster(range+220,false);
@@ -5507,6 +6241,40 @@ function useSkill(slot=1,fromAuto=false){
   }
 
   if(castHighTierSkill(aj,rank,st,skAtk,pow,radius,range,fromAuto))return;
+  if(j==='adventurer'){
+    const t=nearestMonster(range+150,true)||nearestMonster(range+150,false);
+    if(t){
+      player.dir=Math.atan2(t.y-player.y,t.x-player.x);
+      doDamage(t,st.atk*2.05,'heavystrike',true);
+      effects.push({type:'spark',x:t.x,y:t.y,life:.42,r:30});
+    }else{
+      damageArea(player.x+Math.cos(player.dir)*64,player.y+Math.sin(player.dir)*64,50,st.atk*1.35,'heavystrike');
+    }
+    return;
+  }
+  if(j==='thief'){
+    if(rank===2){
+      player.stealthTime=Math.max(Number(player.stealthTime)||0,6);
+      addBuff('투명화',6,{dodge:.18});
+      effects.push({type:'ring',x:player.x,y:player.y,life:.65,r:72});
+      toast('투명화');
+      return;
+    }
+    const t=nearestMonster(range+220,true)||nearestMonster(range+220,false);
+    if(t){
+      const before={x:player.x,y:player.y};
+      const a=Math.atan2(t.y-player.y,t.x-player.x);
+      const bx=t.x+Math.cos(a)*32, by=t.y+Math.sin(a)*32;
+      const p=nearestDungeonPoint(bx,by,22);
+      player.x=clamp(p.x,28,fieldSize-28);player.y=clamp(p.y,28,fieldSize-28);
+      player.dir=Math.atan2(t.y-player.y,t.x-player.x);
+      const stealthMult=consumeStealthAttackMult();
+      doDamage(t,st.atk*2.5*stealthMult,'backstep',false);
+      effects.push({type:'skillAfterimage',x:before.x,y:before.y,tx:player.x,ty:player.y,life:.34,maxLife:.34,rank,kind:'backstep'});
+      effects.push({type:'spark',x:t.x,y:t.y,life:.45,r:34});
+    }
+    return;
+  }
 
   if(aj==='blade'){
     const t=nearestMonster(range+180,true)||nearestMonster(range+180,false);
@@ -5615,14 +6383,12 @@ function usePotion(key=null,silent=false){
   if(player.potionTimer>0)return false; normalizePlayer();
   let useKey=key&&CONSUMABLES[key]?key:player.potionSlot;
   if(!CONSUMABLES[useKey]||(player.consumables[useKey]||0)<=0){
-    const order=['potionL','elixir','shield','haste','potion'];
-    useKey=key?null:order.find(k=>(player.consumables[k]||0)>0);
+    useKey=key?null:POTION_ORDER.find(k=>potionCount(k)>0);
   }
   if(!useKey||!CONSUMABLES[useKey]||(player.consumables[useKey]||0)<=0){if(!silent)toast('소모품 없음');return false;}
-  const c=CONSUMABLES[useKey]; player.consumables[useKey]--; player.potions=player.consumables.potion||0; player.potionTimer=1.2;
-  if(c.heal>0){const heal=Math.round(player.maxHp*c.heal);player.hp=clamp(player.hp+heal,0,player.maxHp);effects.push({type:'text',x:player.x,y:player.y-40,t:`+${heal}`,life:.85,vy:-25,heal:true});}
-  if(c.buff){addBuff(c.buff.name,c.buff.duration,c.buff); if(c.buff.shield)player.shield=Math.max(player.shield,c.buff.duration); effects.push({type:'ring',x:player.x,y:player.y,life:.45,r:34});}
-  if(c.active==='bomb'){const tx=player.x+Math.cos(player.dir)*85, ty=player.y+Math.sin(player.dir)*85;effects.push({type:'bomb',x:tx,y:ty,life:.65,r:0,damage:computeStats().atk*2.2,range:92});}
+  const c=CONSUMABLES[useKey]; player.consumables[useKey]--; player.potions=player.consumables.potion||0; player.potionTimer=POTION_COOLDOWN;
+  const heal=Math.round(player.maxHp*c.heal);player.hp=clamp(player.hp+heal,0,player.maxHp);effects.push({type:'text',x:player.x,y:player.y-40,t:`+${heal}`,life:.85,vy:-25,heal:true});
+  effects.push({type:'ring',x:player.x,y:player.y,life:.45,r:34});
   if(!silent)toast(`${c.name} 사용`);
   return true;
 }
@@ -5671,6 +6437,7 @@ function nerfGrowthValue059(stat,value){
   if(stat==='hp')factor=.26;
   else if(stat==='atk'||stat==='def')factor=.30;
   else if(stat==='speed'||stat==='range')factor=.24;
+  else if(stat==='lifesteal')factor=.08;
   else if(pctStats.includes(stat))factor=.22;
   const v=Number(value)||0;
   if(pctStats.includes(stat))return fmtSmall(v*factor);
@@ -5771,7 +6538,7 @@ function tryLegendaryHeroAwaken(){
   if(!player.jobHistory.includes('legendaryHero'))player.jobHistory.push('legendaryHero');
   player.skillStars=player.skillStars||{};
   player.skillStars.legendaryHero=Math.max(Number(player.skillStars.legendaryHero)||0,4);
-  player.skillSlots=[1,2,3,4];
+  applyDefaultActionSlotsOnly();
   const w=makeItem(Math.max(100,player.level||100),'전설','weapon','legendaryHero');
   w.name=hero.weaponName||'전설의 용사검';
   player.inventory=Array.isArray(player.inventory)?player.inventory:[];
@@ -5785,7 +6552,7 @@ function tryLegendaryHeroAwaken(){
   updateHud();
   return true;
 }
-function advancementStageInfo(){const cur=jobById(player.job||'adventurer');if(cur.id==='adventurer')return {title:'1차 직업 선택',need:0,next:player.firstJobUnlocked?JOBS.filter(j=>j.tier===1&&!j.hidden):[]};if(!player.job)return {title:'1차 직업 선택',need:0,next:JOBS.filter(j=>j.tier===1&&!j.hidden)};if(cur.tier===1)return {title:'2차 전직',need:20,next:(cur.nextJobs||[]).map(jobById)};if(cur.tier===2)return {title:'3차 전직',need:50,next:(cur.nextJobs||[]).map(jobById)};return {title:'전직 완료',need:null,next:[]};}
+function advancementStageInfo(){const cur=jobById(player.job||'adventurer');if(cur.id==='adventurer')return {title:'1차 전직',need:10,next:player.firstJobUnlocked?JOBS.filter(j=>j.tier===1&&!j.hidden):[]};if(!player.job)return {title:'1차 전직',need:10,next:JOBS.filter(j=>j.tier===1&&!j.hidden)};if(cur.tier===1)return {title:'2차 전직',need:30,next:(cur.nextJobs||[]).map(jobById)};return {title:'전직 완료',need:null,next:[]};}
 function hiddenJobCards(){return JOBS.filter(j=>j.hidden).map(j=>{const st=jobUnlockStatus(j);const title=st.ok?j.name:'???';const disabled=st.ok?'':'disabled';const detail=st.ok?`${j.desc}<br><span class="small">${jobBadge(j)}<br>${jobPartyLine(j)}</span>`:`히든 전직 조건 미달<br><span class="small">힌트: ${escapeHtml(st.hint||'특수 조건 필요')}<br>부족: ${st.fail.join(' / ')||'조건 확인 필요'}</span>`;return `<button class="card ${st.ok?'':'locked'}" ${disabled} onclick="Game.advanceJob('${j.id}')"><h3>${title}</h3><b>${st.ok?'히든 전직 발견':'히든 전직'}</b><br>${detail}</button>`;}).join('');}
 function showAdvancement(){
   normalizePlayer();tryLegendaryHeroAwaken();popupMode='advancement';zoneTag.textContent='전직';
@@ -5793,8 +6560,8 @@ function showAdvancement(){
   const currentCard=`<div class="card"><h3>현재 직업: ${cur.name}</h3><b>${jobBadge(cur)}</b><br>${cur.desc||''}<br><span class="small">레벨 ${player.level} · ${jobPartyLine(cur)}<br>전직 이력: ${(player.jobHistory||[]).map(id=>jobById(id).name).join(' → ')||'없음'}</span></div>`;
   const nextCards=(info.next||[]).filter(Boolean).map(j=>{const locked=!canLevel;const b=j.base||{};return `<button class="card" ${locked?'disabled':''} onclick="Game.advanceJob('${j.id}')"><h3>${locked?'[잠김] ':''}${j.name}</h3><b>${jobBadge(j)}</b><br>${j.desc}<br><span class="small">필요: Lv.${info.need||'-'} · 공격 ${b.atk||0} · HP ${b.hp||0} · 방어 ${b.def||0}<br>${jobPartyLine(j)}</span></button>`;}).join('') || `<div class="card"><h3>일반 전직 완료</h3>현재 단계에서 일반 전직 후보가 없습니다.<br><span class="small">히든 조건 달성 시 아래에 전직 후보가 열립니다.</span></div>`;
   const levelNote=info.need&&player.level<info.need?`<div class="card"><h3>전직 조건 부족</h3>${info.title} 필요 레벨은 ${info.need}입니다. 현재 레벨은 ${player.level}입니다.</div>`:'';
-  const advLock=(cur.id==='adventurer'&&!player.firstJobUnlocked)?`<div class="card"><h3>직업 선택 잠김</h3>장로에게 모험가 퀘스트를 받고 훈련소 허수아비를 50대 때리면 직업소개소에서 1차 직업을 선택할 수 있습니다.<br><span class="small">현재 허수아비 타격: ${player.adventurerQuest?.dummyHits||0}/50</span></div>`:'';
-  openPopup(`<div class="title">직업소개소 / 전직 관리</div><div class="sub">모험가 퀘스트 완료 후 1차 직업을 고르고, 이후 2차(Lv.20)·3차(Lv.50) 전직을 진행합니다. 히든 직업은 조건을 만족해야 이름과 전직 버튼이 열립니다.</div>${currentCard}${advLock}${levelNote}<h3>${info.title}</h3><div class="grid">${nextCards}</div><h3>히든 전직</h3><div class="grid">${hiddenJobCards()}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+  const advLock=(cur.id==='adventurer'&&!player.firstJobUnlocked)?`<div class="card"><h3>직업 선택 잠김</h3>장로에게 모험가 퀘스트를 받고 훈련소 허수아비를 50대 때리고 Lv.10을 달성하면 Lv.10부터 직업소개소에서 1차 직업을 선택할 수 있습니다.<br><span class="small">현재 허수아비 타격: ${player.adventurerQuest?.dummyHits||0}/50</span></div>`:'';
+  openPopup(`<div class="title">직업소개소 / 전직 관리</div><div class="sub">모험가 퀘스트 완료 후 Lv.10에서 1차 직업을 고르고, Lv.30에서 2차 전직을 진행합니다.</div>${currentCard}${advLock}${levelNote}<h3>${info.title}</h3><div class="grid">${nextCards}</div><h3>히든 전직</h3><div class="grid">${hiddenJobCards()}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function advanceJob(id){
   normalizePlayer();const next=jobById(id), cur=jobById(player.job||'warrior');
@@ -5815,19 +6582,19 @@ function showTown(){
   closePopup();
 }
 function adventurerQuestState(){normalizePlayer();return player.adventurerQuest;}
-function showElderGuide(){popupMode='guide';openPopup(`<div class="title">장로의 안내</div><div class="card"><h3>정식 직업 등록 전 안내</h3>처음에는 <b>모험가</b>로 시작합니다.<br>마을 북쪽 <b>장로</b>에게 모험가 퀘스트를 받고, 훈련소 허수아비를 50대 때리면 직업소개소에서 1차 직업을 선택할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.showSkillInfoPanel()">스킬정보</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
+function showElderGuide(){popupMode='guide';openPopup(`<div class="title">장로의 안내</div><div class="card"><h3>정식 직업 등록 전 안내</h3>처음에는 <b>모험가</b>로 시작합니다.<br>마을 북쪽 <b>장로</b>에게 모험가 퀘스트를 받고, 훈련소 허수아비를 50대 때리고 Lv.10을 달성하면 Lv.10부터 직업소개소에서 1차 직업을 선택할 수 있습니다.</div><div class="footerBtns"><button onclick="Game.showSkillInfoPanel()">스킬정보</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);}
 function showAdventurerQuest(){
   const q=adventurerQuestState();
   const hits=clamp(Math.floor(Number(q.dummyHits)||0),0,50);
   const accepted=!!q.accepted, done=!!q.done||hits>=50, completed=!!q.completed;
   if(done){q.done=true;player.firstJobUnlocked=true;}
-  const body=completed?`<h3>모험가 퀘스트 완료</h3>직업소개소에서 1차 직업을 선택할 수 있습니다.<br><span class="small">직업 선택창을 닫아도 장로에게 다시 말하면 이 버튼이 다시 표시됩니다.</span>`:accepted?`<h3>허수아비 실전 테스트</h3>훈련소 허수아비를 50대 때리십시오.<br>진행도: ${hits}/50<br><span class="small">허수아비 근처에서 공격 버튼을 누르면 카운트됩니다.</span>`:`<h3>모험가 등록 시험</h3>정식 직업을 갖기 전 기초 전투 테스트가 필요합니다.<br>목표: 훈련소 허수아비 50대 타격<br>보상: 직업소개소 이용 허가`;
+  const body=completed?`<h3>모험가 퀘스트 완료</h3>Lv.10부터 직업소개소에서 1차 직업을 선택할 수 있습니다.<br><span class="small">직업 선택창을 닫아도 장로에게 다시 말하면 이 버튼이 다시 표시됩니다.</span>`:accepted?`<h3>허수아비 실전 테스트</h3>훈련소 허수아비를 50대 때리십시오.<br>진행도: ${hits}/50<br><span class="small">허수아비 근처에서 공격 버튼을 누르면 카운트됩니다.</span>`:`<h3>모험가 등록 시험</h3>정식 직업을 갖기 전 기초 전투 테스트가 필요합니다.<br>목표: 훈련소 허수아비 50대 타격<br>보상: 직업소개소 이용 허가`;
   const btn=completed?`<button onclick="Game.showJobAgency()">직업소개소</button>`:done?`<button onclick="Game.completeAdventurerQuest()">완료 보고</button>`:accepted?`<button onclick="Game.showTrainingDummy()">훈련소 보기</button>`:`<button onclick="Game.acceptAdventurerQuest()">퀘스트 받기</button>`;
   openPopup(`<div class="title">장로 / 모험가 퀘스트</div><div class="card">${body}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button>${btn}</div>`);
 }
 function acceptAdventurerQuest(){const q=adventurerQuestState();q.accepted=true;q.done=false;q.completed=false;q.dummyHits=0;player.firstJobUnlocked=false;toast('모험가 퀘스트 수락');showAdventurerQuest();}
 function completeAdventurerQuest(){const q=adventurerQuestState();if((q.dummyHits||0)<50&&!q.done){toast('허수아비 50타가 필요합니다');showAdventurerQuest();return;}q.accepted=true;q.done=true;q.completed=true;q.dummyHits=50;player.firstJobUnlocked=true;player.gold+=120;player.consumables.potion=(player.consumables.potion||0)+2;player.potions=player.consumables.potion;toast('직업소개소 이용 허가 획득');msg('장로가 직업소개소 이용을 허가했습니다.');saveGame();showJobAgency();}
-function showJobAgency(){normalizePlayer();popupMode='jobAgency';zoneTag.textContent='직업소개소';if((player.job||'adventurer')==='adventurer'&&!player.firstJobUnlocked){openPopup(`<div class="title">직업소개소</div><div class="card"><h3>이용 조건 미달</h3>장로의 모험가 퀘스트를 완료해야 1차 직업을 선택할 수 있습니다.<br><span class="small">허수아비 타격: ${player.adventurerQuest?.dummyHits||0}/50</span></div><div class="footerBtns"><button onclick="Game.showQuest()">장로에게 가기</button><button onclick="Game.showTrainingDummy()">훈련소</button></div>`);return;}showAdvancement();}
+function showJobAgency(){normalizePlayer();popupMode='jobAgency';zoneTag.textContent='직업소개소';if(devPreviewMode()){showDevJobFreeSelect();return;}if((player.job||'adventurer')==='adventurer'&&!player.firstJobUnlocked){openPopup(`<div class="title">직업소개소</div><div class="card"><h3>이용 조건 미달</h3>장로의 모험가 퀘스트 완료와 Lv.10 달성이 필요합니다.<br><span class="small">허수아비 타격: ${player.adventurerQuest?.dummyHits||0}/50</span></div><div class="footerBtns"><button onclick="Game.showQuest()">장로에게 가기</button><button onclick="Game.showTrainingDummy()">훈련소</button></div>`);return;}showAdvancement();}
 function showTrainingDummy(){normalizePlayer();const q=player.adventurerQuest||{};const hits=clamp(Math.floor(Number(q.dummyHits)||0),0,50);openPopup(`<div class="title">훈련소</div><div class="card"><h3>허수아비</h3>직업 선택 테스트용 훈련 허수아비입니다.<br>모험가 퀘스트 진행도: ${hits}/50<br><span class="small">마을 오른쪽 아래 훈련소의 허수아비 옆에서 공격 버튼을 누르면 타격 수가 증가합니다.</span></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button><button onclick="Game.showQuest()">장로 퀘스트</button></div>`);}
 function trainingDummyNpc(){return currentField==='town'?(npcs||[]).find(n=>n.kind==='dummy'):null;}
 function hitTrainingDummy(fromAuto=false){const n=trainingDummyNpc();if(!n)return false;const st=computeStats();if(player.atkTimer>0)return false;const d=Math.hypot(player.x-n.x,player.y-n.y);if(d>96){if(!fromAuto)toast('허수아비 가까이에서 공격');return false;}player.dir=Math.atan2(n.y-player.y,n.x-player.x);player.atkTimer=Math.max(.16,.58/(st.aspd||1));player.atkTimerMax=player.atkTimer;player.attackAnim=.22;effects.push({type:'spark',x:n.x+rnd(-10,10),y:n.y+rnd(-20,10),life:.25,r:14});const q=adventurerQuestState();if(q.accepted&&!q.done&&!q.completed){q.dummyHits=clamp((Math.floor(Number(q.dummyHits)||0)+1),0,50);effects.push({type:'text',x:n.x,y:n.y-48,t:`허수아비 ${q.dummyHits}/50`,life:.7,vy:-18});if(q.dummyHits>=50){q.done=true;player.firstJobUnlocked=true;toast('모험가 테스트 완료. 장로에게 보고');msg('허수아비 50타 완료. 직업소개소 이용 조건을 달성했습니다.');saveGame();}else if(q.dummyHits%10===0){toast(`허수아비 ${q.dummyHits}/50`);} }else if(!q.accepted&&!q.completed&&!fromAuto){toast('장로에게 모험가 퀘스트를 먼저 받으십시오');}return true;}
@@ -5848,7 +6615,7 @@ const QUESTS=[
 ];
 function showQuest(){popupMode='quest';normalizePlayer();if((player.job||'adventurer')==='adventurer'){showAdventurerQuest();return;}const q=QUESTS[player.quest]||null;if(!q){openPopup(`<div class="title">장로 / 스토리 완료</div><div class="sub">현재 공개된 스토리 퀘스트를 모두 완료했습니다.</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);return;} const progress=player.quest===1?bossKillsTotal():player.questKills; const done=progress>=q.need; openPopup(`<div class="title">장로 / 스토리 퀘스트</div><div class="card"><h3>${q.title}</h3>${q.text}<br>진행도: ${progress}/${q.need}<br>보상: ${q.reward.gold||0}G ${q.reward.potions?`/ 물약 ${q.reward.potions}`:''} ${q.reward.item?'/ 장비 상자':''}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button><button ${done?'':'disabled'} onclick="Game.claimQuest()">보상 받기</button></div>`);}
 function bossKillsTotal(){let n=0;for(const fid in player.codex){const boss=player.codex[fid][10];if(boss)n+=boss.kills;}return n;}
-function claimQuest(){const q=QUESTS[player.quest]; if(!q)return; player.gold+=q.reward.gold||0; player.potions+=q.reward.potions||0; player.guildTokens+=q.reward.tokens||0; if(q.reward.item)player.inventory.push(makeItem(player.level,'희귀',null)); player.quest++; player.questKills=0; toast('퀘스트 보상 획득'); showQuest();}
+function claimQuest(){const q=QUESTS[player.quest]; if(!q)return; player.gold+=q.reward.gold||0; if(q.reward.potions){player.consumables=player.consumables||{};player.consumables.potion=(player.consumables.potion||0)+q.reward.potions;player.potions=player.consumables.potion||0;} player.guildTokens+=q.reward.tokens||0; if(q.reward.item)player.inventory.push(makeItem(player.level,'희귀',null)); player.quest++; player.questKills=0; toast('퀘스트 보상 획득'); showQuest();}
 function showShop(){
   popupMode='shop';
   normalizePlayer();
@@ -5876,33 +6643,33 @@ function pickArmorSlotForJob(jobId){
 }
 function buy(kind){
   normalizePlayer();
-  if(CONSUMABLES[kind]){const c=CONSUMABLES[kind]; if(player.gold<c.cost){toast('골드 부족');return;} player.gold-=c.cost; player.consumables[kind]=(player.consumables[kind]||0)+1; player.potions=player.consumables.potion||0; toast(`${c.name} 구매`); showShop(); return;}
+  if(CONSUMABLES[kind]){const c=CONSUMABLES[kind]; if(player.gold<c.cost){toast('골드 부족');return;} player.gold-=c.cost; player.consumables[kind]=(player.consumables[kind]||0)+1; player.potions=player.consumables.potion||0; toast(`${c.name} 구매`); requestCloudSave('buyPotion'); showShop(); return;}
   let cost=0;if(kind==='weapon')cost=260;else if(kind==='armor')cost=240;else cost=500;if(player.gold<cost){toast('골드 부족');return;}player.gold-=cost;const slot=kind==='armor'?pickArmorSlotForJob(player.job):kind;player.inventory.push(makeItem(player.level,null,slot,player.job));showShop();
 }
 function showSkillShop(){
   normalizePlayer();
   if((player.job||'adventurer')==='adventurer'){
-    toast('정식 직업 선택 후 스킬 상점을 이용할 수 있습니다');
-    showShop();
+    toast('모험가의 강한 일격은 기본 보유 스킬입니다');
+    showSkillInfoPanel();
     return;
   }
   popupMode='skillShop';
-  const j=player.job||'blade', job=jobById(j), learned=skillStar(j), cost=skillCost(j), list=skillList(j), next=Math.min(MAX_SKILL_STAR,learned+1);
+  const j=player.job||'blade', job=jobById(j), learned=skillStar(j), maxRank=maxSkillRankForJob(j), cost=skillCost(j), list=skillList(j).slice(0,maxRank), next=Math.min(maxRank,learned+1);
   const current=learned>0?`현재 사용 스킬: ${learned}성 ${skillByRank(j,learned).name}`:'현재 사용 스킬: 미습득';
-  const nextReq=skillRequiredLevel(next);
-  const nextText=learned>=MAX_SKILL_STAR?'모든 스킬 습득 완료':`다음 구매: ${next}성 ${skillByRank(j,next).name} · Lv.${nextReq} 필요 · ${cost}G`;
-  const rows=list.map((sk,i)=>{const lv=i+1, owned=learned>=lv, nextSkill=learned+1===lv, req=skillRequiredLevel(lv), lvOk=player.level>=req;return `<div class="card ${owned?'selected':''} ${nextSkill?'rare-희귀':''}"><h3>${lv}성 ${sk.name} ${owned?'[보유]':''}</h3>${sk.desc}<br><span class="small">Lv.${req} 필요 · ${owned?'습득 완료':(nextSkill?(lvOk?'구매 가능 · ':'레벨 부족 · '):'잠김 · ')+(SKILL_COSTS[i]||0)+'G'}</span></div>`;}).join('');
-  openPopup(`<div class="title">스킬 상점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G · 직업마다 서로 다른 ${MAX_SKILL_STAR}종 스킬을 1성부터 순서대로 구매합니다. 11성/12성은 초월 스킬입니다.</div><div class="card"><h3>${job.name} 스킬 트리</h3>${current}<br>${nextText}</div><div class="footerBtns"><button ${learned>=MAX_SKILL_STAR||player.level<nextReq?'disabled':''} onclick="Game.buySkill()">${learned>=MAX_SKILL_STAR?'전체 습득 완료':`${next}성 스킬 구매`}</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><h3>직업 스킬 ${MAX_SKILL_STAR}종</h3><div class="grid3">${rows}</div>`);
+  const nextReq=skillRequiredLevel(next,j);
+  const nextText=learned>=maxRank?'모든 스킬 습득 완료':`다음 구매: ${next}성 ${skillByRank(j,next).name} · Lv.${nextReq} 필요 · ${cost}G`;
+  const rows=list.map((sk,i)=>{const lv=i+1, owned=learned>=lv, nextSkill=learned+1===lv, req=skillRequiredLevel(lv,j), lvOk=player.level>=req;return `<div class="card ${owned?'selected':''} ${nextSkill?'rare-희귀':''}"><h3>${lv}성 ${sk.name} ${owned?'[보유]':''}</h3>${sk.desc}<br><span class="small">Lv.${req} 필요 · ${owned?'습득 완료':(nextSkill?(lvOk?'구매 가능 · ':'레벨 부족 · '):'잠김 · ')+(SKILL_COSTS[i]||0)+'G'}</span></div>`;}).join('');
+  openPopup(`<div class="title">스킬 상점</div><div class="sub">보유 골드: ${Math.round(player.gold)}G · 현재 직업은 ${maxRank}개 스킬을 1성부터 순서대로 구매합니다.</div><div class="card"><h3>${job.name} 스킬 트리</h3>${current}<br>${nextText}</div><div class="footerBtns"><button ${learned>=maxRank||player.level<nextReq?'disabled':''} onclick="Game.buySkill()">${learned>=maxRank?'전체 습득 완료':`${next}성 스킬 구매`}</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><h3>직업 스킬 ${maxRank}종</h3><div class="grid3">${rows}</div>`);
 }
 function buySkill(){
   normalizePlayer();
   if((player.job||'adventurer')==='adventurer'){
-    toast('정식 직업 선택 후 스킬을 배울 수 있습니다');
-    showShop();
+    toast('모험가의 강한 일격은 기본 보유 스킬입니다');
+    showSkillInfoPanel();
     return;
   }
-  const j=player.job||'blade'; player.skillStars=player.skillStars||{}; const learned=skillStar(j); if(learned>=MAX_SKILL_STAR){toast('이미 모든 스킬 습득');return;}
-  const next=learned+1, reqLv=skillRequiredLevel(next);
+  const j=player.job||'blade'; player.skillStars=player.skillStars||{}; const learned=skillStar(j), maxRank=maxSkillRankForJob(j); if(learned>=maxRank){toast('이미 모든 스킬 습득');return;}
+  const next=learned+1, reqLv=skillRequiredLevel(next,j);
   if(player.level<reqLv){toast(`${next}성 스킬은 Lv.${reqLv} 필요`);showSkillShop();return;}
   const cost=skillCost(j); if(player.gold<cost){toast(`골드 부족: ${cost}G 필요`);return;}
   const info=skillByRank(j,next);
@@ -6007,10 +6774,10 @@ function saveGame(){requestCloudSave('event',true);}
 async function loadGame(){return await loadCloudStateAndEnter();}
 
 function update(dt){
-  if(!player.classChosen)return; const oldX=player.x, oldY=player.y; const st=syncHp(); player.atkTimer=Math.max(0,player.atkTimer-dt);player.skillTimers=player.skillTimers||[player.skillTimer||0,0,0];for(let i=0;i<4;i++)player.skillTimers[i]=Math.max(0,(player.skillTimers[i]||0)-dt);player.skillTimer=0;player.potionTimer=Math.max(0,player.potionTimer-dt);player.dodgeTimer=Math.max(0,player.dodgeTimer-dt);player.dashTime=Math.max(0,player.dashTime-dt);player.attackAnim=Math.max(0,player.attackAnim-dt);player.spinAnim=Math.max(0,(Number(player.spinAnim)||0)-dt);player.hurt=Math.max(0,player.hurt-dt);player.shield=Math.max(0,player.shield-dt);
+  if(!player.classChosen)return; const oldX=player.x, oldY=player.y; const st=syncHp(); player.atkTimer=Math.max(0,player.atkTimer-dt);player.skillTimers=player.skillTimers||[player.skillTimer||0,0,0,0,0,0];while(player.skillTimers.length<ACTION_SLOT_COUNT)player.skillTimers.push(0);for(let i=0;i<ACTION_SLOT_COUNT;i++)player.skillTimers[i]=Math.max(0,(player.skillTimers[i]||0)-dt);player.skillTimer=0;player.potionTimer=Math.max(0,player.potionTimer-dt);player.dodgeTimer=Math.max(0,player.dodgeTimer-dt);player.dashTime=Math.max(0,player.dashTime-dt);player.attackAnim=Math.max(0,player.attackAnim-dt);player.spinAnim=Math.max(0,(Number(player.spinAnim)||0)-dt);player.hurt=Math.max(0,player.hurt-dt);player.shield=Math.max(0,player.shield-dt);player.stealthTime=Math.max(0,(Number(player.stealthTime)||0)-dt);
   if(st.hpRegen>0) player.hp=clamp(player.hp+st.hpRegen*dt,0,player.maxHp);updateStatusTimers(dt);
   if(player.autoMode) updateAuto(dt);
-  if(attackHeld) normalAttack(); for(let i=0;i<4;i++)if(skillHeld[i])safeUseSkill(i+1);
+  if(attackHeld) normalAttack(); for(let i=0;i<ACTION_SLOT_COUNT;i++)if(skillHeld[i])safeUseSkill(i+1);
   let moveX=joystick.dx, moveY=joystick.dy;
   if(!joystick.active){
     const k=pcInput.keys||{};
@@ -6170,7 +6937,7 @@ function autoThreatDamageRatio(mon,st){
 function hasAutoRecoveryReady(){
   if(player.potionTimer>0)return false;
   const c=player.consumables||{};
-  return ['potionL','elixir','shield','haste','potion'].some(k=>(Number(c[k])||0)>0);
+  return POTION_ORDER.some(k=>(Number(c[k])||0)>0);
 }
 function autoDodgeIncoming(st,dt,force=false){
   let danger=null,bd=999;
@@ -6190,7 +6957,7 @@ function autoDodgeIncoming(st,dt,force=false){
   return true;
 }
 function autoTryDefensiveSkill(){
-  for(let i=1;i<=4;i++){
+  for(let i=1;i<=ACTION_SLOT_COUNT;i++){
     const rank=skillRankForSlot(i);
     if(rank<=0||(player.skillTimers[i-1]||0)>0)continue;
     const aj=(jobById(player.job||'blade').skillBase||player.job||'blade');
@@ -6198,7 +6965,7 @@ function autoTryDefensiveSkill(){
   }
   return false;
 }
-function autoUseReadySkills(){for(let i=1;i<=4;i++)if(skillRankForSlot(i)>0&&(player.skillTimers[i-1]||0)<=0)safeUseSkill(i,true);}
+function autoUseReadySkills(){for(let i=1;i<=ACTION_SLOT_COUNT;i++)if(skillRankForSlot(i)>0&&(player.skillTimers[i-1]||0)<=0)safeUseSkill(i,true);}
 function autoAttackReady(target,profile,st){
   if(!target||target.dead)return false;
   if(!dungeonLineWalkable(player.x,player.y,target.x,target.y,8))return false;
@@ -6318,7 +7085,8 @@ function updateAuto(dt){
 }
 
 function monsterActorCandidates(m){
-  const arr=[{id:myOnlineId(),kind:'player',actor:player,x:player.x,y:player.y,name:sanitizeNickname(player.nickname||'플레이어')}];
+  const arr=[];
+  if(!(Number(player.stealthTime)||0))arr.push({id:myOnlineId(),kind:'player',actor:player,x:player.x,y:player.y,name:sanitizeNickname(player.nickname||'플레이어')});
   for(const id of devDummyIds()){
     const p=onlineState.peers&&onlineState.peers[id];
     if(p&&p.devDummy&&p.field===currentField&&performance.now()-(p.seenAt||0)<5000)arr.push({id:p.id,kind:'dummy',actor:p,x:Number(p.x)||0,y:Number(p.y)||0,name:p.name||'AI동료'});
@@ -6604,21 +7372,27 @@ function updateHud(){
   if(currencyPanel)currencyPanel.innerHTML=`<div class="currencyRow"><span><b>G</b> ${Math.round(player.gold)}</span><span><b>N</b> ${Math.floor(Number(player.neonStone)||0)}</span></div>`;
   const questPanel=$('questPanel');
   if(questPanel)questPanel.innerHTML=`<div class="questRow"><span><b>Q</b> ${escapeHtml(questPanelStatus())}</span></div>`;
-  const atkBtn=$('attackBtn'),atkCool=$('atkCool'),atkMax=player.atkTimerMax||player.atkTimer||1;
-  if(atkCool)atkCool.textContent=player.atkTimer>0?'쿨타임':'READY';
-  if(atkBtn)atkBtn.style.setProperty('--cdp',player.atkTimer>0?`${clamp(player.atkTimer/atkMax*100,0,100)}%`:'0%');
-  for(let i=1;i<=4;i++){
-    const rank=skillRankForSlot(i),el=$(`skCool${i}`),nameEl=$(`skName${i}`),btn=$(`skillBtn${i}`);
-    const timer=(player.skillTimers&&player.skillTimers[i-1])||0,max=(player.skillTimerMax&&player.skillTimerMax[i-1])||timer||1;
-    const name=rank>0?skillByRank(player.job,rank).name:`스킬${i}`;
-    if(nameEl){nameEl.textContent=name;nameEl.classList.remove('marquee');}
-    if(el)el.textContent=rank>0?(timer>0?'쿨타임':`${rank}성 준비`):'미습득';
-    if(btn)btn.style.setProperty('--cdp',timer>0?`${clamp(timer/max*100,0,100)}%`:'0%');
+  normalizeActionSlots();
+  const totalPot=totalPotionCount(),slotPot=potionCount(player.potionSlot);
+  const potCountEl=$('potCount'); if(potCountEl)potCountEl.textContent=player.potionTimer>0?`${Math.ceil(player.potionTimer)}초`:`${slotPot}/${totalPot}`;
+  const potNameEl=$('potName'),potInfo=CONSUMABLES[player.potionSlot]||CONSUMABLES.potion; if(potNameEl)potNameEl.textContent=potInfo.short||'포션(하)';
+  const potionBtn=$('potionBtn'); if(potionBtn)potionBtn.style.setProperty('--cdp',player.potionTimer>0?`${clamp(player.potionTimer/POTION_COOLDOWN*100,0,100)}%`:'0%');
+  const atkMax=player.atkTimerMax||player.atkTimer||1;
+  const dodgeMax=player.dodgeTimerMax||player.dodgeTimer||1;
+  for(let i=1;i<=ACTION_SLOT_COUNT;i++){
+    const a=getActionSlot(i),disp=actionSlotDisplay(i),nameEl=$(`actionName${i}`),coolEl=$(`actionCool${i}`),btn=$(actionSlotButtonId(i));
+    if(nameEl)nameEl.textContent=disp.name;
+    if(coolEl)coolEl.textContent=disp.cool;
+    let pct=0;
+    if(a.type==='skill'){
+      const timer=(player.skillTimers&&player.skillTimers[i-1])||0,max=(player.skillTimerMax&&player.skillTimerMax[i-1])||timer||1;
+      pct=timer>0?clamp(timer/max*100,0,100):0;
+      if(coolEl&&disp.rank>0)coolEl.textContent=timer>0?'쿨타임':`${disp.rank}성 준비`;
+    }else if(a.type==='attack')pct=player.atkTimer>0?clamp(player.atkTimer/atkMax*100,0,100):0;
+    else if(a.type==='dodge')pct=player.dodgeTimer>0?clamp(player.dodgeTimer/dodgeMax*100,0,100):0;
+    else if(a.type==='potion')pct=player.potionTimer>0?clamp(player.potionTimer/POTION_COOLDOWN*100,0,100):0;
+    if(btn){btn.style.setProperty('--cdp',pct?`${pct}%`:'0%');btn.classList.toggle('emptySlot',a.type==='empty');}
   }
-  const totalPot=Object.values(player.consumables||{}).reduce((a,b)=>a+(Number(b)||0),0),slotPot=(player.consumables&&player.consumables[player.potionSlot])||0;$('potCount').textContent=`${slotPot}/${totalPot}`;
-  const dodgeBtn=$('dodgeBtn'),dodgeCool=$('dodgeCool'),dodgeMax=player.dodgeTimerMax||player.dodgeTimer||1;
-  if(dodgeCool)dodgeCool.textContent=player.dodgeTimer>0?'쿨타임':'READY';
-  if(dodgeBtn)dodgeBtn.style.setProperty('--cdp',player.dodgeTimer>0?`${clamp(player.dodgeTimer/dodgeMax*100,0,100)}%`:'0%');
   const autoCool=$('autoCool'),autoBtn=$('autoBtn'),jobCool=$('jobCool');
   if(autoCool)autoCool.textContent=player.autoMode?'ON':'OFF';
   if(autoBtn)autoBtn.classList.toggle('autoOn',!!player.autoMode);
@@ -7980,9 +8754,7 @@ function showOnlineHub(autoConnect=true){
   const inviteHtml=inviteBlockOn?'<div class="partyMiniLine">자동거절 적용 중</div>':(invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>');
   const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b>${m.id===onlineState.partyOwnerId?' <span class="small">[파티장]</span>':''} · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${typeof fmtK==='function'?fmtK(m.hp||0):(m.hp||0)}/${typeof fmtK==='function'?fmtK(m.maxHp||0):(m.maxHp||0)}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
   const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>Lv.${p.level||1} ${escapeHtml(p.name||'플레이어')}</b><br><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
-  const onlineGroup=onlineState.partyId
-    ? `<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`
-    : `<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자 아이디</h3></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
+  const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자</h3><span>${allOnline.count}명</span></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
   const partyButtons=onlineState.partyId
     ? `<div class="footerBtns"><button onclick="Game.showTransferPartyLeader()">파티장 넘기기</button><button onclick="Game.showKickPartyMember()">내보내기</button><button onclick="Game.disbandParty()">파티해산</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>`
     : '';
@@ -8012,7 +8784,7 @@ function toggleHudLogSetting(k){
   requestCloudSave('logSetting');
 }
 function showQuickChat(){
-  openPopup(`<div class="title">채팅 입력</div><div class="sub">로그창을 터치해서 연 입력창입니다.</div><input id="quickChatInput" class="neonInput" maxlength="80" placeholder="채팅 내용" style="width:100%;font:inherit;padding:11px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:12px;user-select:text;-webkit-user-select:text;caret-color:var(--g)"><div class="footerBtns"><button onclick="Game.sendQuickChat()">전송</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+  openPopup(`<div class="title">채팅 입력</div><div class="sub">로그창을 터치해서 연 입력창입니다.</div><input id="quickChatInput" class="neonInput" maxlength="80" placeholder="채팅 내용" style="width:100%;font:inherit;padding:11px;background:#000;color:var(--g);border:1px solid var(--gd);border-radius:12px;user-select:text;-webkit-user-select:text;caret-color:var(--g);outline:none!important;-webkit-appearance:none;appearance:none;box-shadow:none"><div class="footerBtns"><button onclick="Game.sendQuickChat()">전송</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
   setTimeout(()=>$('quickChatInput')?.focus(),60);
 }
 function sendQuickChat(){
@@ -8033,7 +8805,7 @@ function showStats(){
   const st=computeStats();
   openPopup(`<div class="title">스텟</div><div class="grid"><div class="card"><h3>기본</h3>직업: ${jobById(player.job||'blade').name}<br>스킬: ${skillStageText(player.job||'blade')}<br>레벨: ${player.level}<br>골드: ${Math.round(player.gold)}G<br>네온석: ${Math.floor(Number(player.neonStone)||0)}<br>처치: ${player.totalKills}</div><div class="card"><h3>전투</h3>공격력: ${Math.round(st.atk)}<br>방어: ${Math.round(st.def)}<br>이속: ${Math.round(st.speed)}<br>공속: ${st.aspd.toFixed(2)}</div><div class="card"><h3>특수</h3>크리: ${Math.round(st.crit*100)}%<br>치피: ${Math.round(st.critDmg*100)}%<br>흡혈: ${Math.round(st.lifesteal*100)}%<br>회피: ${Math.round(st.dodge*100)}%</div><div class="card"><h3>보너스</h3>경험치: ${Math.round(st.expBonus*100)}%<br>골드: ${Math.round(st.goldBonus*100)}%<br>반사: ${Math.round(st.reflect*100)}%<br>쿨감: ${Math.round(st.cooldown*100)}%</div></div><div class="footerBtns"><button onclick="Game.showSkillInfoPanel()">스킬정보</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
-function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드, 그래픽, 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="grid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.showGraphicSettings()">그래픽</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
+function showSettings(){openPopup(`<div class="title">설정</div><div class="sub">오토모드, 그래픽, 계정을 관리합니다.<br><span class="small">${cloudStatusText()}</span></div><div class="settingsGrid"><button onclick="Game.showAutoPanel()" class="${player.autoMode?'autoOn':''}">오토 설정</button><button onclick="Game.enterTownFromSettings()">마을 귀환</button><button onclick="Game.showGraphicSettings()">그래픽</button><button onclick="Game.showPatchNotes()">패치노트</button><button onclick="Game.showOnlinePanel()">계정</button><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">접속 시 서버에서 자동 로드되고, 플레이 중 서버에 자동 저장됩니다.</div>`);}
 function themeHex(key,fallback){try{return localStorage.getItem(key)||fallback;}catch(e){return fallback;}}
 function hexToRgb(hex){const h=String(hex||'').replace('#','');if(!/^[0-9a-fA-F]{6}$/.test(h))return {r:0,g:255,b:114};return {r:parseInt(h.slice(0,2),16),g:parseInt(h.slice(2,4),16),b:parseInt(h.slice(4,6),16)};}
 function setAlpha(hex,a){const c=hexToRgb(hex);return `rgba(${c.r},${c.g},${c.b},${a})`;}
@@ -8065,18 +8837,16 @@ function showAutoPanel(){
   const job=jobById(player.job||'blade');
   const cur=AUTO_BATTLE_TYPES[player.autoBattleType]?player.autoBattleType:'smart';
   const modes=Object.keys(AUTO_BATTLE_TYPES).map(k=>`<button class="card ${cur===k?'selected':''}" onclick="Game.setAutoBattleType('${k}')"><h3>${AUTO_BATTLE_TYPES[k]}</h3>${AUTO_BATTLE_DESCS[k]}</button>`).join('');
-  const pct=Math.round(player.autoPotionPct*100);
-  const pot=CONSUMABLES[player.potionSlot]||CONSUMABLES.potion;
-  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${escapeHtml(job.name)}</b> · ${escapeHtml(job.type||'')}<br>현재 방식: <b>${AUTO_BATTLE_TYPES[cur]}</b></div><h3>전투 방식</h3><div class="grid">${modes}</div><h3>물약 자동사용 체력%</h3><div class="card"><div class="sub">현재 물약: ${escapeHtml(pot.name)} · HP <b id="autoPctVal">${pct}%</b> 이하 자동 사용</div><div class="neonRangeWrap"><div id="rangeBubble" class="rangeBubble" style="left:${pct}%">${pct}%</div><input class="neonRange" type="range" min="0" max="100" step="1" value="${pct}" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" oninput="Game.updatePotionRangeLabel(this.value)" onchange="Game.setAutoPotionPct(this.value)"><div class="neonRangeText"><span>0%</span><span>자동 사용 기준</span><span>100%</span></div></div></div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">오토 ON/OFF는 하단 오토 버튼 또는 E키로 전환합니다.</div>`);
+  openPopup(`<div class="title">오토모드 설정</div><div class="sub">현재 직업: <b>${escapeHtml(job.name)}</b> · ${escapeHtml(job.type||'')}<br>현재 방식: <b>${AUTO_BATTLE_TYPES[cur]}</b></div><h3>전투 방식</h3><div class="grid">${modes}</div><div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div><div class="townNote">오토 버튼 짧게 누르기: ON/OFF · 길게 누르기: 4가지 오토 방식 설정<br>물약 선택과 자동 사용 HP 기준은 물약 버튼을 길게 눌러 설정합니다.</div>`);
 }
 
 let skillDragState=null;
 function skillCardHtml(rank,owned=true){
   const sk=skillByRank(player.job,rank)||{name:'스킬',desc:''};
-  const req=typeof skillRequiredLevel==='function'?skillRequiredLevel(rank):1;
+  const req=typeof skillRequiredLevel==='function'?skillRequiredLevel(rank,player.job):1;
   const usedSlot=(player.skillSlots||[]).findIndex(v=>Number(v)===rank)+1;
   const usedText=usedSlot>0?` · 슬롯${usedSlot} 장착중`:'';
-  return `<button class="card skillPickCard" type="button" onclick="Game.showSkillSlotSelectPopup(${rank})"><h3>${rank}성 ${escapeHtml(sk.name)}</h3>${escapeHtml(sk.desc)}<br><span class="small">Lv.${req} 필요${usedText}<br>누르면 슬롯 1~4 선택</span></button>`;
+  return `<button class="card skillPickCard" type="button" onclick="Game.showSkillSlotSelectPopup(${rank})"><h3>${rank}성 ${escapeHtml(sk.name)}</h3>${escapeHtml(sk.desc)}<br><span class="small">Lv.${req} 필요${usedText}<br>누르면 버튼 1~6 선택</span></button>`;
 }
 function skillSlotBoxHtml(slot){
   normalizePlayer();
@@ -8093,8 +8863,8 @@ function showSkillSlotSelectPopup(rank){
   const learned=skillStar();
   if(rank<=0||rank>learned){toast('아직 배우지 않은 스킬');showSkillInfoPanel();return;}
   const sk=skillByRank(player.job,rank)||{name:'스킬',desc:''};
-  const req=typeof skillRequiredLevel==='function'?skillRequiredLevel(rank):1;
-  const buttons=[1,2,3,4].map(slot=>{
+  const req=typeof skillRequiredLevel==='function'?skillRequiredLevel(rank,player.job):1;
+  const buttons=[1,2,3,4,5,6].map(slot=>{
     const curRank=Number((player.skillSlots||[])[slot-1])||0;
     const curSkill=curRank?skillByRank(player.job,curRank):null;
     const curText=curSkill?`${curRank}성 ${escapeHtml(curSkill.name)}`:'비움';
@@ -8106,20 +8876,19 @@ function showSkillSlotSelectPopup(rank){
 function showSkillInfoPanel(){
   normalizePlayer();
   popupMode='skillInfo';
-  const isAdventurer=(player.job||'adventurer')==='adventurer';
-  const learned=isAdventurer?0:skillStar();
   const job=jobById(player.job||'adventurer');
+  const learned=skillStar(job.id);
+  const maxRank=maxSkillRankForJob(job.id);
   let skillCards='';
-  if(isAdventurer){
-    skillCards=`<div class="card"><h3>보유 스킬 없음</h3>모험가는 스킬 상점을 이용할 수 없습니다.<br><span class="small">직업소개소에서 1차 직업을 선택하면 스킬을 배울 수 있습니다.</span></div>`;
-  }else if(learned<=0){
-    skillCards=`<div class="card"><h3>보유 스킬 없음</h3>아직 배운 스킬이 없습니다.<br><button onclick="Game.showSkillShop()">스킬 상점 이동</button></div>`;
+  if(learned<=0){
+    skillCards=`<div class="card"><h3>보유 스킬 없음</h3>아직 배운 스킬이 없습니다.<br>${job.id==='adventurer'?'':'<button onclick="Game.showSkillShop()">스킬 상점 이동</button>'}</div>`;
   }else{
     const list=[];
     for(let r=1;r<=learned;r++)list.push(skillCardHtml(r,true));
     skillCards=list.join('');
   }
-  openPopup(`<div class="title">스킬정보</div><div class="sub">${escapeHtml(job.name)} · 보유 스킬 ${learned}/${MAX_SKILL_STAR}<br>보유 스킬 설명을 확인하고, 카드를 누르면 슬롯 1~4 선택 팝업이 열립니다.</div><h3>보유 스킬</h3><div class="skillInfoDeck">${skillCards}</div><div class="footerBtns"><button onclick="Game.showStats()">스텟</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+  const basic=job.id==='adventurer'?'<br><span class="small">기본 조작: 공격 / 회피 · 전투 스킬: 강한 일격</span>':'';
+  openPopup(`<div class="title">스킬정보</div><div class="sub">${escapeHtml(job.name)} · 보유 스킬 ${learned}/${maxRank}${basic}<br>보유 스킬 설명을 확인하고, 카드를 누르면 버튼 1~6 선택 팝업이 열립니다.</div><h3>보유 스킬</h3><div class="skillInfoDeck">${skillCards}</div><div class="footerBtns"><button onclick="Game.showStats()">스텟</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
 function showSkillSlotSettings(){showSkillInfoPanel();}
 function beginSkillDrag(ev,rank){
@@ -8172,28 +8941,110 @@ function highlightSkillDropSlot(x,y){
 }
 function clearSkillDropHighlights(){document.querySelectorAll('.skillDropSlot.dragOver').forEach(el=>el.classList.remove('dragOver'));}
 function cleanupSkillPointerDrag(){try{if(skillDragState&&skillDragState.ghost)skillDragState.ghost.remove();}catch(e){}skillDragState=null;}
-function setSkillSlot(slot,rank){normalizePlayer();slot=clamp(Number(slot)||1,1,4);rank=clamp(Number(rank)||0,0,MAX_SKILL_STAR);const learned=skillStar();if(rank>learned){toast('아직 배우지 않은 스킬');return;}if(rank>0){const used=player.skillSlots.findIndex((v,i)=>i!==slot-1&&Number(v)===rank);if(used>=0)player.skillSlots[used]=0;}player.skillSlots[slot-1]=rank;toast(rank?`슬롯${slot}: ${rank}성 ${skillByRank(player.job,rank).name}`:`슬롯${slot} 비움`);if(popupMode==='skillInfo'||popupMode==='skillSlotSelect')showSkillInfoPanel();else showSkillSlotSettings();updateHud();}
-function clearSkillSlots(){normalizePlayer();player.skillSlots=[0,0,0,0];toast('스킬 슬롯 모두 비움');requestCloudSave('skillSlots');showSkillInfoPanel();updateHud();}
+function setSkillSlot(slot,rank){normalizePlayer();slot=clamp(Number(slot)||1,1,ACTION_SLOT_COUNT);rank=clamp(Number(rank)||0,0,maxSkillRankForJob(player.job));const learned=skillStar();if(rank>learned){toast('아직 배우지 않은 스킬');return;}setActionSlotType(slot,rank>0?'skill':'empty',rank);if(popupMode==='skillInfo'||popupMode==='skillSlotSelect')showSkillInfoPanel();else if(popupMode==='actionSlotSettings')showActionSlotSettings(slot);updateHud();}
+function clearSkillSlots(){normalizePlayer();for(let i=0;i<ACTION_SLOT_COUNT;i++){if(player.actionSlots[i]&&player.actionSlots[i].type==='skill')player.actionSlots[i]={type:'empty'};}player.skillSlots=actionSlotsToSkillSlots(player.actionSlots);toast('스킬 배치만 비움');requestCloudSave('actionSlots');if(popupMode==='actionSlotSettings')showActionSlotSettings(1);else showSkillInfoPanel();updateHud();}
 function showPotionSettings(){
   normalizePlayer();
-  const itemRows=Object.entries(CONSUMABLES).map(([k,c])=>`<button class="card ${player.potionSlot===k?'selected':''}" onclick="Game.setPotionSlot('${k}')"><h3>${c.name}</h3>${c.desc}<br><span class="small">보유 ${player.consumables[k]||0}개</span></button>`).join('');
-  const pct=Math.round(player.autoPotionPct*100);
-  openPopup(`<div class="title">물약 설정</div><div class="sub">물약 슬롯과 오토모드 자동 사용 체력 퍼센트를 지정합니다. 수동 물약 버튼도 현재 슬롯을 우선 사용합니다.</div><div class="card"><h3>현재 설정</h3>슬롯: ${CONSUMABLES[player.potionSlot].name}<br>자동 사용: HP <b id="autoPctVal">${pct}%</b> 이하</div><h3>물약 슬롯</h3><div class="grid">${itemRows}</div><h3>자동 사용 퍼센트</h3><div class="card"><div class="neonRangeWrap"><div id="rangeBubble" class="rangeBubble" style="left:${pct}%">${pct}%</div><input class="neonRange" type="range" min="0" max="100" step="1" value="${pct}" onpointerdown="event.stopPropagation()" ontouchstart="event.stopPropagation()" oninput="Game.updatePotionRangeLabel(this.value)" onchange="Game.setAutoPotionPct(this.value)"><div class="neonRangeText"><span>0%</span><span>자동 사용 기준</span><span>100%</span></div></div></div><div class="footerBtns"><button onclick="Game.showAutoPanel()">오토 설정</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+  popupMode='potion';
+  const itemRows=POTION_ORDER.map(k=>[k,CONSUMABLES[k]]).filter(([k,c])=>!!c).map(([k,c])=>`<button class="card ${player.potionSlot===k?'selected':''}" onclick="Game.setPotionSlot('${k}')"><h3>${c.name}</h3>${c.desc}<br><span class="small">가격 ${c.cost}G · 보유 ${potionCount(k)}개</span></button>`).join('');
+  const pctRaw=clamp((Number(player.autoPotionPct)||0)*100,0,100);
+  const pctLabel=Math.round(pctRaw);
+  const cur=CONSUMABLES[player.potionSlot]||CONSUMABLES.potion;
+  openPopup(`<div class="title">물약 버튼 설정</div><div class="sub">게이지를 끌거나 오른쪽 숫자칸에 0~100 값을 직접 입력합니다. 드래그 위치와 입력값은 즉시 연동됩니다.</div><div class="card"><h3>현재 설정</h3>선택 물약: <b>${escapeHtml(cur.name)}</b><br>자동 사용: HP <b id="autoPctVal">${pctLabel}%</b> 이하<br><span class="small">보유 ${potionCount(player.potionSlot)}개 / 전체 ${totalPotionCount()}개</span></div><h3>포션 선택</h3><div class="grid">${itemRows}</div><h3>자동 사용 HP 퍼센트</h3><div class="card"><div class="potionPctLine"><div id="potionRangeWrap" class="neonRangeWrap smoothRange" style="--potion-pct:${pctRaw}%" onpointerdown="Game.beginPotionRangeDrag(event)" onpointermove="Game.movePotionRangeDrag(event)" onpointerup="Game.endPotionRangeDrag(event)" onpointercancel="Game.endPotionRangeDrag(event)" onlostpointercapture="Game.endPotionRangeDrag(event)"><div id="rangeBubble" class="rangeBubble">${pctLabel}%</div><div id="potionSmoothTrack" class="smoothTrack"><div class="smoothTrackFill"></div><div class="smoothTrackThumb"></div></div><input id="potionRangeInput" class="neonRange" type="range" min="0" max="100" step="0.1" value="${pctRaw}" tabindex="-1" aria-hidden="true"><div class="neonRangeText"><span>0%</span><span>자동 사용 기준</span><span>100%</span></div></div><label class="potionPctInputBox" for="potionPctNumberInput" onpointerdown="event.stopPropagation()" onclick="event.stopPropagation()"><input id="potionPctNumberInput" class="potionPctNumberInput" type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="100" step="1" value="${pctLabel}" oninput="Game.previewPotionPctInput(this.value)" onchange="Game.commitPotionPctInput(this.value)" onblur="Game.commitPotionPctInput(this.value)" onkeydown="Game.handlePotionPctInputKey(event)"><span>%</span></label></div></div><div class="footerBtns"><button onclick="Game.useSelectedPotionFromSettings()">현재 물약 사용</button><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
 }
-function setPotionSlot(key){normalizePlayer();if(!CONSUMABLES[key])return;player.potionSlot=key;toast(`${CONSUMABLES[key].name} 슬롯 지정`);showPotionSettings();updateHud();}
+function setPotionSlot(key){normalizePlayer();if(!CONSUMABLES[key])return;player.potionSlot=key;toast(`${CONSUMABLES[key].name} 선택`);requestCloudSave('potionSlot');showPotionSettings();updateHud();}
+function useSelectedPotionFromSettings(){if(usePotion(player.potionSlot)){requestCloudSave('usePotion');showPotionSettings();updateHud();}}
 
-function updatePotionRangeLabel(v){
+
+function potionRangeRawValue(v,fallback=42){
   const n=Number(v);
-  const val=clamp(Number.isFinite(n)?n:42,0,100);
+  return clamp(Number.isFinite(n)?n:fallback,0,100);
+}
+function updatePotionRangeLabel(v){
+  const val=potionRangeRawValue(v,(Number(player.autoPotionPct)||.42)*100);
+  const labelVal=Math.round(val);
   const label=$('autoPctVal');
   const bubble=$('rangeBubble');
-  if(label)label.textContent=val+'%';
-  if(bubble){
-    bubble.textContent=val+'%';
-    bubble.style.left=val+'%';
+  const input=$('potionRangeInput');
+  const numberInput=$('potionPctNumberInput');
+  const wrap=$('potionRangeWrap');
+  const cssVal=`${val}%`;
+  if(input)input.value=String(Math.round(val*10)/10);
+  if(numberInput&&document.activeElement!==numberInput)numberInput.value=String(labelVal);
+  if(wrap)wrap.style.setProperty('--potion-pct',cssVal);
+  if(label)label.textContent=labelVal+'%';
+  if(bubble)bubble.textContent=labelVal+'%';
+}
+function previewAutoPotionPct(v){
+  const val=potionRangeRawValue(v,(Number(player.autoPotionPct)||.42)*100);
+  player.autoPotionPct=val/100;
+}
+function potionRangeValueFromEvent(e){
+  const wrap=$('potionRangeWrap');
+  if(!wrap||!e)return potionRangeRawValue((Number(player.autoPotionPct)||.42)*100);
+  const r=wrap.getBoundingClientRect();
+  const x=Number(e.clientX);
+  const ratio=clamp((Number.isFinite(x)?x-r.left:0)/(r.width||1),0,1);
+  const val=clamp(ratio*100,0,100);
+  previewAutoPotionPct(val);
+  updatePotionRangeLabel(val);
+  return val;
+}
+function beginPotionRangeDrag(e){
+  if(!e)return;
+  e.preventDefault();e.stopPropagation();
+  const wrap=$('potionRangeWrap');
+  if(wrap){wrap.dataset.dragging='1';wrap.classList.add('dragging');try{wrap.setPointerCapture(e.pointerId);}catch(_){}}
+  potionRangeValueFromEvent(e);
+}
+function movePotionRangeDrag(e){
+  const wrap=$('potionRangeWrap');
+  if(!wrap||wrap.dataset.dragging!=='1')return;
+  e.preventDefault();e.stopPropagation();
+  potionRangeValueFromEvent(e);
+}
+function endPotionRangeDrag(e){
+  const wrap=$('potionRangeWrap');
+  if(!wrap||wrap.dataset.dragging!=='1')return;
+  e.preventDefault();e.stopPropagation();
+  const val=e&&Number.isFinite(Number(e.clientX))?potionRangeValueFromEvent(e):potionRangeRawValue((Number(player.autoPotionPct)||.42)*100);
+  delete wrap.dataset.dragging;
+  wrap.classList.remove('dragging');
+  try{wrap.releasePointerCapture(e.pointerId);}catch(_){ }
+  setAutoPotionPct(val,true);
+}
+function setAutoPotionPct(v,silent=false){
+  const val=potionRangeRawValue(v,(Number(player.autoPotionPct)||.42)*100);
+  player.autoPotionPct=val/100;
+  updatePotionRangeLabel(val);
+  if(!silent)toast(`자동 물약 HP ${Math.round(val)}%`);
+  requestCloudSave('autoPotion');
+  if(popupMode==='auto')showAutoPanel();
+  updateHud();
+}
+function previewPotionPctInput(v){
+  const raw=String(v??'').trim();
+  if(raw==='')return;
+  const val=potionRangeRawValue(raw,(Number(player.autoPotionPct)||.42)*100);
+  player.autoPotionPct=val/100;
+  updatePotionRangeLabel(val);
+  const numberInput=$('potionPctNumberInput');
+  if(numberInput&&document.activeElement===numberInput)numberInput.value=String(Math.round(val));
+}
+function commitPotionPctInput(v){
+  const raw=String(v??'').trim();
+  const val=raw===''?potionRangeRawValue((Number(player.autoPotionPct)||.42)*100):potionRangeRawValue(raw,(Number(player.autoPotionPct)||.42)*100);
+  const rounded=Math.round(val);
+  setAutoPotionPct(rounded,true);
+}
+function handlePotionPctInputKey(e){
+  if(!e)return;
+  if(e.key==='Enter'){
+    e.preventDefault();
+    commitPotionPctInput(e.currentTarget?e.currentTarget.value:e.target&&e.target.value);
+    try{e.currentTarget.blur();}catch(_){ }
   }
 }
-function setAutoPotionPct(v){normalizePlayer();const n=Number(v);player.autoPotionPct=clamp((Number.isFinite(n)?n:42)/100,0,1);toast(`자동 물약 HP ${Math.round(player.autoPotionPct*100)}%`);requestCloudSave('autoPotion');if(popupMode==='auto')showAutoPanel();else showPotionSettings();updateHud();}
 function enterTownFromSettings(){closePopup();enterField('town');toast('마을로 귀환');}
 function nearestNpc(){let b=null,bd=85;for(const n of npcs){if(n.kind==='portal')continue;const d=Math.hypot(player.x-n.x,player.y-n.y);if(d<bd){bd=d;b=n;}}return b;}
 function talkToNpc(n){if(!n)return; if(n.kind==='quest')showQuest();else if(n.kind==='shop')showShop();else if(n.kind==='guild')showGuild();else if(n.kind==='jobAgency')showJobAgency();else if(n.kind==='dummy')showTrainingDummy();}
@@ -8284,13 +9135,62 @@ function bind(){
   joy.addEventListener('pointerdown',e=>{e.preventDefault();joystick.active=true;joystick.id=e.pointerId;joy.setPointerCapture(e.pointerId);setJoy(e.clientX,e.clientY);},{passive:false});
   joy.addEventListener('pointermove',e=>{if(joystick.active&&e.pointerId===joystick.id){e.preventDefault();setJoy(e.clientX,e.clientY);}},{passive:false});
   const end=e=>{if(e.pointerId===joystick.id){joystick.active=false;joystick.id=null;joystick.dx=joystick.dy=0;stick.style.transform='translate(0,0)';}};joy.addEventListener('pointerup',end);joy.addEventListener('pointercancel',end);
-  const hold=(el,down,up)=>{el.addEventListener('pointerdown',e=>{e.preventDefault();down();});el.addEventListener('pointerup',e=>{e.preventDefault();up();});el.addEventListener('pointercancel',up);el.addEventListener('pointerleave',up);};
-  hold($('attackBtn'),()=>{attackHeld=true;normalAttack();},()=>attackHeld=false);
-  for(let i=1;i<=4;i++){const btn=$(`skillBtn${i}`);if(btn)hold(btn,()=>{skillHeld[i-1]=true;safeUseSkill(i);},()=>skillHeld[i-1]=false);}
-  const dodgeBtn=$('dodgeBtn');
-  dodgeBtn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();dodge(true);},{passive:false});
-  dodgeBtn.onclick=e=>{e.preventDefault();};
-  $('potionBtn').onclick=usePotion; $('talkPrompt').onclick=handleTalkPrompt; $('statBtn').onclick=showOnlineHub; bindStatPanelWideClick(); $('bagBtn').onclick=renderBag; $('codexBtn').onclick=()=>renderCodex(true); $('settingBtn').onclick=showSettings; const lb=$('log'); if(lb)lb.onclick=showQuickChat; $('logChatBtn').onclick=()=>toggleHudLogSetting('chat'); $('logSystemBtn').onclick=()=>toggleHudLogSetting('system'); $('logCombatBtn').onclick=()=>toggleHudLogSetting('combat'); updateLogToggleButtons(); zoneTag.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
+  const bindActionSlotButton=(slot)=>{
+    const btn=$(actionSlotButtonId(slot));
+    if(!btn)return;
+    let timer=null,longPress=false,pid=null;
+    const clear=()=>{if(timer){clearTimeout(timer);timer=null;}};
+    btn.addEventListener('pointerdown',e=>{
+      e.preventDefault();e.stopPropagation();pid=e.pointerId;longPress=false;
+      try{btn.setPointerCapture(e.pointerId);}catch(_){ }
+      clear();
+      timer=setTimeout(()=>{longPress=true;showActionSlotSettings(slot);},560);
+    },{passive:false});
+    const finish=(e,run)=>{
+      if(e){e.preventDefault();e.stopPropagation();}
+      clear();
+      if(run&&!longPress)executeActionSlot(slot,false);
+      pid=null;
+    };
+    btn.addEventListener('pointerup',e=>finish(e,true),{passive:false});
+    btn.addEventListener('pointercancel',e=>finish(e,false),{passive:false});
+    btn.addEventListener('pointerleave',e=>{if(pid!==null)finish(e,false);},{passive:false});
+    btn.onclick=e=>{e.preventDefault();e.stopPropagation();};
+  };
+  for(let i=1;i<=ACTION_SLOT_COUNT;i++)bindActionSlotButton(i);
+  const bindPotionButton=()=>{
+    const btn=$('potionBtn'); if(!btn)return;
+    let timer=null,longPress=false,pid=null;
+    const clear=()=>{if(timer){clearTimeout(timer);timer=null;}};
+    btn.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();pid=e.pointerId;longPress=false;try{btn.setPointerCapture(e.pointerId);}catch(_){ }clear();timer=setTimeout(()=>{longPress=true;showPotionSettings();},560);},{passive:false});
+    const finish=(e,run)=>{if(e){e.preventDefault();e.stopPropagation();}clear();if(run&&!longPress)usePotion();pid=null;};
+    btn.addEventListener('pointerup',e=>finish(e,true),{passive:false});
+    btn.addEventListener('pointercancel',e=>finish(e,false),{passive:false});
+    btn.addEventListener('pointerleave',e=>{if(pid!==null)finish(e,false);},{passive:false});
+    btn.onclick=e=>{e.preventDefault();e.stopPropagation();};
+  };
+  const bindAutoButton=()=>{
+    const btn=$('autoBtn'); if(!btn)return;
+    let timer=null,longPress=false,pid=null;
+    const clear=()=>{if(timer){clearTimeout(timer);timer=null;}};
+    btn.addEventListener('pointerdown',e=>{
+      e.preventDefault();e.stopPropagation();pid=e.pointerId;longPress=false;
+      try{btn.setPointerCapture(e.pointerId);}catch(_){ }
+      clear();
+      timer=setTimeout(()=>{longPress=true;showAutoPanel();},560);
+    },{passive:false});
+    const finish=(e,run)=>{
+      if(e){e.preventDefault();e.stopPropagation();}
+      clear();
+      if(run&&!longPress)quickToggleAuto();
+      pid=null;
+    };
+    btn.addEventListener('pointerup',e=>finish(e,true),{passive:false});
+    btn.addEventListener('pointercancel',e=>finish(e,false),{passive:false});
+    btn.addEventListener('pointerleave',e=>{if(pid!==null)finish(e,false);},{passive:false});
+    btn.onclick=e=>{e.preventDefault();e.stopPropagation();};
+  };
+  bindPotionButton(); bindAutoButton(); $('talkPrompt').onclick=handleTalkPrompt; $('statBtn').onclick=showOnlineHub; bindStatPanelWideClick(); $('bagBtn').onclick=renderBag; $('codexBtn').onclick=()=>renderCodex(true); $('settingBtn').onclick=showSettings; const lb=$('log'); if(lb)lb.onclick=showQuickChat; $('logChatBtn').onclick=()=>toggleHudLogSetting('chat'); $('logSystemBtn').onclick=()=>toggleHudLogSetting('system'); $('logCombatBtn').onclick=()=>toggleHudLogSetting('combat'); updateLogToggleButtons(); zoneTag.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();},{passive:false});
   mini.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();showFullMap();},{passive:false});
   game.addEventListener('pointerdown',e=>{
     if(isTextEditingTarget(e.target))return;
@@ -8309,16 +9209,18 @@ function bind(){
     if(isTextEditingTarget(e.target)||e.repeat)return;
     const code=e.code;
     if(['KeyW','KeyA','KeyS','KeyD'].includes(code)){pcInput.keys[code]=true;e.preventDefault();return;}
-    if(code==='Digit1'||code==='Numpad1'){e.preventDefault();safeUseSkill(1);return;}
-    if(code==='Digit2'||code==='Numpad2'){e.preventDefault();safeUseSkill(2);return;}
-    if(code==='Digit3'||code==='Numpad3'){e.preventDefault();safeUseSkill(3);return;}
-    if(code==='Digit4'||code==='Numpad4'){e.preventDefault();safeUseSkill(4);return;}
+    if(code==='Digit1'||code==='Numpad1'){e.preventDefault();executeActionSlot(1);return;}
+    if(code==='Digit2'||code==='Numpad2'){e.preventDefault();executeActionSlot(2);return;}
+    if(code==='Digit3'||code==='Numpad3'){e.preventDefault();executeActionSlot(3);return;}
+    if(code==='Digit4'||code==='Numpad4'){e.preventDefault();executeActionSlot(4);return;}
+    if(code==='Digit5'||code==='Numpad5'){e.preventDefault();executeActionSlot(5);return;}
+    if(code==='Digit6'||code==='Numpad6'){e.preventDefault();executeActionSlot(6);return;}
     if(code==='KeyE'){e.preventDefault();quickToggleAuto();return;}
     if(code==='KeyQ'){e.preventDefault();usePotion();return;}
   }, {passive:false});
   document.addEventListener('keyup',e=>{if(['KeyW','KeyA','KeyS','KeyD'].includes(e.code)){pcInput.keys[e.code]=false;e.preventDefault();}}, {passive:false});
-  window.addEventListener('blur',()=>{pcInput.keys={};attackHeld=false;skillHeld=[false,false,false,false];});
-  $('autoBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();quickToggleAuto();},{passive:false});
+  window.addEventListener('blur',()=>{pcInput.keys={};attackHeld=false;skillHeld=[false,false,false,false,false,false];});
+  // 오토 버튼은 bindAutoButton()에서 짧게 누르기/길게 누르기를 분리 처리합니다.
   document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false}); document.addEventListener('contextmenu',e=>e.preventDefault()); document.addEventListener('selectstart',e=>e.preventDefault());
 }
 bind();
@@ -8436,7 +9338,158 @@ function safeConnectOnlineFromPanel(){
 }
 
 applyThemeColors();
-window.Game={safeCall:gameSafeCall,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,disbandParty,togglePartyInviteBlock,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSkillInfoPanel,showSkillSlotSelectPopup,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showTransferPartyLeader,transferPartyLeader,showKickPartyMember,kickPartyMember,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,setAutoBattleType,showSkillInfoPanel,showSkillSlotSettings,clearSkillSlots,beginSkillDrag,beginSkillPointerDrag,skillSlotDragOver,skillSlotDragLeave,dropSkillOnSlot,setSkillSlot,showPotionSettings,setPotionSlot,setAutoPotionPct,updatePotionRangeLabel,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+
+
+/* 156: 개발자 신규 Lv.100 모험가 시작 / 더미 개별 자율활동 유지 */
+function devDummyInitialField(idx=0){
+  try{
+    const stages=typeof stageFields==='function'?stageFields():[];
+    if(stages&&stages.length)return stages[Math.abs(idx)%stages.length];
+  }catch(_){ }
+  try{return FIELDS.find(f=>f.id==='plain')||FIELDS.find(f=>f.id!=='town')||FIELDS[0];}catch(_){return {id:'plain',size:2200,name:'초원'};}
+}
+function devDummyRandomPointForField(fieldId,idx=0){
+  const size=typeof devDummyFieldSize==='function'?devDummyFieldSize(fieldId):(fieldSize||2200);
+  const seed=(idx+1)*997+(Date.now()%7919);
+  const baseX=160+((seed*37)%Math.max(220,size-320));
+  const baseY=160+((seed*53)%Math.max(220,size-320));
+  return {x:clamp(baseX,60,size-60),y:clamp(baseY,60,size-60)};
+}
+function devDummyNormalizeIndependentState(d,profile,idx=0,created=false){
+  if(!d)return d;
+  d.id=profile.id; d.userId=profile.id; d.profileId=profile.id; d.devDummy=true;
+  d.name=devDummyNickname(profile); d.job=profile.job; d.jobName=profile.jobName;
+  d.seenAt=performance.now(); d.ts=Date.now();
+  if(!onlineState.partyId){d.partyId='';d.partyOwnerId='';}
+  if(!devDummyInParty(d)){
+    const f=stageField(d.field)||FIELDS.find(x=>x.id===d.field);
+    if(created||!f){
+      const init=devDummyInitialField(idx);
+      const p=devDummyRandomPointForField(init.id,idx);
+      d.field=init.id; d.x=p.x; d.y=p.y; d.drawX=p.x; d.drawY=p.y; d.targetX=p.x; d.targetY=p.y;
+      d.aiTargetField=init.id;
+    }
+    if(!Number.isFinite(Number(d.aiRoamX))||!Number.isFinite(Number(d.aiRoamY))){
+      const p=devDummyRandomPointForField(d.field,idx+3);
+      d.aiRoamX=p.x; d.aiRoamY=p.y; d.aiRoamTimer=2+idx*.7;
+    }
+    d.aiState=d.aiState||'개별 자율활동';
+  }
+  return d;
+}
+function ensureDevDummies(){
+  if(!onlineState.peers)onlineState.peers={};
+  if(!devDummyModeActive()){
+    for(const id of devDummyIds())delete onlineState.peers[id];
+    return [];
+  }
+  return DEV_DUMMY_PROFILES.map((profile,idx)=>{
+    let d=onlineState.peers[profile.id];
+    const created=!d||!d.devDummy;
+    if(created)d=makeDevDummyPeer(profile,idx);
+    d=devDummyNormalizeIndependentState(d,profile,idx,created);
+    onlineState.peers[profile.id]=d;
+    return d;
+  });
+}
+function devDummyPickRoamPoint(d,idx=0){
+  const size=devDummyFieldSize(d.field);
+  let p=null;
+  for(let i=0;i<8;i++){
+    const a=Math.random()*Math.PI*2;
+    const r=120+Math.random()*420;
+    const x=clamp((Number(d.x)||size/2)+Math.cos(a)*r,70,size-70);
+    const y=clamp((Number(d.y)||size/2)+Math.sin(a)*r,70,size-70);
+    p={x,y};
+    if(d.field!==currentField)break;
+    try{if(!dungeonActive()||dungeonPointWalkable(x,y,18))break;}catch(_){break;}
+  }
+  if(!p)p=devDummyRandomPointForField(d.field,idx+11);
+  d.aiRoamX=p.x; d.aiRoamY=p.y; d.aiRoamTimer=3.5+Math.random()*4.5+idx*.35;
+}
+function devDummyAutonomousSim(d,dt,st){
+  if(!d)return;
+  const idx=Math.max(0,devDummyIds().indexOf(d.id));
+  d.aiThink=(Number(d.aiThink)||0)-dt;
+  d.aiPortal=(Number(d.aiPortal)||0)-dt;
+  d.aiShop=(Number(d.aiShop)||0)-dt;
+  d.aiRoamTimer=(Number(d.aiRoamTimer)||0)-dt;
+  if(!d.field||!FIELDS.find(f=>f.id===d.field)){
+    const f=devDummyInitialField(idx); const p=devDummyRandomPointForField(f.id,idx);
+    d.field=f.id; d.x=p.x; d.y=p.y; d.drawX=p.x; d.drawY=p.y;
+  }
+  if(devDummyUpdatePortalMove(d,st,dt))return;
+  const size=devDummyFieldSize(d.field);
+  if(!Number.isFinite(Number(d.aiRoamX))||!Number.isFinite(Number(d.aiRoamY))||d.aiRoamTimer<=0||Math.hypot((Number(d.aiRoamX)||d.x)-d.x,(Number(d.aiRoamY)||d.y)-d.y)<42){
+    devDummyPickRoamPoint(d,idx);
+  }
+  if(d.aiThink<=0){
+    d.aiThink=.85+Math.random()*1.35+idx*.08;
+    if(d.field==='town'){
+      devDummyGearShop(d,true);
+      const next=devDummyBestField(d);
+      if(next&&d.aiPortal<=0){d.aiPortal=9+Math.random()*7+idx;devDummyRequestPortal(d,next.id,'next');d.aiState=`${next.name||'사냥터'} 이동`;}
+    }else{
+      const f=stageField(d.field)||stageFields()[0];
+      const lv=Number(f&&f.level||1);
+      const hard=lv>Number(d.level||1)+4;
+      if(hard){devDummyMaybeInvite(d,'bossHard');devDummyGain(d,10+lv,7+lv);d.aiState='고난도 보스 견적중';}
+      else{
+        devDummyGain(d,12+lv*2,8+lv*1.5);
+        if(Math.random()<.16)devDummyGearShop(d,false);
+        d.aiCleared=d.aiCleared&&typeof d.aiCleared==='object'?d.aiCleared:{};
+        d.aiDiscovered=d.aiDiscovered&&typeof d.aiDiscovered==='object'?d.aiDiscovered:{};
+        if(Math.random()<.08||Number(d.level||1)>=lv+3){
+          d.aiCleared[f.id]=true;
+          const nx=nextStageId(f.id);
+          if(nx){d.aiDiscovered[nx]=true;if(Math.random()<.36&&d.aiPortal<=0){d.aiPortal=12+Math.random()*8+idx;devDummyRequestPortal(d,nx,'next');d.aiState='다음 사냥터 확장';}}
+        }
+        if(Math.random()<.035&&d.aiPortal<=0){d.aiPortal=15+Math.random()*10+idx;devDummyRequestPortal(d,'town','town');d.aiState='상점 정비 이동';}
+      }
+    }
+  }
+  const ox=Number(d.x)||size/2, oy=Number(d.y)||size/2;
+  const tx=clamp(Number(d.aiRoamX)||ox,60,size-60), ty=clamp(Number(d.aiRoamY)||oy,60,size-60);
+  const dx=tx-ox, dy=ty-oy, gap=Math.hypot(dx,dy);
+  if(gap>4){
+    const a=Math.atan2(dy,dx);
+    const speed=((st&&st.speed)||135)*(d.field===currentField?0.42:0.30);
+    d.x=clamp(ox+Math.cos(a)*speed*dt,28,size-28);
+    d.y=clamp(oy+Math.sin(a)*speed*dt,28,size-28);
+    d.dir=a; d.moving=true; d.visualMoving=true;
+    if(d.field===currentField){try{if(typeof resolveDungeonEntity==='function')resolveDungeonEntity(d,ox,oy,18);}catch(_){ }}
+    const moved=Math.hypot(d.x-ox,d.y-oy);
+    d.vx=moved>0?(d.x-ox)/Math.max(.016,dt):0; d.vy=moved>0?(d.y-oy)/Math.max(.016,dt):0;
+  }else{d.moving=false; d.visualMoving=Number(d.attackAnim||0)>0;}
+  d.targetX=d.x; d.targetY=d.y;
+}
+function showOnlineHub(autoConnect=true){
+  if(autoConnect==='false')autoConnect=false;
+  popupMode='onlineHub';
+  normalizePlayer();
+  restorePersistentParty();
+  updateDevDummyAI(0.016);
+  if(autoConnect)ensureOnlineHubConnection(true,true);
+  const invites=Object.values(onlineState.invites||{});
+  const allOnline=onlineUserListRows();
+  const near=activePeers(220,true);
+  const members=onlineState.partyId?partyMembers():[];
+  const inviteBlockOn=partyInviteBlocked();
+  if(inviteBlockOn&&invites.length){try{onlineState.invites={};}catch(_){ }}
+  const inviteGuardHtml=`<div class="onlineSectionTitle"><h3>받은 파티 신청</h3><button class="${inviteBlockOn?'autoOn':''}" style="height:26px;padding:2px 8px;font-size:10px;border-radius:8px" onclick="Game.togglePartyInviteBlock()">자동거절</button></div><div class="sub">${inviteBlockOn?'ON · 들어오는 파티 신청을 즉시 거절합니다.':'OFF · 파티 신청을 받을 수 있습니다.'}</div>`;
+  const inviteHtml=inviteBlockOn?'<div class="partyMiniLine">자동거절 적용 중</div>':(invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>');
+  const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b>${m.id===onlineState.partyOwnerId?' <span class="small">[파티장]</span>':''} · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${typeof fmtK==='function'?fmtK(m.hp||0):(m.hp||0)}/${typeof fmtK==='function'?fmtK(m.maxHp||0):(m.maxHp||0)}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
+  const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>Lv.${p.level||1} ${escapeHtml(p.name||'플레이어')}</b><br><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
+  const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자</h3><span>${allOnline.count}명</span></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
+  const partyButtons=onlineState.partyId
+    ? `<div class="footerBtns"><button onclick="Game.showTransferPartyLeader()">파티장 넘기기</button><button onclick="Game.showKickPartyMember()">내보내기</button><button onclick="Game.disbandParty()">파티해산</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>`
+    : '';
+  const partyStatusText=onlineState.partyId?`<div class="sub">${escapeHtml(partyLeaderLabel())}</div>`:'<div class="sub">파티는 상대에게 파티 신청을 보내면 자동으로 유지됩니다.</div>';
+  const partyGroup=`<h3>파티</h3><div class="onlineGroupBox">${partyButtons}${partyStatusText}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div>${inviteGuardHtml}<div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
+  openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+}
+
+window.Game={safeCall:gameSafeCall,showDevJobFreeSelect,pickDevJob,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,disbandParty,togglePartyInviteBlock,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSkillInfoPanel,showSkillSlotSelectPopup,showActionSlotSettings,setActionSlotType,executeActionSlot,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showTransferPartyLeader,transferPartyLeader,showKickPartyMember,kickPartyMember,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,setAutoBattleType,showSkillInfoPanel,showSkillSlotSettings,clearSkillSlots,beginSkillDrag,beginSkillPointerDrag,skillSlotDragOver,skillSlotDragLeave,dropSkillOnSlot,setSkillSlot,showPotionSettings,setPotionSlot,useSelectedPotionFromSettings,setAutoPotionPct,updatePotionRangeLabel,previewAutoPotionPct,beginPotionRangeDrag,movePotionRangeDrag,endPotionRangeDrag,previewPotionPctInput,commitPotionPctInput,handlePotionPctInputKey,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
 try{
   window.showPeerAction=(id)=>gameSafeCall('showPeerAction',id);
   globalThis.showPeerAction=window.showPeerAction;
