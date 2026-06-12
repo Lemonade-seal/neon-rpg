@@ -3337,6 +3337,13 @@ window.addEventListener('pagehide',()=>{try{if(!cloudState.deleting&&!cloudState
 const onlineSaveKey='green_line_online_realtime_v1';
 function makeOnlinePlayerId(){return 'p_'+Math.random().toString(36).slice(2,10)+'_'+Date.now().toString(36).slice(-5);}
 const onlineState={enabled:false,connecting:false,sending:false,reconnectTimer:null,blocked:false,drawBlocked:false,status:'대기',client:null,channel:null,playerId:storageGet('green_line_online_pid')||makeOnlinePlayerId(),room:'neon-rpg-world',lastSend:0,lastConnectTry:0,lastReconnectSchedule:0,lastHeartbeat:0,lastPresenceTrack:0,lastPayloadX:null,lastPayloadY:null,lastPayloadField:'',lastPayloadAt:0,sendSeq:0,keepAliveTimer:null,peers:{},joinNotice:{},presenceReady:false,partyId:null,partyOwnerId:'',invites:{},chat:[],devDummy:null,blockPartyInvites:false};
+const ONLINE_SEND_MOVING_GAP=50;
+const ONLINE_SEND_IDLE_GAP=650;
+const ONLINE_SEND_FORCE_GAP=80;
+const ONLINE_PRESENCE_TRACK_MS=2500;
+const ONLINE_PEER_ACTIVE_MS=30000;
+const ONLINE_PEER_DRAW_MS=30000;
+const ONLINE_PEER_PRUNE_MS=45000;
 storageSet('green_line_online_pid',onlineState.playerId);
 
 const partyPersistKey='green_line_party_state_v2';
@@ -3470,7 +3477,7 @@ function leaveOnline(showToast=true){
   }
 }
 function myOnlineId(){return onlineState.playerId;}
-function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<8500)n++;}return n;}
+function onlinePeerCount(){const now=performance.now();let n=0;for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&now-(p.seenAt||0)<ONLINE_PEER_ACTIVE_MS)n++;}return n;}
 function onlineStatusText(){return onlineState.blocked?'온라인 재접속 필요':(onlineState.enabled?`온라인 · ${onlinePeerCount()}명`:`오프라인 · ${onlineState.status||'대기'}`);}
 
 function announcePeerJoin(p,prev){
@@ -3478,7 +3485,7 @@ function announcePeerJoin(p,prev){
     if(!p||!p.id||p.id===myOnlineId())return;
     if(!onlineState.presenceReady)return;
     const now=performance.now();
-    const stale=!prev||now-(Number(prev.seenAt)||0)>12000;
+    const stale=!prev||now-(Number(prev.seenAt)||0)>ONLINE_PEER_PRUNE_MS;
     if(!stale)return;
     onlineState.joinNotice=onlineState.joinNotice||{};
     if(onlineState.joinNotice[p.id]&&now-onlineState.joinNotice[p.id]<15000)return;
@@ -3528,7 +3535,7 @@ function sanitizePeerEquip(raw){
 }
 function buildOnlinePayload(){
   normalizePlayer();
-  return {id:myOnlineId(),userId:(cloudState.user&&cloudState.user.id)||'',name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*10)/10,y:Math.round(player.y*10)/10,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim,equip:compactOnlineEquip(),partyId:onlineState.partyId||'',partyOwnerId:onlineState.partyOwnerId||'',ts:Date.now()};
+  return {id:myOnlineId(),userId:(cloudState.user&&cloudState.user.id)||'',name:sanitizeNickname(player.nickname||'플레이어'),job:player.job||'adventurer',jobName:jobById(player.job||'adventurer').name,level:player.level||1,field:currentField,x:Math.round(player.x*100)/100,y:Math.round(player.y*100)/100,dir:Number.isFinite(player.dir)?player.dir:0,hp:Math.round(player.hp||0),maxHp:Math.round(player.maxHp||1),moving:!!player.movingAnim||player.dashTime>0,equip:compactOnlineEquip(),partyId:onlineState.partyId||'',partyOwnerId:onlineState.partyOwnerId||'',ts:Date.now()};
 }
 async function initPartyPresence(force=false){
   if(force){onlineState.blocked=false;onlineState.drawBlocked=false;onlineState.enabled=false;onlineState.connecting=false;}
@@ -3677,7 +3684,7 @@ function smoothPeerPosition(p,dt){
   let dx=Number.isFinite(Number(p.drawX))?Number(p.drawX):baseX;
   let dy=Number.isFinite(Number(p.drawY))?Number(p.drawY):baseY;
   const gapBase=Math.hypot(baseX-dx,baseY-dy);
-  if(!Number.isFinite(gapBase)||gapBase>440){
+  if(!Number.isFinite(gapBase)||gapBase>520){
     p.drawX=baseX;
     p.drawY=baseY;
     p.visualMoving=false;
@@ -3686,24 +3693,23 @@ function smoothPeerPosition(p,dt){
   const vx=Number(p.vx)||0;
   const vy=Number(p.vy)||0;
   const sp=Math.hypot(vx,vy);
-  const moving=!!p.moving||sp>8||gapBase>1.0;
+  const moving=!!p.moving||sp>6||gapBase>0.35;
   let tx=baseX,ty=baseY;
-  if(moving&&sp>8){
-    const age=Math.max(0,Math.min(.22,(now-(Number(p.seenAt)||now))/1000));
-    const predictSec=Math.min(.16,.045+age*.55);
+  if(moving&&sp>6){
+    const age=Math.max(0,Math.min(.16,(now-(Number(p.seenAt)||now))/1000));
+    const predictSec=Math.min(.105,.028+age*.42);
     let ox=vx*predictSec,oy=vy*predictSec;
     const off=Math.hypot(ox,oy);
-    if(off>34){const k=34/off;ox*=k;oy*=k;}
+    if(off>26){const k=26/off;ox*=k;oy*=k;}
     tx=baseX+ox;
     ty=baseY+oy;
   }
-  const gap=Math.hypot(tx-dx,ty-dy);
-  const follow=1-Math.exp(-Math.max(0.001,dt||0.016)*(moving?13.5:10.5));
+  const follow=1-Math.exp(-Math.max(0.001,dt||0.016)*(moving?30:22));
   p.drawX=dx+(tx-dx)*follow;
   p.drawY=dy+(ty-dy)*follow;
   const left=Math.hypot(tx-p.drawX,ty-p.drawY);
-  p.visualMoving=left>0.7||gapBase>0.7||now-(Number(p.lastMoveAt)||0)<680;
-  if(left<=0.55&&!moving){p.drawX=baseX;p.drawY=baseY;}
+  p.visualMoving=left>0.28||gapBase>0.28||now-(Number(p.lastMoveAt)||0)<520;
+  if(left<=0.22&&!moving){p.drawX=baseX;p.drawY=baseY;}
 }
 
 
@@ -4328,19 +4334,26 @@ function updateOnlinePeerSmoothing(dt){
 function syncOnlinePresence(){
   try{
     const ch=onlineState.channel;if(!ch)return;
+    const previous=onlineState.peers||{};
     const preserved={};
-    for(const id in onlineState.peers||{}){const p=onlineState.peers[id];if(p&&p.devDummy)preserved[id]=p;}
+    for(const id in previous){const p=previous[id];if(p&&p.devDummy)preserved[id]=p;}
     const state=ch.presenceState();const now=performance.now();const next={};
     Object.keys(state||{}).forEach(key=>{
       const arr=state[key]||[];
       for(const raw of arr){
         const p=sanitizePeerPayload(raw,now);
         if(p&&p.id){
-          announcePeerJoin(p,onlineState.peers&&onlineState.peers[p.id]);
+          announcePeerJoin(p,previous&&previous[p.id]);
           next[p.id]=p;
         }
       }
     });
+    for(const id in previous){
+      const p=previous[id];
+      if(!p||p.id===myOnlineId()||next[id])continue;
+      if(p.devDummy)continue;
+      if(now-(Number(p.seenAt)||0)<ONLINE_PEER_PRUNE_MS)next[id]=p;
+    }
     if(devDummyModeActive())for(const id in preserved)next[id]=preserved[id];
     onlineState.peers=next;
     onlineState.presenceReady=true;
@@ -4365,7 +4378,7 @@ async function trackOnlinePresence(force=false){
   const movedSince=Number.isFinite(Number(onlineState.lastPayloadX))?Math.hypot(px-Number(onlineState.lastPayloadX),py-Number(onlineState.lastPayloadY||0)):0;
   const fieldChanged=onlineState.lastPayloadField&&onlineState.lastPayloadField!==currentField;
   const movingNow=!!player.movingAnim||movedSince>1.0||fieldChanged;
-  const minGap=force?220:(movingNow?165:920);
+  const minGap=force?ONLINE_SEND_FORCE_GAP:(movingNow?ONLINE_SEND_MOVING_GAP:ONLINE_SEND_IDLE_GAP);
   if(t-(onlineState.lastSend||0)<minGap)return false;
   const prevPayloadX=Number.isFinite(Number(onlineState.lastPayloadX))?Number(onlineState.lastPayloadX):px;
   const prevPayloadY=Number.isFinite(Number(onlineState.lastPayloadY))?Number(onlineState.lastPayloadY):py;
@@ -4385,7 +4398,7 @@ async function trackOnlinePresence(force=false){
   payload.vy=Math.round(vy*10)/10;
   payload.seq=(onlineState.sendSeq=(Number(onlineState.sendSeq)||0)+1);
   try{
-    const shouldTrack=force||!onlineState.lastPresenceTrack||t-(onlineState.lastPresenceTrack||0)>4200;
+    const shouldTrack=force||!onlineState.lastPresenceTrack||t-(onlineState.lastPresenceTrack||0)>ONLINE_PRESENCE_TRACK_MS;
     if(shouldTrack){
       await onlineState.channel.track(payload);
       onlineState.lastPresenceTrack=t;
@@ -4417,7 +4430,7 @@ function pruneOnlinePeers(){
     const p=onlineState.peers[id];
     if(!p){delete onlineState.peers[id];continue;}
     if(p.devDummy)continue;
-    if(now-(p.seenAt||0)>12000)delete onlineState.peers[id];
+    if(now-(p.seenAt||0)>ONLINE_PEER_PRUNE_MS)delete onlineState.peers[id];
   }
 }
 function updateOnline(dt){
@@ -4571,7 +4584,7 @@ function handlePartyChat(p){if(!p||!p.text)return;if(p.partyId&&onlineState.part
 function activePeers(range=99999,fieldOnly=false){
   const now=performance.now();
   return Object.values(onlineState.peers||{})
-    .filter(p=>p&&now-(p.seenAt||0)<8500&&(!fieldOnly||p.field===currentField)&&dist(player.x,player.y,Number.isFinite(Number(p.drawX))?Number(p.drawX):Number(p.x),Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y))<=range)
+    .filter(p=>p&&now-(p.seenAt||0)<ONLINE_PEER_ACTIVE_MS&&(!fieldOnly||p.field===currentField)&&dist(player.x,player.y,Number.isFinite(Number(p.drawX))?Number(p.drawX):Number(p.x),Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y))<=range)
     .sort((a,b)=>dist(player.x,player.y,Number.isFinite(Number(a.drawX))?Number(a.drawX):Number(a.x),Number.isFinite(Number(a.drawY))?Number(a.drawY):Number(a.y))-dist(player.x,player.y,Number.isFinite(Number(b.drawX))?Number(b.drawX):Number(b.x),Number.isFinite(Number(b.drawY))?Number(b.drawY):Number(b.y)));
 }
 function nearOnlinePeer(range=128){return activePeers(range,true)[0]||null;}
@@ -4665,13 +4678,13 @@ function drawRemotePlayerSprite(p){
   const y=Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y);
   if(!Number.isFinite(x)||!Number.isFinite(y))return;
   const age=performance.now()-(Number(p.seenAt)||0);
-  if(age>8500)return;
+  if(age>ONLINE_PEER_DRAW_MS)return;
   const maxHp=Math.max(1,Number(p.maxHp)||1);
   const curHp=clamp(Number.isFinite(Number(p.hp))?Number(p.hp):maxHp,0,maxHp);
   const hpPct=clamp(curHp/maxHp,0,1);
   ctx.save();
   ctx.translate(x,y);
-  ctx.globalAlpha=clamp(1-age/10000,.62,.96);
+  ctx.globalAlpha=clamp(1-age/ONLINE_PEER_DRAW_MS,.62,.96);
 
   // 본인 캐릭터와 같은 졸라맨 골격/무기 표현을 사용한다.
   const hurt=.9;
@@ -5725,6 +5738,15 @@ function setupTown(){
   mode='town'; dungeonMap=null; fieldSize=1800; player.x=900; player.y=1080;
   npcs=[{x:900,y:545,name:'장로',kind:'quest'},{x:555,y:855,name:'상인',kind:'shop'},{x:1255,y:855,name:'길드마스터',kind:'guild'},{x:555,y:1190,name:'면접관',kind:'jobAgency'},{x:1265,y:1200,name:'허수아비',kind:'dummy'},{x:900,y:1465,name:'포탈',kind:'portal'}];
   portalArmed=true;
+}
+const TOWN_REGEN_PCT_PER_SEC=.015;
+const TOWN_REGEN_MIN_PER_SEC=2;
+function updateTownRecovery(dt){
+  if(currentField!=='town'||!player||!player.classChosen)return;
+  if(!(Number(player.hp)>0)||!(Number(player.maxHp)>0))return;
+  if(player.hp>=player.maxHp)return;
+  const amount=Math.max(TOWN_REGEN_MIN_PER_SEC,Number(player.maxHp)*TOWN_REGEN_PCT_PER_SEC)*(Number(dt)||0);
+  player.hp=clamp(Number(player.hp)+amount,0,Number(player.maxHp));
 }
 function setupField(f){
   mode='field'; ensureCodexForField(f); markFieldDiscovered(f.id); dungeonMap=buildDungeonMap(f);
@@ -6818,7 +6840,7 @@ async function loadGame(){return await loadCloudStateAndEnter();}
 
 function update(dt){
   if(!player.classChosen)return; const oldX=player.x, oldY=player.y; const st=syncHp(); player.atkTimer=Math.max(0,player.atkTimer-dt);player.skillTimers=player.skillTimers||[player.skillTimer||0,0,0,0,0,0];while(player.skillTimers.length<ACTION_SLOT_COUNT)player.skillTimers.push(0);for(let i=0;i<ACTION_SLOT_COUNT;i++)player.skillTimers[i]=Math.max(0,(player.skillTimers[i]||0)-dt);player.skillTimer=0;player.potionTimer=Math.max(0,player.potionTimer-dt);player.dodgeTimer=Math.max(0,player.dodgeTimer-dt);player.dashTime=Math.max(0,player.dashTime-dt);player.attackAnim=Math.max(0,player.attackAnim-dt);player.spinAnim=Math.max(0,(Number(player.spinAnim)||0)-dt);player.hurt=Math.max(0,player.hurt-dt);player.shield=Math.max(0,player.shield-dt);player.stealthTime=Math.max(0,(Number(player.stealthTime)||0)-dt);
-  if(st.hpRegen>0) player.hp=clamp(player.hp+st.hpRegen*dt,0,player.maxHp);updateStatusTimers(dt);
+  if(st.hpRegen>0) player.hp=clamp(player.hp+st.hpRegen*dt,0,player.maxHp);updateTownRecovery(dt);updateStatusTimers(dt);
   if(player.autoMode) updateAuto(dt);
   if(attackHeld) normalAttack(); for(let i=0;i<ACTION_SLOT_COUNT;i++)if(skillHeld[i])safeUseSkill(i+1);
   let moveX=joystick.dx, moveY=joystick.dy;
@@ -8546,7 +8568,7 @@ function renderFullMapCanvas(){
   for(const m of monsters)if(!m.dead)fullMapDot(c,tr.x(m.x),tr.y(m.y),m.boss?5.5:3.1,m.boss?themeLine(.95):themeLine(.46));
   for(const n of npcs)fullMapDot(c,tr.x(n.x),tr.y(n.y),n.kind==='portal'?5:3.4,themeLine(.70));
   fullMapDot(c,tr.x(player.x),tr.y(player.y),6.2,themeLine(.98),themeLine(.22));
-  if(onlineState.enabled){for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&p.field===currentField&&performance.now()-(p.seenAt||0)<6500)fullMapDot(c,tr.x(Number(p.x)||0),tr.y(Number(p.y)||0),4.6,themeLine(.72),themeLine(.12));}}
+  if(onlineState.enabled){for(const id in onlineState.peers){const p=onlineState.peers[id];if(p&&p.field===currentField&&performance.now()-(p.seenAt||0)<ONLINE_PEER_ACTIVE_MS)fullMapDot(c,tr.x(Number(p.x)||0),tr.y(Number(p.y)||0),4.6,themeLine(.72),themeLine(.12));}}
   c.restore();
   c.strokeStyle=themeLine(.82);c.lineWidth=1.4;c.strokeRect(tr.pad+.5,tr.pad+.5,w-tr.pad*2-1,h-tr.pad*2-1);
 }
@@ -9162,7 +9184,7 @@ function peerAtClient(clientX,clientY){
   let best=null,bd=46;
   for(const id in onlineState.peers||{}){
     const p=onlineState.peers[id];
-    if(!p||p.field!==currentField||now-(p.seenAt||0)>8500)continue;
+    if(!p||p.field!==currentField||now-(p.seenAt||0)>ONLINE_PEER_DRAW_MS)continue;
     const x=Number.isFinite(Number(p.drawX))?Number(p.drawX):Number(p.x);
     const y=Number.isFinite(Number(p.drawY))?Number(p.drawY):Number(p.y);
     if(!Number.isFinite(x)||!Number.isFinite(y))continue;
