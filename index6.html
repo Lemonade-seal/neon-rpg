@@ -9555,6 +9555,295 @@ function showOnlineHub(autoConnect=true){
 }
 
 window.Game={safeCall:gameSafeCall,showDevJobFreeSelect,pickDevJob,showPeerAction,showPeerInfo,requestPartyToPeer,connectOnlineFromPanel,showOnlineHub,closePopup,createParty,leaveParty,disbandParty,togglePartyInviteBlock,pickJob,openPopup,showTown,showFullMap,showAdvancement,showJobAgency,acceptAdventurerQuest,completeAdventurerQuest,showTrainingDummy,advanceJob,showQuest,claimQuest,showShop,showShopSell,buy,showSkillShop,buySkill,showGuild,guildMission,guildReward,showFieldSelect,goField,confirmPrevStagePortal,renderBag,equipItem,sellItem,sellAllUnequipped,autoEquipBest,renderCodex,toggleCodexField,claimCodexReward,showStats,showSkillInfoPanel,showSkillSlotSelectPopup,showActionSlotSettings,setActionSlotType,executeActionSlot,showSettings,showGraphicSettings,setThemeColor,resetThemeColors,ensureOnlineHubConnection,forceOnlineKeepAlive,showParty,toggleOnlineUserList,acceptPartyInvite,declinePartyInvite,sendPartyChat,showTransferPartyLeader,transferPartyLeader,showKickPartyMember,kickPartyMember,showQuickChat,sendQuickChat,showLogSettings,toggleLogSetting,toggleHudLogSetting,showDeleteAccount,confirmDeleteAccount,clearAllLocalGameDataForAccountDelete,showOnlinePanel,showKakaoLoginPage,startKakaoLogin,devKakaoLogin,kakaoLogout,leaveOnline,sendOnlinePing,showAutoPanel,setAutoBattleType,showSkillInfoPanel,showSkillSlotSettings,clearSkillSlots,beginSkillDrag,beginSkillPointerDrag,skillSlotDragOver,skillSlotDragLeave,dropSkillOnSlot,setSkillSlot,showPotionSettings,setPotionSlot,useSelectedPotionFromSettings,setAutoPotionPct,updatePotionRangeLabel,previewAutoPotionPct,beginPotionRangeDrag,movePotionRangeDrag,endPotionRangeDrag,previewPotionPctInput,commitPotionPctInput,handlePotionPctInputKey,quickToggleAuto,toggleAuto,enterTownFromSettings,dodge,startAdventurerGame,startQuickGame,startClassSelect,showUpdatePage,showTitlePage,showNicknamePage,confirmNickname,showJobSelectPage,showPatchNotes,openRoulette,spinRoulette,confirmRouletteResult,toggleGrowth,confirmGrowth,saveGame,loadGame};
+
+/* 165: 온라인 상태 깜빡임 방지 패치
+   - 온라인창 렌더링이 채널을 강제 재연결하지 않도록 분리
+   - reconnect/track 중간 상태를 오프라인으로 표시하지 않음
+   - 이전 채널의 CLOSED/TIMED_OUT 콜백이 새 연결을 끊는 문제 차단
+*/
+const ONLINE_LOCAL_GRACE_MS=22000;
+const ONLINE_RECONNECT_GRACE_MS=45000;
+function onlineNowMs(){try{return performance.now();}catch(_){return Date.now();}}
+function onlineHasLiveSignal(grace=ONLINE_LOCAL_GRACE_MS){
+  try{
+    if(!cloudState||!cloudState.user)return false;
+    if(onlineState.blocked)return false;
+    const now=onlineNowMs();
+    if(onlineState.enabled&&onlineState.channel)return true;
+    if(onlineState.connecting)return true;
+    if(onlineState.reconnectTimer&&now-(Number(onlineState.lastHeartbeat)||0)<ONLINE_RECONNECT_GRACE_MS)return true;
+    if(onlineState.channel&&now-(Number(onlineState.lastHeartbeat)||0)<grace)return true;
+    return false;
+  }catch(_){return false;}
+}
+function onlineStatusText(){
+  try{
+    if(onlineState.blocked)return '온라인 재접속 필요';
+    if(!cloudState.user)return '오프라인 · 로그인 필요';
+    const count=onlinePeerCount();
+    if(onlineState.enabled&&onlineState.channel)return `온라인 · ${count}명`;
+    if(onlineState.connecting)return `온라인 · 연결 확인 중 · ${count}명`;
+    if(onlineHasLiveSignal())return `온라인 · 재연결 유지 중 · ${count}명`;
+    return `오프라인 · ${onlineState.status||'대기'}`;
+  }catch(_){return '온라인 상태 확인 중';}
+}
+function scheduleOnlineReconnect(reason='retry',delay=1800){
+  if(!cloudState.user||cloudState.deleting||cloudState.accountResetting)return false;
+  if(typeof document!=='undefined'&&document.hidden)return false;
+  const now=onlineNowMs();
+  if(onlineState.reconnectTimer)return false;
+  if(now-(onlineState.lastReconnectSchedule||0)<1200)return false;
+  onlineState.lastReconnectSchedule=now;
+  onlineState.status='재접속 대기';
+  onlineState.reconnectTimer=setTimeout(()=>{
+    onlineState.reconnectTimer=null;
+    try{
+      if(!cloudState.user||cloudState.deleting||cloudState.accountResetting)return;
+      if(typeof document!=='undefined'&&document.hidden)return;
+      ensureOnlineHubConnection(popupMode==='onlineHub',false);
+    }catch(e){console.error(e);onlineState.status='재접속 오류';}
+  },delay);
+  return true;
+}
+async function initPartyPresence(force=false){
+  if(force){
+    onlineState.blocked=false;
+    onlineState.drawBlocked=false;
+  }
+  if(onlineState.blocked&&!force)return false;
+  const client=await ensureSupabaseClient(false);
+  if(!client||!cloudState.user){
+    onlineState.status='로그인 필요';
+    onlineState.enabled=false;
+    onlineState.connecting=false;
+    return false;
+  }
+  if(!force&&onlineState.channel&&onlineState.enabled)return true;
+  if(!force&&onlineState.connecting)return false;
+  onlineState.connecting=true;
+  onlineState.status='접속 중';
+  onlineState.client=client;
+  const seq=(onlineState.connectSeq=(Number(onlineState.connectSeq)||0)+1);
+  try{
+    if(force&&onlineState.channel){
+      const old=onlineState.channel;
+      try{old.unsubscribe();}catch(_){ }
+      if(onlineState.channel===old)onlineState.channel=null;
+    }else if(onlineState.channel&&!onlineState.enabled){
+      try{onlineState.channel.unsubscribe();}catch(_){ }
+      onlineState.channel=null;
+    }
+    const channel=client.channel('neon-rpg-world-v4',{config:{presence:{key:myOnlineId()}}});
+    onlineState.channel=channel;
+    channel
+      .on('presence',{event:'sync'},syncOnlinePresence)
+      .on('broadcast',{event:'online_state'},({payload})=>handleOnlineState(payload))
+      .on('broadcast',{event:'party_invite'},({payload})=>handlePartyInvite(payload))
+      .on('broadcast',{event:'party_accept'},({payload})=>handlePartyAccept(payload))
+      .on('broadcast',{event:'party_decline'},({payload})=>handlePartyDecline(payload))
+      .on('broadcast',{event:'party_leave'},({payload})=>handlePartyLeave(payload))
+      .on('broadcast',{event:'party_disband'},({payload})=>handlePartyDisband(payload))
+      .on('broadcast',{event:'party_kick'},({payload})=>handlePartyKick(payload))
+      .on('broadcast',{event:'party_leader'},({payload})=>handlePartyLeader(payload))
+      .on('broadcast',{event:'party_chat'},({payload})=>handlePartyChat(payload))
+      .on('broadcast',{event:'stage_portal_open'},({payload})=>handleStagePortalOpen(payload))
+      .subscribe(async status=>{
+        if(onlineState.channel!==channel||onlineState.connectSeq!==seq)return;
+        onlineState.status=status;
+        if(status==='SUBSCRIBED'){
+          onlineState.connecting=false;
+          onlineState.enabled=true;
+          onlineState.blocked=false;
+          onlineState.drawBlocked=false;
+          onlineState.lastConnectTry=onlineNowMs();
+          onlineState.lastHeartbeat=onlineNowMs();
+          await trackOnlinePresence(true);
+          if(popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),300);
+        }else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){
+          onlineState.connecting=false;
+          onlineState.sending=false;
+          onlineState.status='재접속 중';
+          if(onlineState.channel===channel)onlineState.channel=null;
+          onlineState.enabled=false;
+          scheduleOnlineReconnect(status,1800);
+          if(popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),300);
+        }
+      });
+    return true;
+  }catch(e){
+    console.error(e);
+    onlineState.connecting=false;
+    onlineState.sending=false;
+    onlineState.status='접속 재시도 대기';
+    if(!onlineHasLiveSignal(ONLINE_LOCAL_GRACE_MS))onlineState.enabled=false;
+    try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){ }
+    onlineState.channel=null;
+    scheduleOnlineReconnect('connect_failed',2200);
+    return false;
+  }
+}
+function ensureOnlineHubConnection(refresh=false,force=false){
+  try{
+    if(!cloudState.user){onlineState.status='로그인 필요';onlineState.enabled=false;onlineState.connecting=false;return false;}
+    if(typeof document!=='undefined'&&document.hidden&&!force)return false;
+    const now=onlineNowMs();
+    if(onlineState.reconnectTimer&&force){clearTimeout(onlineState.reconnectTimer);onlineState.reconnectTimer=null;}
+    if(!force&&onlineState.channel&&onlineState.enabled){
+      if(now-(Number(onlineState.lastHeartbeat)||0)>3500)trackOnlinePresence(true);
+      return true;
+    }
+    if(!force&&onlineState.connecting)return false;
+    if(!force&&onlineState.channel&&onlineHasLiveSignal()){
+      if(now-(Number(onlineState.lastHeartbeat)||0)>3500)trackOnlinePresence(true);
+      return true;
+    }
+    if(!force&&onlineState.lastConnectTry&&now-onlineState.lastConnectTry<2500)return false;
+    onlineState.lastConnectTry=now;
+    onlineState.blocked=false;
+    onlineState.drawBlocked=false;
+    onlineState.status=force?'재접속 중':'접속 확인 중';
+    initPartyPresence(force).then(ok=>{
+      if(ok)trackOnlinePresence(true);
+      if(refresh&&popupMode==='onlineHub')setTimeout(()=>showOnlineHub(false),350);
+    }).catch(e=>{console.error(e);scheduleOnlineReconnect('ensure_failed',2200);});
+    return true;
+  }catch(e){console.error(e);return false;}
+}
+function forceOnlineKeepAlive(){
+  try{
+    if(!cloudState.user)return false;
+    if(typeof document!=='undefined'&&document.hidden)return false;
+    if(onlineState.enabled&&onlineState.channel)return true;
+    if(onlineState.connecting)return true;
+    const now=onlineNowMs();
+    if(onlineState.channel&&onlineHasLiveSignal())return true;
+    if(!onlineState.lastConnectTry||now-onlineState.lastConnectTry>7000){
+      ensureOnlineHubConnection(popupMode==='onlineHub',false);
+    }
+    return false;
+  }catch(e){console.error(e);return false;}
+}
+function onlineKeepAliveTick(reason='heartbeat'){
+  try{
+    if(!cloudState.user||cloudState.deleting||cloudState.accountResetting)return false;
+    if(typeof document!=='undefined'&&document.hidden)return false;
+    const now=onlineNowMs();
+    if(onlineState.enabled&&onlineState.channel){
+      if(!onlineState.sending&&now-(Number(onlineState.lastHeartbeat)||0)>4200)trackOnlinePresence(true);
+      return true;
+    }
+    if(onlineState.connecting)return true;
+    if(onlineState.channel&&onlineHasLiveSignal())return true;
+    scheduleOnlineReconnect(reason,700);
+    return false;
+  }catch(e){console.error(e);return false;}
+}
+async function trackOnlinePresence(force=false){
+  if(typeof document!=='undefined'&&document.hidden&&!force)return false;
+  if(onlineState.blocked||!onlineState.channel)return false;
+  if(onlineState.sending)return false;
+  const t=onlineNowMs();
+  const px=Number(player.x)||0,py=Number(player.y)||0;
+  const movedSince=Number.isFinite(Number(onlineState.lastPayloadX))?Math.hypot(px-Number(onlineState.lastPayloadX),py-Number(onlineState.lastPayloadY||0)):0;
+  const fieldChanged=onlineState.lastPayloadField&&onlineState.lastPayloadField!==currentField;
+  const movingNow=!!player.movingAnim||movedSince>1.0||fieldChanged;
+  const minGap=force?ONLINE_SEND_FORCE_GAP:(movingNow?ONLINE_SEND_MOVING_GAP:ONLINE_SEND_IDLE_GAP);
+  if(t-(onlineState.lastSend||0)<minGap)return false;
+  const prevPayloadX=Number.isFinite(Number(onlineState.lastPayloadX))?Number(onlineState.lastPayloadX):px;
+  const prevPayloadY=Number.isFinite(Number(onlineState.lastPayloadY))?Number(onlineState.lastPayloadY):py;
+  const prevPayloadAt=Number(onlineState.lastPayloadAt)||0;
+  onlineState.lastSend=t;
+  onlineState.sending=true;
+  const payload=buildOnlinePayload();
+  let vx=0,vy=0;
+  if(!fieldChanged&&prevPayloadAt>0){
+    const dtSec=Math.max(.05,Math.min(1.2,(t-prevPayloadAt)/1000));
+    vx=(payload.x-prevPayloadX)/dtSec;
+    vy=(payload.y-prevPayloadY)/dtSec;
+    const limited=limitPeerVelocity(vx,vy,620);
+    vx=limited.vx;vy=limited.vy;
+  }
+  payload.vx=Math.round(vx*10)/10;
+  payload.vy=Math.round(vy*10)/10;
+  payload.seq=(onlineState.sendSeq=(Number(onlineState.sendSeq)||0)+1);
+  try{
+    onlineState.enabled=true;
+    const shouldTrack=force||!onlineState.lastPresenceTrack||t-(onlineState.lastPresenceTrack||0)>ONLINE_PRESENCE_TRACK_MS;
+    if(shouldTrack){
+      await onlineState.channel.track(payload);
+      onlineState.lastPresenceTrack=t;
+    }
+    await onlineState.channel.send({type:'broadcast',event:'online_state',payload});
+    onlineState.lastPayloadX=payload.x;
+    onlineState.lastPayloadY=payload.y;
+    onlineState.lastPayloadField=payload.field;
+    onlineState.lastPayloadAt=t;
+    onlineState.lastHeartbeat=onlineNowMs();
+    onlineState.status='SUBSCRIBED';
+    return true;
+  }catch(e){
+    console.error(e);
+    onlineState.connecting=false;
+    onlineState.sending=false;
+    onlineState.status='전송 재시도 대기';
+    if(!onlineHasLiveSignal(ONLINE_LOCAL_GRACE_MS))onlineState.enabled=false;
+    try{if(onlineState.channel)onlineState.channel.unsubscribe();}catch(_){ }
+    onlineState.channel=null;
+    scheduleOnlineReconnect('send_failed',2200);
+    return false;
+  }finally{
+    onlineState.sending=false;
+  }
+}
+function connectOnlineFromPanel(){
+  try{
+    if(!cloudState.user){toast('로그인 필요');showKakaoLoginPage();return;}
+    onlineState.blocked=false;
+    onlineState.drawBlocked=false;
+    onlineState.sending=false;
+    if(onlineState.reconnectTimer){clearTimeout(onlineState.reconnectTimer);onlineState.reconnectTimer=null;}
+    onlineState.status='재접속 중';
+    ensureOnlineHubConnection(true,true);
+    toast('온라인 접속 확인 중');
+  }catch(e){
+    console.error(e);
+    toast('온라인 접속 오류 차단');
+  }
+}
+function showOnlineHub(autoConnect=true){
+  if(autoConnect==='false')autoConnect=false;
+  popupMode='onlineHub';
+  normalizePlayer();
+  restorePersistentParty();
+  updateDevDummyAI(0.016);
+  if(autoConnect)ensureOnlineHubConnection(false,false);
+  const invites=Object.values(onlineState.invites||{});
+  const allOnline=onlineUserListRows();
+  const near=activePeers(220,true);
+  const members=onlineState.partyId?partyMembers():[];
+  const inviteBlockOn=partyInviteBlocked();
+  if(inviteBlockOn&&invites.length){try{onlineState.invites={};}catch(_){ }}
+  const inviteGuardHtml=`<div class="onlineSectionTitle"><h3>받은 파티 신청</h3><button class="${inviteBlockOn?'autoOn':''}" style="height:26px;padding:2px 8px;font-size:10px;border-radius:8px" onclick="Game.togglePartyInviteBlock()">자동거절</button></div><div class="sub">${inviteBlockOn?'ON · 들어오는 파티 신청을 즉시 거절합니다.':'OFF · 파티 신청을 받을 수 있습니다.'}</div>`;
+  const inviteHtml=inviteBlockOn?'<div class="partyMiniLine">자동거절 적용 중</div>':(invites.length?invites.map(i=>`<div class="partyMiniLine"><b>${escapeHtml(i.fromName||'유저')}</b> 파티 신청<div class="footerBtns"><button onclick="Game.acceptPartyInvite('${escapeHtml(i.from)}')">수락</button><button onclick="Game.declinePartyInvite('${escapeHtml(i.from)}')">거절</button></div></div>`).join(''):'<div class="partyMiniLine">받은 파티 신청 없음</div>');
+  const memberHtml=members.length?members.map(m=>`<div class="partyMiniLine"><b>${escapeHtml(m.name||'플레이어')}</b>${m.id===onlineState.partyOwnerId?' <span class="small">[파티장]</span>':''} · Lv.${m.level||1} · ${escapeHtml(m.jobName||jobById(m.job||'adventurer').name)}<br>HP ${typeof fmtK==='function'?fmtK(m.hp||0):(m.hp||0)}/${typeof fmtK==='function'?fmtK(m.maxHp||0):(m.maxHp||0)}</div>`).join(''):'<div class="partyMiniLine">파티 없음</div>';
+  const nearHtml=near.length?near.map(p=>`<div class="partyMiniLine"><b>Lv.${p.level||1} ${escapeHtml(p.name||'플레이어')}</b><br><span class="small">위치: ${escapeHtml(peerDisplayLocation(p))}</span><div class="footerBtns"><button onclick="Game.showPeerInfo('${escapeHtml(p.id)}')">정보</button><button onclick="Game.requestPartyToPeer('${escapeHtml(p.id)}')">파티 신청</button></div></div>`).join(''):'<div class="partyMiniLine">근처 유저 없음</div>';
+  const onlineGroup=`<h3>온라인</h3><div class="onlineGroupBox"><div class="onlineSectionTitle"><h3>접속자</h3><span>${allOnline.count}명</span></div><div class="partyMiniList">${allOnline.html}</div><div class="onlineSectionTitle"><h3>랭킹</h3><span>Lv 기준</span></div><div class="partyMiniList">${onlineRankingRows()}</div></div>`;
+  const partyButtons=onlineState.partyId
+    ? `<div class="footerBtns"><button onclick="Game.showTransferPartyLeader()">파티장 넘기기</button><button onclick="Game.showKickPartyMember()">내보내기</button><button onclick="Game.disbandParty()">파티해산</button><button onclick="Game.leaveParty()">파티 탈퇴</button></div>`
+    : '';
+  const partyStatusText=onlineState.partyId?`<div class="sub">${escapeHtml(partyLeaderLabel())}</div>`:'<div class="sub">파티는 상대에게 파티 신청을 보내면 자동으로 유지됩니다.</div>';
+  const partyGroup=`<h3>파티</h3><div class="onlineGroupBox">${partyButtons}${partyStatusText}<h3>파티원</h3><div class="partyMiniList">${memberHtml}</div>${inviteGuardHtml}<div class="partyMiniList">${inviteHtml}</div><h3>파티 신청</h3><div class="partyMiniList">${nearHtml}</div></div>`;
+  openPopup(`<div class="title">온라인</div><div class="sub">상태: ${onlineStatusText()} · 근처 ${near.length}명</div>${onlineGroup}${partyGroup}<div class="footerBtns"><button onclick="Game.safeCall('closePopup')">닫기</button></div>`);
+}
+function sendOnlinePing(){trackOnlinePresence(true);toast(onlineStatusText());}
+try{
+  if(window.Game){
+    Object.assign(window.Game,{onlineStatusText,ensureOnlineHubConnection,forceOnlineKeepAlive,connectOnlineFromPanel,showOnlineHub,sendOnlinePing});
+    window.connectOnlineFromPanel=connectOnlineFromPanel;
+    globalThis.connectOnlineFromPanel=connectOnlineFromPanel;
+  }
+}catch(e){console.error(e);}
+
 try{
   window.showPeerAction=(id)=>gameSafeCall('showPeerAction',id);
   globalThis.showPeerAction=window.showPeerAction;
